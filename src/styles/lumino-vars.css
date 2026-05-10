@@ -1,0 +1,63 @@
+/* 仅设计令牌，不写 color/font-size 于 :root，便于内容脚本注入时不污染宿主页面 */
+:root {
+  color-scheme: light;
+  --lumi-cream: #fdfbf7;
+  --lumi-cream-deep: #f6f2eb;
+  --lumi-surface: rgba(255, 253, 249, 0.94);
+  --lumi-surface-solid: #fffaf5;
+  --lumi-ink: #2d2622;
+  --lumi-ink-soft: rgba(45, 38, 34, 0.62);
+  --lumi-ink-faint: rgba(45, 38, 34, 0.38);
+  --lumi-ring: rgba(45, 38, 34, 0.06);
+  --lumi-ring-strong: rgba(45, 38, 34, 0.1);
+  --lumi-peach: #e8a090;
+  --lumi-rose: #d9a5b8;
+  --lumi-lilac: #b9a8e8;
+  --lumi-mist: #9ec9e0;
+  --lumi-accent-a: #d4847a;
+  --lumi-accent-b: #a78bfa;
+  --lumi-warn-bg: rgba(255, 246, 230, 0.92);
+  --lumi-warn-border: rgba(234, 179, 8, 0.35);
+  --lumi-warn-text: #7c5c12;
+  --lumi-danger-bg: rgba(254, 242, 242, 0.95);
+  --lumi-danger-border: rgba(248, 113, 113, 0.35);
+  --lumi-danger-text: #9f2a2a;
+  --lumi-radius-outer: 28px;
+  --lumi-radius-inner: calc(var(--lumi-radius-outer) - 6px);
+  --lumi-radius-field: 18px;
+  --lumi-font: "Plus Jakarta Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", ui-sans-serif,
+    system-ui, sans-serif;
+  --lumi-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --lumi-ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --lumi-shadow-diffuse: 0 22px 48px -18px rgba(45, 38, 34, 0.09);
+  --lumi-shadow-soft: 0 14px 32px -20px rgba(45, 38, 34, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --lumi-cream: #1a1614;
+    --lumi-cream-deep: #12100e;
+    --lumi-surface: rgba(34, 30, 28, 0.92);
+    --lumi-surface-solid: #221e1c;
+    --lumi-ink: #faf6f1;
+    --lumi-ink-soft: rgba(250, 246, 241, 0.72);
+    --lumi-ink-faint: rgba(250, 246, 241, 0.45);
+    --lumi-ring: rgba(255, 245, 235, 0.08);
+    --lumi-ring-strong: rgba(255, 245, 235, 0.14);
+    --lumi-peach: rgba(232, 160, 144, 0.45);
+    --lumi-rose: rgba(217, 165, 184, 0.4);
+    --lumi-lilac: rgba(185, 168, 232, 0.45);
+    --lumi-mist: rgba(158, 201, 224, 0.35);
+    --lumi-accent-a: #f0a090;
+    --lumi-accent-b: #c4b5fd;
+    --lumi-warn-bg: rgba(66, 48, 12, 0.55);
+    --lumi-warn-border: rgba(250, 204, 21, 0.25);
+    --lumi-warn-text: #fde68a;
+    --lumi-danger-bg: rgba(88, 28, 28, 0.45);
+    --lumi-danger-border: rgba(252, 165, 165, 0.25);
+    --lumi-danger-text: #fecaca;
+    --lumi-shadow-diffuse: 0 24px 56px -16px rgba(0, 0, 0, 0.45);
+    --lumi-shadow-soft: 0 16px 40px -20px rgba(0, 0, 0, 0.35);
+  }
+}
