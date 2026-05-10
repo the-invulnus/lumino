@@ -384,3 +384,108 @@ lumino/
 - 你用「程序员 AI 编程工具」类比来解释你的产品愿景，这不是模糊的类比，是精确的功能层次映射（自动补全 → 局部任务 → 完整流程 → 持续陪伴）—— 说明你已经把产品拆解到可实现的粒度。
 - 你说「信任授权的问题可以不用考虑，以后的 AI 产品就和当前的智能手机一样」—— 你愿意在产品判断上持有理性的偏见，不纠结于阻碍执行的共识性问题。
 - 你主动提出了三层记忆系统的具体设计（原始记录 → 日记忆 → 检索 → 回退）—— 你不是在等别人给你方案，你是带着方案来的。
+
+---
+
+# Implementation Log
+
+> 实现日期：2026-05-10
+
+## 状态
+
+- [x] Phase 1: 记忆系统基础设施
+- [x] Phase 2: 检索 + 画像 + 上下文组装
+- [x] Phase 3: 输入框补全场景
+- [x] Phase 4: 集成 + 打磨
+
+**Status: IMPLEMENTED** （从 DRAFT 更新）
+
+## 实现与设计的差异
+
+### 实际文件结构
+
+```
+lumino/
+├── src/
+│   ├── background.ts                      # [MODIFIED] 调度中心：消息路由、alarms、页面追踪
+│   ├── sidepanel.tsx                      # [MODIFIED] 新增「🧠 主动 AI」Tab（用户画像 + 日记忆）
+│   ├── options.tsx                        # [UNCHANGED] LLM 配置页
+│   ├── lib/
+│   │   ├── db.ts                          # [NEW] 统一 IndexedDB 连接（lumino 数据库，v1）
+│   │   ├── memory/                        # [NEW] 记忆系统
+│   │   │   ├── types.ts                   # 所有类型定义 + Chrome 消息常量
+│   │   │   ├── privacy-filter.ts          # URL 隐私过滤（bank/gov/health/adult）
+│   │   │   ├── event-collector.ts         # Layer1 事件采集（页面文本摘要、输入信息、selector 提取）
+│   │   │   ├── event-store.ts             # Layer1 事件存取（委托 memory-idb.ts）
+│   │   │   ├── memory-idb.ts              # [NEW] 记忆系统 IndexedDB 操作层（events + daily stores）
+│   │   │   ├── memory-scheduler.ts        # chrome.alarms 定时任务（日记忆/清理/画像）
+│   │   │   ├── daily-memory.ts            # Layer2 日记忆：LLM 总结 → IndexedDB
+│   │   │   ├── retriever.ts               # Layer3 检索：关键词匹配 + 回退原始事件
+│   │   │   ├── user-profile.ts            # 用户画像：LLM 推断 → chrome.storage.local
+│   │   │   └── context-builder.ts         # 上下文组装：画像 + Session + 检索 → LLM prompt
+│   │   ├── completion/                    # [NEW] 输入框补全
+│   │   │   ├── completion-engine.ts       # Background 端：接收请求 → 构建上下文 → LLM → 返回补全
+│   │   │   └── input-watcher.ts           # Content Script 端：监听输入框 + ghost overlay 渲染
+│   │   ├── chat/                          # [MODIFIED]
+│   │   │   ├── thread-idb.ts              # 改用统一的 db.ts 连接
+│   │   │   └── agent-tools.ts             # 新增 lumino_get_profile、lumino_get_daily_memories
+│   ├── contents/
+│   │   ├── lumino-floating-button.ts      # [UNCHANGED] 悬浮按钮
+│   │   └── lumino-input-watcher.ts        # [NEW] 输入观察器 CS 入口（<all_urls>）
+│   ├── styles/
+│   │   ├── paper.css                      # [MODIFIED] 新增 tab 导航、记忆面板、ghost text 样式
+│   │   └── content-inject.css             # [UNCHANGED]
+```
+
+### 结构调整说明
+
+1. **db.ts** — 设计文档中未列出，但实际需要。原计划 `thread-idb.ts` 和记忆系统各自管理 IndexedDB 连接，会导致版本号冲突。统一为 `src/lib/db.ts` 提供唯一连接，所有模块共享，数据库名 `lumino`，含三张表：`threads`、`layer1_events`、`daily_memories`。
+
+2. **memory-idb.ts** — 设计文档未列出。原计划 `event-store.ts` 和 `daily-memory.ts` 直接操作 `chrome.storage.local`，实际改为存 IndexedDB（容量更大、支持索引查询）。`event-store.ts` 变为 thin wrapper，委托 `memory-idb.ts`。
+
+3. **ghost-overlay.ts** — 设计文档中计划独立文件，实际合并到 `input-watcher.ts` 中。ghost overlay 与输入监听紧密耦合，拆分会增加消息复杂度，合并更简洁。
+
+4. **Side Panel 架构** — 聊天 Tab 和主动 AI Tab 用 `display: none/flex` 切换，而非条件渲染（`{tab && <Component/>}`）。后者会销毁/重建 DOM，导致聊天状态丢失。
+
+### 存储架构
+
+| 数据 | 存储位置 | 容量 | 清理策略 |
+|------|---------|------|---------|
+| 聊天会话（threads） | IndexedDB `lumino` / `threads` | 无上限 | 手动删除 |
+| Layer1 事件 | IndexedDB `lumino` / `layer1_events` | 5000 条 | 7 天过期 + 超量删旧 |
+| 日记忆 | IndexedDB `lumino` / `daily_memories` | 90 天 | 超 90 天自动删除 |
+| 用户画像 | `chrome.storage.local` | ~1KB | 每 6h 更新，不删除 |
+| Session 时间戳 | `chrome.storage.local` | 8 bytes | 24h 后重置 |
+| LLM 配置 | `chrome.storage.sync` | ~200 bytes | 手动修改 |
+
+### 补全触发流程
+
+```
+用户输入 ≥2 字符 → 停止 500ms
+  → Content Script (input-watcher.ts) 发消息到 Background
+  → Background (completion-engine.ts):
+      1. buildCompletionContext() 汇聚画像 + Session上下文 + 检索记忆
+      2. 构建 system prompt + user message
+      3. requestChatCompletionTurn() 调用 LLM
+      4. 结果发回 Content Script
+  → Content Script 渲染 ghost overlay
+  → 用户按 Tab 接受 / Escape 关闭 / 继续输入自动消失
+```
+
+### 已知限制
+
+1. **首次使用无记忆** — 新用户没有日记忆和画像，补全仅依赖当前页面的 placeholder 和用户已输入文本
+2. **LLM 未配置时** — 补全不可用（静默跳过），日记忆生成基础统计摘要（无 LLM）
+3. **Content Script 注入** — `lumino-input-watcher.ts` 在 `<all_urls>` 下运行，有性能开销。隐私域名已通过 `privacy-filter.ts` 跳过采集，但 DOM 事件监听仍会注册
+4. **bfcache 警告** — 开发模式下 Chrome 会报 `message channel is closed`，不影响功能，可通过 `chrome://flags/#back-forward-cache` 关闭
+
+### 未实现部分
+
+以下内容在设计文档中提及但本阶段未实现（属于未来迭代）：
+
+- 智能 Tab 管理
+- 浏览日报
+- Embedding 向量检索（当前为简单字符串匹配）
+- 多设备同步（Chrome Storage Sync）
+- LLM token 用量展示
+- 补全接受率统计

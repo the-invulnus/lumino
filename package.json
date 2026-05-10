@@ -18,7 +18,9 @@
   "manifest": {
     "permissions": [
       "storage",
-      "sidePanel"
+      "sidePanel",
+      "alarms",
+      "tabs"
     ],
     "host_permissions": [
       "<all_urls>"

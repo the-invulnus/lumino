@@ -1072,3 +1072,165 @@ textarea {
 .paper-textarea--compact {
   min-height: 72px;
 }
+
+/* ============================================================
+   主动 AI Tab 导航 & 记忆面板
+   ============================================================ */
+
+.paper-tabs {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 4px;
+  background: var(--lumi-ring);
+  border-radius: var(--lumi-radius-field);
+}
+
+.paper-tab {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--lumi-radius-field) - 4px);
+  color: var(--lumi-ink-soft);
+  cursor: pointer;
+  display: flex;
+  flex: 1;
+  font-family: var(--lumi-font);
+  font-size: 13px;
+  font-weight: 600;
+  justify-content: center;
+  padding: 8px 12px;
+  transition: all 240ms var(--lumi-ease-spring);
+}
+
+.paper-tab:hover {
+  color: var(--lumi-ink);
+}
+
+.paper-tab--active {
+  background: var(--lumi-surface-solid);
+  box-shadow: var(--lumi-shadow-soft);
+  color: var(--lumi-ink);
+}
+
+/* 主动 AI 记忆面板 */
+.paper-memory-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.paper-memory-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.paper-memory-title {
+  color: var(--lumi-ink);
+  font-family: var(--lumi-font);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.paper-memory-card {
+  background: rgba(45, 38, 34, 0.025);
+  border: 1px solid var(--lumi-ring);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.paper-memory-row {
+  align-items: flex-start;
+  color: var(--lumi-ink);
+  display: flex;
+  flex-wrap: wrap;
+  font-family: var(--lumi-font);
+  font-size: 13px;
+  gap: 4px 8px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.paper-memory-label {
+  color: var(--lumi-ink-soft);
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.paper-memory-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.paper-memory-tag {
+  background: var(--lumi-ring-strong);
+  border-radius: 8px;
+  color: var(--lumi-ink-soft);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.paper-memory-tag--site {
+  background: rgba(164, 139, 250, 0.12);
+  color: var(--lumi-accent-b);
+}
+
+.paper-memory-tag--kw {
+  background: rgba(232, 160, 144, 0.12);
+  color: var(--lumi-accent-a);
+}
+
+.paper-memory-date {
+  color: var(--lumi-ink-faint);
+  font-family: var(--lumi-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.paper-memory-summary {
+  color: var(--lumi-ink);
+  font-family: var(--lumi-font);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.paper-memory-hint {
+  color: var(--lumi-ink-soft);
+  font-family: var(--lumi-font);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+  padding: 12px 0;
+}
+
+.paper-memory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Ghost text overlay for input completion */
+.lumino-ghost-text {
+  color: rgba(128, 128, 128, 0.45) !important;
+  font-style: italic;
+}
+
+#lumino-ghost-overlay {
+  all: initial;
+}

@@ -1,39 +1,13 @@
 import type { OpenAiChatMessage } from "./openai-messages"
+import { openDatabase, STORE_THREADS } from "../db"
 
-const DB_NAME = "lumino_chat"
-const DB_VERSION = 1
-const STORE = "threads"
-
-/** 兼容旧数据：早期单线程使用的 id */
 export const DEFAULT_THREAD_ID = "default"
 
 export type ChatThreadRecord = {
   id: string
   updatedAt: number
-  /** 列表展示用；缺省时由首条用户消息推导 */
   title?: string
   messages: OpenAiChatMessage[]
-}
-
-function openDatabase(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-
-    request.onerror = () => {
-      reject(request.error ?? new Error("IndexedDB open failed"))
-    }
-
-    request.onsuccess = () => {
-      resolve(request.result)
-    }
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE, { keyPath: "id" })
-      }
-    }
-  })
 }
 
 export function suggestTitleFromMessages(
@@ -55,82 +29,56 @@ export function suggestTitleFromMessages(
 export async function getThread(threadId: string): Promise<ChatThreadRecord | undefined> {
   const db = await openDatabase()
 
-  try {
-    return await new Promise<ChatThreadRecord | undefined>((resolve, reject) => {
-      const tx = db.transaction(STORE, "readonly")
-      const store = tx.objectStore(STORE)
-      const getReq = store.get(threadId)
+  return new Promise<ChatThreadRecord | undefined>((resolve, reject) => {
+    const tx = db.transaction(STORE_THREADS, "readonly")
+    const req = tx.objectStore(STORE_THREADS).get(threadId)
 
-      getReq.onsuccess = () => {
-        resolve(getReq.result as ChatThreadRecord | undefined)
-      }
-
-      getReq.onerror = () => {
-        reject(getReq.error ?? new Error("getThread failed"))
-      }
-    })
-  } finally {
-    db.close()
-  }
+    req.onsuccess = () => resolve(req.result as ChatThreadRecord | undefined)
+    req.onerror = () => reject(req.error ?? new Error("getThread failed"))
+  })
 }
 
 export async function putThread(record: ChatThreadRecord): Promise<void> {
   const db = await openDatabase()
 
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(STORE, "readwrite")
-      const store = tx.objectStore(STORE)
-      store.put(record)
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_THREADS, "readwrite")
+    tx.objectStore(STORE_THREADS).put(record)
 
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => reject(tx.error ?? new Error("putThread failed"))
-      tx.onabort = () => reject(tx.error ?? new Error("putThread aborted"))
-    })
-  } finally {
-    db.close()
-  }
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error ?? new Error("putThread failed"))
+    tx.onabort = () => reject(tx.error ?? new Error("putThread aborted"))
+  })
 }
 
 export async function listThreads(): Promise<ChatThreadRecord[]> {
   const db = await openDatabase()
 
-  try {
-    return await new Promise<ChatThreadRecord[]>((resolve, reject) => {
-      const tx = db.transaction(STORE, "readonly")
-      const store = tx.objectStore(STORE)
-      const req = store.getAll()
+  return new Promise<ChatThreadRecord[]>((resolve, reject) => {
+    const tx = db.transaction(STORE_THREADS, "readonly")
+    const req = tx.objectStore(STORE_THREADS).getAll()
 
-      req.onsuccess = () => {
-        const rows = (req.result as ChatThreadRecord[]) ?? []
-        rows.sort((a, b) => b.updatedAt - a.updatedAt)
-        resolve(rows)
-      }
+    req.onsuccess = () => {
+      const rows = (req.result as ChatThreadRecord[]) ?? []
+      rows.sort((a, b) => b.updatedAt - a.updatedAt)
+      resolve(rows)
+    }
 
-      req.onerror = () => {
-        reject(req.error ?? new Error("listThreads failed"))
-      }
-    })
-  } finally {
-    db.close()
-  }
+    req.onerror = () => reject(req.error ?? new Error("listThreads failed"))
+  })
 }
 
 export async function deleteThread(threadId: string): Promise<void> {
   const db = await openDatabase()
 
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(STORE, "readwrite")
-      tx.objectStore(STORE).delete(threadId)
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_THREADS, "readwrite")
+    tx.objectStore(STORE_THREADS).delete(threadId)
 
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => reject(tx.error ?? new Error("deleteThread failed"))
-      tx.onabort = () => reject(tx.error ?? new Error("deleteThread aborted"))
-    })
-  } finally {
-    db.close()
-  }
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error ?? new Error("deleteThread failed"))
+    tx.onabort = () => reject(tx.error ?? new Error("deleteThread aborted"))
+  })
 }
 
 export async function createEmptyThread(): Promise<ChatThreadRecord> {
@@ -144,20 +92,6 @@ export async function createEmptyThread(): Promise<ChatThreadRecord> {
 
   await putThread(record)
   return record
-}
-
-export async function loadDefaultThread(): Promise<ChatThreadRecord> {
-  const existing = await getThread(DEFAULT_THREAD_ID)
-  if (existing) {
-    return existing
-  }
-
-  return {
-    id: DEFAULT_THREAD_ID,
-    updatedAt: Date.now(),
-    title: "默认",
-    messages: []
-  }
 }
 
 export async function saveThreadMessages(
