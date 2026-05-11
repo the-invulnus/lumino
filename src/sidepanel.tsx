@@ -23,6 +23,7 @@ import { registerAllTools } from "./lib/chat/tool-registry"
 import type { LlmSettings } from "./lib/llm/types"
 import { getLlmSettings, hasCompleteLlmSettings } from "./lib/settings"
 import "./styles/paper.css"
+import blackCatGif from "data-base64:~black_cat.gif"
 
 registerAllTools()
 
@@ -584,60 +585,12 @@ function SidePanel() {
           <div className="paper-sidepanel-layout">
             <header className="paper-sp-header">
               <div className="paper-sp-brand">
-                <div aria-hidden className="paper-logo paper-logo--sm">
-                  <svg
-                    className="paper-logo-dandelion"
-                    viewBox="0 0 48 48"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                      <radialGradient id="d-core" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stopColor="#fffdf9" stopOpacity="1" />
-                        <stop offset="50%" stopColor="#fffdf9" stopOpacity="0.5" />
-                        <stop offset="100%" stopColor="#fffdf9" stopOpacity="0" />
-                      </radialGradient>
-                    </defs>
-                    {/* 花芯 */}
-                    <circle className="d-core" cx="24" cy="24" r="8" fill="url(#d-core)" />
-                    <circle cx="24" cy="24" r="3.5" fill="#fffdf9" opacity="0.95" />
-                    {/* 花丝 */}
-                    <line x1="24" y1="24" x2="24" y2="12" stroke="#fffdf9" strokeWidth="0.6" opacity="0.45" />
-                    <line x1="24" y1="24" x2="20" y2="13" stroke="#fffdf9" strokeWidth="0.55" opacity="0.4" />
-                    <line x1="24" y1="24" x2="28" y2="13" stroke="#fffdf9" strokeWidth="0.55" opacity="0.4" />
-                    <line x1="24" y1="24" x2="17" y2="15" stroke="#fffdf9" strokeWidth="0.5" opacity="0.35" />
-                    <line x1="24" y1="24" x2="31" y2="15" stroke="#fffdf9" strokeWidth="0.5" opacity="0.35" />
-                    <line x1="24" y1="24" x2="15" y2="19" stroke="#fffdf9" strokeWidth="0.45" opacity="0.3" />
-                    <line x1="24" y1="24" x2="33" y2="19" stroke="#fffdf9" strokeWidth="0.45" opacity="0.3" />
-                    <line x1="24" y1="24" x2="14" y2="24" stroke="#fffdf9" strokeWidth="0.4" opacity="0.25" />
-                    <line x1="24" y1="24" x2="34" y2="24" stroke="#fffdf9" strokeWidth="0.4" opacity="0.25" />
-                    {/* 飘絮种子 - 上 */}
-                    <g className="d-seed d-seed--1">
-                      <circle cx="32" cy="10" r="2" fill="#fffdf9" opacity="0" />
-                      <path d="M32 10 Q30 7 27 7" fill="none" stroke="#fffdf9" strokeWidth="1.2" opacity="0" strokeLinecap="round" />
-                    </g>
-                    <g className="d-seed d-seed--2">
-                      <circle cx="16" cy="8" r="1.8" fill="#fffdf9" opacity="0" />
-                      <path d="M16 8 Q18 5 21 5" fill="none" stroke="#fffdf9" strokeWidth="1.1" opacity="0" strokeLinecap="round" />
-                    </g>
-                    <g className="d-seed d-seed--3">
-                      <circle cx="20" cy="6" r="2.2" fill="#fffdf9" opacity="0" />
-                      <path d="M20 6 Q17 3 14 3" fill="none" stroke="#fffdf9" strokeWidth="1.3" opacity="0" strokeLinecap="round" />
-                    </g>
-                    {/* 飘絮种子 - 侧 */}
-                    <g className="d-seed d-seed--4">
-                      <circle cx="38" cy="18" r="1.7" fill="#fffdf9" opacity="0" />
-                      <path d="M38 18 Q41 16 44 16" fill="none" stroke="#fffdf9" strokeWidth="1.1" opacity="0" strokeLinecap="round" />
-                    </g>
-                    <g className="d-seed d-seed--5">
-                      <circle cx="8" cy="22" r="1.9" fill="#fffdf9" opacity="0" />
-                      <path d="M8 22 Q5 20 2 20" fill="none" stroke="#fffdf9" strokeWidth="1.2" opacity="0" strokeLinecap="round" />
-                    </g>
-                    <g className="d-seed d-seed--6">
-                      <circle cx="36" cy="28" r="1.5" fill="#fffdf9" opacity="0" />
-                      <path d="M36 28 Q39 30 42 31" fill="none" stroke="#fffdf9" strokeWidth="1" opacity="0" strokeLinecap="round" />
-                    </g>
-                  </svg>
-                </div>
+                <img
+                  aria-hidden
+                  className="paper-logo-cat"
+                  src={blackCatGif}
+                  alt="Lumi"
+                />
                 <div className="paper-sp-brand-text">
                   <h1 className="paper-sp-title">Lumi Knows You</h1>
                 </div>

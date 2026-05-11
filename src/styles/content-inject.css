@@ -5,52 +5,39 @@
 #lumino-floating-button.lumino-fab {
   -webkit-font-smoothing: antialiased;
   align-items: center;
-  background: linear-gradient(118deg, #e5988e 0%, #c4b0f5 48%, #a8d4ea 100%);
+  background: none;
   border: none;
   border-radius: 999px;
   bottom: 24px;
-  box-shadow: 0 18px 40px -10px rgba(160, 110, 160, 0.42);
+  box-shadow: 0 18px 40px -10px rgba(0, 0, 0, 0.25);
   box-sizing: border-box;
-  color: var(--lumi-ink);
   cursor: pointer;
   display: flex;
-  font-family: var(--lumi-font);
-  font-size: 14px;
   height: 56px;
   justify-content: center;
-  line-height: 1.5;
   padding: 0;
   position: fixed;
   right: 24px;
   transition:
     box-shadow 520ms var(--lumi-ease-spring),
-    filter 520ms var(--lumi-ease-spring),
     transform 520ms var(--lumi-ease-spring);
   width: 56px;
   z-index: 2147483647;
 }
 
 #lumino-floating-button.lumino-fab:hover {
-  box-shadow: 0 22px 48px -10px rgba(140, 100, 180, 0.4);
-  filter: brightness(1.03);
+  box-shadow: 0 22px 48px -10px rgba(0, 0, 0, 0.35);
   transform: translateY(-2px);
 }
 
 #lumino-floating-button.lumino-fab:active {
-  transform: scale(0.97) translateY(0);
+  transform: scale(0.95) translateY(0);
 }
 
-#lumino-floating-button.lumino-fab .lumino-fab__glyph {
-  align-items: center;
-  background: rgba(255, 255, 255, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 18px;
-  color: #fffefa;
-  display: flex;
-  font-size: 16px;
-  font-weight: 700;
-  height: 38px;
-  justify-content: center;
-  letter-spacing: -0.04em;
-  width: 38px;
+#lumino-floating-button.lumino-fab .lumino-fab__img {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
 }

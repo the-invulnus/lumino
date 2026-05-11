@@ -167,95 +167,19 @@ textarea {
 
 .paper-logo--sm {
   border-radius: 20px;
-  font-size: 13px;
   height: 46px;
   width: 46px;
 }
 
-/* --- 蒲公英 Logo 动画 --- */
-.paper-logo-dandelion {
-  width: 40px;
-  height: 40px;
+/* --- 黑猫 Logo --- */
+.paper-logo-cat {
+  width: 44px;
+  height: 44px;
   display: block;
-}
-
-@keyframes d-core-pulse {
-  0%, 100% {
-    transform: scale(0.9);
-    opacity: 0.55;
-  }
-  50% {
-    transform: scale(1.08);
-    opacity: 1;
-  }
-}
-
-@keyframes d-seed-fly-1 {
-  0%   { transform: translate(0, 0) rotate(0deg); opacity: 0; }
-  12%  { opacity: 0.9; }
-  35%  { transform: translate(-4px, -7px) rotate(12deg); opacity: 0.75; }
-  70%  { transform: translate(-9px, -3px) rotate(-8deg); opacity: 0.35; }
-  100% { transform: translate(-16px, -14px) rotate(30deg); opacity: 0; }
-}
-
-@keyframes d-seed-fly-2 {
-  0%   { transform: translate(0, 0) rotate(0deg); opacity: 0; }
-  14%  { opacity: 0.85; }
-  30%  { transform: translate(3px, -8px) rotate(-10deg); opacity: 0.7; }
-  60%  { transform: translate(12px, -5px) rotate(15deg); opacity: 0.3; }
-  100% { transform: translate(7px, -18px) rotate(-25deg); opacity: 0; }
-}
-
-@keyframes d-seed-fly-3 {
-  0%   { transform: translate(0, 0) rotate(0deg); opacity: 0; }
-  10%  { opacity: 0.9; }
-  25%  { transform: translate(-2px, -6px) rotate(8deg); opacity: 0.8; }
-  55%  { transform: translate(-14px, -10px) rotate(-18deg); opacity: 0.35; }
-  100% { transform: translate(-5px, -20px) rotate(15deg); opacity: 0; }
-}
-
-@keyframes d-seed-fly-4 {
-  0%   { transform: translate(0, 0) rotate(0deg); opacity: 0; }
-  10%  { opacity: 0.8; }
-  40%  { transform: translate(6px, -4px) rotate(-10deg); opacity: 0.6; }
-  75%  { transform: translate(3px, -10px) rotate(20deg); opacity: 0.2; }
-  100% { transform: translate(14px, -8px) rotate(-35deg); opacity: 0; }
-}
-
-@keyframes d-seed-fly-5 {
-  0%   { transform: translate(0, 0) rotate(0deg); opacity: 0; }
-  8%   { opacity: 0.8; }
-  30%  { transform: translate(-5px, -3px) rotate(15deg); opacity: 0.65; }
-  65%  { transform: translate(-10px, 3px) rotate(-12deg); opacity: 0.25; }
-  100% { transform: translate(-17px, -10px) rotate(22deg); opacity: 0; }
-}
-
-@keyframes d-seed-fly-6 {
-  0%   { transform: translate(0, 0) rotate(0deg); opacity: 0; }
-  12%  { opacity: 0.75; }
-  35%  { transform: translate(8px, 1px) rotate(-8deg); opacity: 0.55; }
-  70%  { transform: translate(14px, -5px) rotate(18deg); opacity: 0.2; }
-  100% { transform: translate(10px, -16px) rotate(-30deg); opacity: 0; }
-}
-
-.d-core {
-  transform-origin: 24px 24px;
-  animation: d-core-pulse 2.8s var(--lumi-ease-spring) infinite;
-}
-
-.d-seed--1 { animation: d-seed-fly-1 4.2s var(--lumi-ease-spring) infinite; }
-.d-seed--2 { animation: d-seed-fly-2 4.6s var(--lumi-ease-spring) infinite 0.5s; }
-.d-seed--3 { animation: d-seed-fly-3 5s var(--lumi-ease-spring) infinite 1.1s; }
-.d-seed--4 { animation: d-seed-fly-4 3.8s var(--lumi-ease-spring) infinite 0.8s; }
-.d-seed--5 { animation: d-seed-fly-5 4.4s var(--lumi-ease-spring) infinite 0.2s; }
-.d-seed--6 { animation: d-seed-fly-6 5s var(--lumi-ease-spring) infinite 1.6s; }
-
-@media (prefers-reduced-motion: reduce) {
-  .d-core,
-  .d-seed--1, .d-seed--2, .d-seed--3,
-  .d-seed--4, .d-seed--5, .d-seed--6 {
-    animation: none;
-  }
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: var(--lumi-shadow-soft);
 }
 
 .paper-sp-brand-text {
