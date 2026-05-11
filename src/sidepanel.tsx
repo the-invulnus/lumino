@@ -95,6 +95,21 @@ function LumiToolCall({
 }) {
   const [expanded, setExpanded] = useState(false)
   const hasResult = result !== null
+
+  // 检测工具结果是否为错误
+  let toolError: string | null = null
+  if (hasResult) {
+    try {
+      const parsed = JSON.parse(result!)
+      if (parsed && typeof parsed === "object" && parsed.error) {
+        toolError = parsed.error
+        // 尝试获取更友好的错误消息
+        if (parsed.message) toolError = `${parsed.error}: ${parsed.message}`
+      }
+    } catch {
+      // 不是 JSON，忽略
+    }
+  }
   const isReadFileSkill =
     call.function.name === "read_file" &&
     (call.function.arguments || "").includes("SKILL.md")
@@ -136,11 +151,13 @@ function LumiToolCall({
         <span
           className={
             "lumi-tool-call__icon" +
-            (hasResult
-              ? " lumi-tool-call__icon--ok"
-              : isRunning
-                ? " lumi-tool-call__icon--running"
-                : "")
+            (toolError
+              ? " lumi-tool-call__icon--error"
+              : hasResult
+                ? " lumi-tool-call__icon--ok"
+                : isRunning
+                  ? " lumi-tool-call__icon--running"
+                  : "")
           }
         >
           {isReadFileSkill ? (
@@ -154,6 +171,12 @@ function LumiToolCall({
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
             </svg>
+          ) : toolError ? (
+            <svg className="lumi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color: "var(--lumi-error, #e5484d)"}}>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" x2="9" y1="9" y2="15" />
+              <line x1="9" x2="15" y1="9" y2="15" />
+            </svg>
           ) : hasResult ? (
             <svg className="lumi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
@@ -165,6 +188,9 @@ function LumiToolCall({
           )}
         </span>
         <span className="lumi-tool-call__name">{label}</span>
+        {toolError && (
+          <span className="lumi-tool-call__error-badge" title={toolError}>!</span>
+        )}
         {isRunning && (
           <span className="lumi-tool-call__running-label">running</span>
         )}
@@ -207,7 +233,7 @@ function LumiToolCall({
           </div>
           <div className="lumi-tool-call__detail-section">
             <div className="lumi-tool-call__detail-label">Result:</div>
-            <pre>{result}</pre>
+            <pre className={toolError ? "lumi-tool-call__result--error" : ""}>{result}</pre>
           </div>
         </div>
       )}
@@ -538,6 +564,13 @@ function SidePanel() {
     setError("")
     setDraft("")
 
+    // 将 agent 状态输出到 console 以便调试
+    const statusLog = (...args: unknown[]) => {
+      console.log("[lumino:sidepanel]", ...args)
+      setError("")  // 清除旧错误
+    }
+    statusLog("开始请求，当前消息数:", messages.length)
+
     try {
       const history = cloneMessages(messages)
 
@@ -546,6 +579,10 @@ function SidePanel() {
         threadId,
         historyMessages: history,
         userInput: trimmed,
+        onUserMessageSent: async (msgs) => {
+          // 乐观更新：用户消息立刻上屏
+          setMessages(cloneMessages(msgs))
+        },
         onMessagesUpdate: async (msgs) => {
           setMessages(cloneMessages(msgs))
           await saveThreadMessages(threadId, msgs)

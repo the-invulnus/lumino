@@ -40,6 +40,109 @@ export function createFloatingButton(ownerDocument: Document) {
   return button
 }
 
+function savePosition(x: number, y: number) {
+  try {
+    localStorage.setItem("lumino-fab-pos", JSON.stringify({ x, y }))
+  } catch { /* ignore */ }
+}
+
+function loadPosition(): { x: number; y: number } | null {
+  try {
+    const raw = localStorage.getItem("lumino-fab-pos")
+    if (raw) return JSON.parse(raw) as { x: number; y: number }
+  } catch { /* ignore */ }
+  return null
+}
+
+function enableDrag(button: HTMLButtonElement) {
+  let dragging = false
+  let startX = 0
+  let startY = 0
+  let startLeft = 0
+  let startTop = 0
+  let moved = false
+
+  const onStart = (clientX: number, clientY: number) => {
+    dragging = true
+    moved = false
+    startX = clientX
+    startY = clientY
+    const rect = button.getBoundingClientRect()
+    startLeft = rect.left
+    startTop = rect.top
+    button.style.transition = "none"
+  }
+
+  const onMove = (clientX: number, clientY: number) => {
+    if (!dragging) return
+    const dx = clientX - startX
+    const dy = clientY - startY
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true
+    const maxX = window.innerWidth - button.offsetWidth - 8
+    const maxY = window.innerHeight - button.offsetHeight - 8
+    const newLeft = Math.min(maxX, Math.max(8, startLeft + dx))
+    const newTop = Math.min(maxY, Math.max(8, startTop + dy))
+    button.style.left = newLeft + "px"
+    button.style.top = newTop + "px"
+    button.style.right = "auto"
+    button.style.bottom = "auto"
+  }
+
+  const onEnd = () => {
+    if (!dragging) return
+    dragging = false
+    button.style.transition = ""
+    if (moved) {
+      const rect = button.getBoundingClientRect()
+      savePosition(rect.left, rect.top)
+    }
+  }
+
+  button.addEventListener("mousedown", (e) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    onStart(e.clientX, e.clientY)
+  })
+
+  button.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) return
+    const t = e.touches[0]
+    onStart(t.clientX, t.clientY)
+  }, { passive: true })
+
+  document.addEventListener("mousemove", (e) => {
+    onMove(e.clientX, e.clientY)
+  })
+
+  document.addEventListener("touchmove", (e) => {
+    if (e.touches.length !== 1) return
+    const t = e.touches[0]
+    onMove(t.clientX, t.clientY)
+  }, { passive: true })
+
+  document.addEventListener("mouseup", onEnd)
+  document.addEventListener("touchend", onEnd)
+
+  // Prevent click when dragged
+  button.addEventListener("click", (e) => {
+    if (moved) {
+      e.stopPropagation()
+      e.preventDefault()
+    }
+  }, true)
+
+  // Restore saved position
+  const saved = loadPosition()
+  if (saved) {
+    const maxX = window.innerWidth - 56 - 8
+    const maxY = window.innerHeight - 56 - 8
+    button.style.left = Math.min(maxX, Math.max(8, saved.x)) + "px"
+    button.style.top = Math.min(maxY, Math.max(8, saved.y)) + "px"
+    button.style.right = "auto"
+    button.style.bottom = "auto"
+  }
+}
+
 export function mountFloatingButton(ownerDocument: Document = document) {
   const existingButton = ownerDocument.getElementById(FLOATING_BUTTON_ID)
 
@@ -51,6 +154,7 @@ export function mountFloatingButton(ownerDocument: Document = document) {
   button.addEventListener("click", requestOpenSidePanel)
 
   ownerDocument.body.append(button)
+  enableDrag(button)
 
   return button
 }

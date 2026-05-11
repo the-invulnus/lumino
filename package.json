@@ -21,7 +21,8 @@
       "sidePanel",
       "alarms",
       "tabs",
-      "downloads"
+      "downloads",
+      "scripting"
     ],
     "host_permissions": [
       "<all_urls>"

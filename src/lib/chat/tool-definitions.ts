@@ -255,5 +255,148 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
         additionalProperties: false
       }
     }
-  }
+  },
+  // ── 浏览器交互工具 ──
+  {
+    type: "function",
+    function: {
+      name: "get_page_content",
+      description:
+        "提取当前浏览器页面的文本内容。支持多种模式：text（提取正文文本）、full_html（完整HTML）、structured（按选择器提取结构化数据）。默认以 text 模式提取 <main>/<article>/<body> 的内容。可通过 selector 参数精确提取某个元素内的文本，通过 max_chars 控制最大返回长度。",
+      parameters: {
+        type: "object",
+        properties: {
+          mode: {
+            type: "string",
+            description: "提取模式：text（正文文本，默认）、full_html（完整HTML源码）、structured（按选择器提取结构化列表）",
+            enum: ["text", "full_html", "structured"]
+          },
+          selector: {
+            type: "string",
+            description: "CSS 选择器。在 text/structured 模式下，只提取该选择器匹配元素的内容。不传则提取整个页面正文。"
+          },
+          max_chars: {
+            type: "number",
+            description: "最大返回字符数，默认 8000。超出部分会被截断并附加提示。"
+          }
+        },
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "take_selection",
+      description:
+        "获取用户在当前页面中选中的文本。返回选中的文本内容、长度，以及选中文本前后的上下文（各约50字符）。如果用户没有选中任何文本，返回 selected: false。",
+      parameters: {
+        type: "object",
+        properties: {},
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "inspect_element",
+      description:
+        "探查页面 DOM 元素的结构和属性。传入 CSS 选择器可精确探查某个元素；不传则智能探测页面中最可能的交互区域（表单、对话框、导航等）。返回：标签名、属性（id/class/href/src/name/type/placeholder/label/value）、交互性（是否可见/可点击/可聚焦/可编辑）、候选 CSS 选择器（可用于 fill_form/click_element）、递归子元素树（depth 控制深度）。在点击按钮、填充表单、提取数据之前，优先使用此工具了解 DOM 结构。",
+      parameters: {
+        type: "object",
+        properties: {
+          selector: {
+            type: "string",
+            description: "CSS 选择器，用于定位要探查的元素。不传则自动探测页面中最可能的交互区域。"
+          },
+          depth: {
+            type: "number",
+            description: "递归探查子元素的深度，默认 2。设为 0 则只返回目标元素本身。"
+          },
+          include_children: {
+            type: "boolean",
+            description: "是否包含子元素信息，默认 true。设为 false 则只返回目标元素属性。"
+          }
+        },
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "fill_form",
+      description:
+        "在当前浏览器页面中自动填充表单字段。传入字段列表 [{selector, value}, ...]，每个 selector 为 CSS 选择器，value 为要填充的值。会触发 input/change/focus/blur 事件以确保 React/Vue 等框架感知变化。返回每个字段的填充结果。",
+      parameters: {
+        type: "object",
+        properties: {
+          fields: {
+            type: "array",
+            description: "要填充的字段列表",
+            items: {
+              type: "object",
+              properties: {
+                selector: {
+                  type: "string",
+                  description: "CSS 选择器，用于定位表单元素"
+                },
+                value: {
+                  type: "string",
+                  description: "要填充的值"
+                }
+              },
+              required: ["selector", "value"],
+              additionalProperties: false
+            }
+          }
+        },
+        required: ["fields"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "click_element",
+      description:
+        "在当前浏览器页面中模拟点击指定元素。会先尝试滚动到该元素可见区域。如果元素被禁用（disabled），返回失败。返回被点击元素的标签名和文本摘要。",
+      parameters: {
+        type: "object",
+        properties: {
+          selector: {
+            type: "string",
+            description: "CSS 选择器，用于定位要点击的元素"
+          }
+        },
+        required: ["selector"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "screenshot",
+      description:
+        "对当前浏览器页面可见区域截图。返回截图信息（data URL 前缀、格式、大小）。若模型支持 vision 能力，可通过返回的 data URL 查看截图内容。支持 jpeg（默认）和 png 格式。",
+      parameters: {
+        type: "object",
+        properties: {
+          format: {
+            type: "string",
+            description: "截图格式，jpeg 或 png。默认 jpeg。",
+            enum: ["jpeg", "png"]
+          },
+          quality: {
+            type: "number",
+            description: "JPEG 质量，0-100，默认 80。PNG 格式忽略此参数。"
+          }
+        },
+        additionalProperties: false
+      }
+    }
+  },
 ]

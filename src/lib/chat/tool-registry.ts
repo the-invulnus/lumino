@@ -11,6 +11,14 @@ import {
   handleExport
 } from "./tools/fs-tools"
 import { handleCurrentPage, handleTabs } from "./tools/system-tools"
+import {
+  handleGetPageContent,
+  handleTakeSelection,
+  handleInspectElement,
+  handleFillForm,
+  handleClickElement,
+  handleScreenshot
+} from "./tools/browser-tools"
 
 let registered = false
 
@@ -35,4 +43,12 @@ export function registerAllTools(): void {
   // 浏览器系统工具
   registerTool("current_page", handleCurrentPage)
   registerTool("tabs", handleTabs)
+
+  // 浏览器交互工具
+  registerTool("get_page_content", handleGetPageContent)
+  registerTool("take_selection", handleTakeSelection)
+  registerTool("inspect_element", handleInspectElement)
+  registerTool("fill_form", handleFillForm)
+  registerTool("click_element", handleClickElement)
+  registerTool("screenshot", handleScreenshot)
 }

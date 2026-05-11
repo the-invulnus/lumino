@@ -1508,3 +1508,28 @@ textarea {
   border-radius: 10px;
   padding: 8px 12px;
 }
+
+/* ── 工具调用错误状态 ── */
+.lumi-tool-call__error-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--lumi-danger-bg, #fce8e8);
+  color: var(--lumi-danger-text, #e5484d);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.lumi-tool-call__result--error {
+  color: var(--lumi-danger-text, #e5484d) !important;
+  background: var(--lumi-danger-bg, #fef2f2);
+  border: 1px solid var(--lumi-danger-border, #fecaca);
+  border-radius: 6px;
+  padding: 8px 10px;
+}

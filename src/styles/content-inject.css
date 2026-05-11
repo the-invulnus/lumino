@@ -11,7 +11,7 @@
   bottom: 24px;
   box-shadow: 0 18px 40px -10px rgba(0, 0, 0, 0.25);
   box-sizing: border-box;
-  cursor: pointer;
+  cursor: grab;
   display: flex;
   height: 56px;
   justify-content: center;
@@ -23,6 +23,8 @@
     transform 520ms var(--lumi-ease-spring);
   width: 56px;
   z-index: 2147483647;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 #lumino-floating-button.lumino-fab:hover {
@@ -31,6 +33,7 @@
 }
 
 #lumino-floating-button.lumino-fab:active {
+  cursor: grabbing;
   transform: scale(0.95) translateY(0);
 }
 

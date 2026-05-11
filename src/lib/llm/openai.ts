@@ -53,14 +53,25 @@ async function postChatCompletion(
   options: ChatCompletionOptions
 ) {
   const fetcher = options.fetcher ?? fetch
-  const response = await fetcher(buildChatCompletionUrl(settings.baseUrl), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${settings.apiKey}`
-    },
-    body: JSON.stringify(body)
-  })
+  const controller = options.signal ? undefined : new AbortController()
+  const signal = options.signal ?? controller?.signal
+
+  // 默认 120 秒超时
+  const timeoutMs = options.timeoutMs ?? 120_000
+  const timeoutId = setTimeout(() => {
+    controller?.abort()
+  }, timeoutMs)
+
+  try {
+    const response = await fetcher(buildChatCompletionUrl(settings.baseUrl), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${settings.apiKey}`
+      },
+      body: JSON.stringify(body),
+      signal
+    })
 
   if (!response.ok) {
     const data = await parseJson<OpenAiErrorResponse>(response)
@@ -71,7 +82,10 @@ async function postChatCompletion(
     )
   }
 
-  return parseJson<OpenAiChatCompletionResponse>(response)
+    return parseJson<OpenAiChatCompletionResponse>(response)
+  } finally {
+    clearTimeout(timeoutId)
+  }
 }
 
 export type ChatCompletionTurnResult = {

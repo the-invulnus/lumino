@@ -13,4 +13,6 @@ export type Fetcher = typeof fetch
 
 export type ChatCompletionOptions = {
   fetcher?: Fetcher
+  signal?: AbortSignal
+  timeoutMs?: number
 }
