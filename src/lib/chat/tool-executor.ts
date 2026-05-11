@@ -1,4 +1,5 @@
 import type { OpenAiToolCall } from "./openai-messages"
+import { maybeEvictToolResult } from "./tool-eviction"
 
 type ToolHandler = (args: Record<string, unknown>) => Promise<string> | string
 
@@ -24,7 +25,10 @@ export async function executeToolCall(
 
   try {
     const args = JSON.parse(call.function.arguments || "{}") as Record<string, unknown>
-    return await handler(args)
+    const rawResult = await handler(args)
+
+    // 驱逐判定：大工具结果自动写入 OPFS，用预览替换返回内容
+    return await maybeEvictToolResult(rawResult, call.id, name)
   } catch (error) {
     return JSON.stringify({
       error: "tool_execution_failed",

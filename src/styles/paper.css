@@ -966,7 +966,7 @@ textarea {
 .paper-chat-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
   max-width: 100%;
 }
 
@@ -1233,4 +1233,256 @@ textarea {
 
 #lumino-ghost-overlay {
   all: initial;
+}
+
+/* ============================================================
+   助手文本 Markdown 优化 & 可折叠工具调用
+   ============================================================ */
+
+/* —— 助理气泡：无背景无边框，与页面融合 —— */
+.paper-chat-row--assistant .paper-chat-bubble--assistant {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  width: 100%;
+}
+
+/* —— 助手 Markdown 正文排版 —— */
+.paper-chat-row--assistant .paper-chat-md {
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+.paper-chat-row--assistant .paper-chat-md > * { margin: 0; }
+.paper-chat-row--assistant .paper-chat-md > * + * { margin-top: 0.5em; }
+.paper-chat-row--assistant .paper-chat-md ul,
+.paper-chat-row--assistant .paper-chat-md ol { padding-left: 1.25em; }
+.paper-chat-row--assistant .paper-chat-md li > p { margin: 0; }
+.paper-chat-row--assistant .paper-chat-md pre {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--lumi-cream-deep);
+  overflow-x: auto;
+  line-height: 1.45;
+}
+.paper-chat-row--assistant .paper-chat-md pre code {
+  font-size: 0.92em; background: none; padding: 0;
+}
+.paper-chat-row--assistant .paper-chat-md code {
+  font-family: var(--lumi-mono);
+  font-size: 0.92em;
+  background: var(--lumi-cream-deep);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.paper-chat-row--assistant .paper-chat-md blockquote {
+  border-left: 3px solid var(--lumi-accent-b);
+  margin: 0; padding: 0 10px;
+  color: var(--lumi-ink-soft);
+}
+.paper-chat-row--assistant .paper-chat-md a { color: var(--lumi-accent-b); }
+.paper-chat-row--assistant .paper-chat-md table {
+  border-collapse: collapse; width: 100%;
+}
+.paper-chat-row--assistant .paper-chat-md th,
+.paper-chat-row--assistant .paper-chat-md td {
+  border: 1px solid var(--lumi-ring-strong); padding: 5px 8px; text-align: left;
+}
+.paper-chat-row--assistant .paper-chat-md th {
+  background: var(--lumi-cream-deep); font-weight: 600;
+}
+
+/* —— 有序序列栈（文本 + 工具交错） —— */
+.lumi-sequence-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.lumi-sequence-stack > * {
+  margin: 0;
+}
+
+/* —— 工具调用容器（可折叠） —— */
+.lumi-tool-call {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+  border-radius: var(--lumi-radius-field);
+}
+
+.lumi-tool-call__trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border-radius: var(--lumi-radius-field);
+  background: transparent;
+  border: none;
+  color: var(--lumi-ink-soft);
+  font-size: 12px;
+  font-family: var(--lumi-font);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: color 180ms var(--lumi-ease-spring);
+}
+
+.lumi-tool-call__trigger:hover {
+  color: var(--lumi-ink);
+}
+
+.lumi-tool-call__trigger--expanded {
+  color: var(--lumi-ink);
+}
+
+.lumi-tool-call__trigger--disabled {
+  cursor: default;
+}
+
+.lumi-tool-call__trigger--disabled:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--lumi-ink-soft);
+}
+
+.lumi-tool-call__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  color: var(--lumi-ink-faint);
+}
+.lumi-tool-call__icon--ok { color: #22c55e; }
+.lumi-tool-call__icon--running { color: var(--lumi-accent-a); }
+.lumi-tool-call__icon--error { color: var(--lumi-danger-text); }
+
+.lumi-tool-call__name {
+  font-family: var(--lumi-mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.55;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lumi-tool-call__running-label {
+  font-family: var(--lumi-font);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--lumi-accent-a);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.lumi-tool-call__chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  color: var(--lumi-ink-faint);
+  transition: transform 180ms var(--lumi-ease-spring);
+}
+
+.lumi-tool-call__chevron--open {
+  transform: rotate(90deg);
+}
+
+.lumi-tool-call__detail {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--lumi-cream-deep);
+  border: 1px solid var(--lumi-ring-strong);
+  border-radius: var(--lumi-radius-field);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lumi-tool-call__detail--open {
+  display: flex;
+}
+
+.lumi-tool-call__detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lumi-tool-call__detail-label {
+  font-family: var(--lumi-font);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--lumi-ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lumi-tool-call__detail pre {
+  font-family: var(--lumi-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--lumi-ink);
+  background: var(--lumi-surface-solid);
+  border: 1px solid var(--lumi-ring);
+  border-radius: 10px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  max-height: 160px;
+}
+
+/* —— 加载技能行 —— */
+.lumi-tool-call--skill .lumi-tool-call__trigger {
+  cursor: default;
+}
+.lumi-tool-call--skill .lumi-tool-call__trigger:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--lumi-ink-soft);
+}
+
+/* —— 流式指示点 —— */
+@keyframes lumi-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.lumi-streaming-dots {
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.lumi-streaming-dots__dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--lumi-accent-a);
+  animation: lumi-dot-pulse 1.3s var(--lumi-ease-spring) infinite;
+}
+.lumi-streaming-dots__dot:nth-child(2) { animation-delay: 0.18s; }
+.lumi-streaming-dots__dot:nth-child(3) { animation-delay: 0.36s; }
+
+/* —— 图标尺寸 —— */
+.lumi-icon-sm { width: 14px; height: 14px; }
+.lumi-icon-xs { width: 11px; height: 11px; }
+
+/* —— 错误消息 —— */
+.lumi-chat-error {
+  font-size: 13px;
+  color: var(--lumi-danger-text);
+  background: var(--lumi-danger-bg);
+  border: 1px solid var(--lumi-danger-border);
+  border-radius: 10px;
+  padding: 8px 12px;
 }

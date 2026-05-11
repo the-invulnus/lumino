@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salt 前端对话样式参考</title>
+<!-- 引入 Space Grotesk + JetBrains Mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ===== 设计令牌 (Design Tokens) ===== */
+:root {
+  --bg: #12141a;
+  --bg-accent: #14161d;
+  --bg-elevated: #1a1d25;
+  --bg-hover: #262a35;
+  --card: #181b22;
+  --card-foreground: #f4f4f5;
+  --card-highlight: rgba(255,255,255,0.05);
+  --panel: #12141a;
+  --panel-strong: #1a1d25;
+  --panel-hover: #262a35;
+  --chrome: rgba(18,20,26,0.95);
+
+  --text: #e4e4e7;
+  --text-strong: #fafafa;
+  --chat-text: #e4e4e7;
+  --muted: #71717a;
+  --muted-strong: #52525b;
+
+  --border: #27272a;
+  --border-strong: #3f3f46;
+
+  --accent: #ff5c5c;
+  --accent-hover: #ff7070;
+  --accent-subtle: rgba(255,92,92,0.15);
+  --accent-glow: rgba(255,92,92,0.25);
+  --accent-2: #14b8a6;
+  --accent-2-muted: rgba(20,184,166,0.7);
+  --accent-2-subtle: rgba(20,184,166,0.15);
+
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --warn-muted: rgba(245,158,11,0.75);
+  --warn-subtle: rgba(245,158,11,0.12);
+  --danger: #ef4444;
+  --danger-subtle: rgba(239,68,68,0.12);
+  --info: #3b82f6;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-body: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.03);
+  --shadow-lg: 0 12px 28px rgba(0,0,0,0.35);
+
+  --ease-out: cubic-bezier(0.16,1,0.3,1);
+  --ease-in-out: cubic-bezier(0.4,0,0.2,1);
+  --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 40px 24px;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 14px/1.55 var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+h2 {
+  font-size: 20px; font-weight: 600;
+  color: var(--text-strong); margin: 32px 0 12px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+h2:first-child { margin-top: 0; }
+h3 {
+  font-size: 15px; font-weight: 600;
+  color: var(--text-strong); margin: 20px 0 8px;
+}
+.wrapper { max-width: 720px; margin: 0 auto; }
+.note {
+  font-size: 12px; color: var(--muted);
+  margin-bottom: 12px;
+}
+
+/* ===== 助手 Markdown 正文 ===== */
+.chat-msg-md {
+  line-height: 1.5;
+  color: var(--chat-text);
+  word-break: break-word;
+}
+.chat-msg-md > * { margin: 0; }
+.chat-msg-md > * + * { margin-top: 0.5em; }
+.chat-msg-md ul, .chat-msg-md ol { padding-left: 1.25em; }
+.chat-msg-md li > p { margin: 0; }
+.chat-msg-md pre {
+  padding: 0.55em 0.65em;
+  border-radius: var(--radius-sm);
+  background: var(--bg-accent);
+  overflow-x: auto;
+  line-height: 1.45;
+}
+.chat-msg-md pre code {
+  font-size: 0.92em; background: none; padding: 0;
+}
+.chat-msg-md code {
+  font-family: var(--mono);
+  font-size: 0.92em;
+  background: var(--bg-accent);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.chat-msg-md blockquote {
+  border-left: 3px solid var(--accent-2);
+  margin: 0; padding: 0 12px;
+  color: var(--muted);
+}
+.chat-msg-md a { color: var(--accent-2); }
+.chat-msg-md table { border-collapse: collapse; width: 100%; }
+.chat-msg-md th, .chat-msg-md td {
+  border: 1px solid var(--border); padding: 6px 10px; text-align: left;
+}
+.chat-msg-md th { background: var(--bg-accent); font-weight: 600; }
+
+/* ===== 气泡容器 ===== */
+.chat-msg-bubble {
+  margin-bottom: 0;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+/* 助手气泡：无背景无边框，与页面融合 */
+.chat-msg-bubble--assistant {
+  background-color: var(--bg);
+  border: none;
+  box-shadow: none;
+}
+/* 用户气泡：卡片感 */
+.chat-msg-bubble--user {
+  background: linear-gradient(165deg, var(--bg-elevated) 0%, var(--card) 55%, var(--card) 100%);
+  border: 1px solid var(--border);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    inset 0 -1px 0 rgba(0,0,0,0.05),
+    0 2px 12px rgba(0,0,0,0.1);
+}
+/* 流式气泡 */
+.chat-msg-bubble--stream {
+  background-color: var(--bg-accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 24px var(--accent-glow);
+}
+.chat-msg-bubble--assistant.chat-msg-bubble--stream {
+  background-color: var(--bg);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* ===== 有序序列栈（文本与工具交错） ===== */
+.chat-sequence-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ===== 工具调用 ===== */
+.chat-tool-call {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 100%;
+  min-width: 0;
+}
+.chat-tool-call__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 0; margin: 0;
+  border: none; border-radius: 0;
+  background: transparent !important;
+  font: inherit; text-align: left;
+  color: var(--muted);
+  box-shadow: none;
+  cursor: pointer;
+  appearance: none;
+}
+.chat-tool-call__trigger:disabled {
+  cursor: default;
+}
+
+/* 图标 */
+.chat-tool-call__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  color: color-mix(in srgb, var(--chat-text) 65%, var(--muted) 30%);
+  opacity: 1;
+}
+.chat-tool-call__icon--running {
+  color: var(--warn-muted);
+}
+
+/* 工具名 */
+.chat-tool-call__name {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--chat-text) 65%, var(--muted) 30%);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* chevron */
+.chat-tool-call__chevron {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: color-mix(in srgb, var(--chat-text) 65%, var(--muted) 30%);
+  opacity: 1;
+}
+
+/* running 标签 */
+.chat-tool-call__running-label {
+  font-size: 10px;
+  color: var(--warn-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* 展开详情区 */
+.chat-tool-call__detail {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 8px;
+  background-color: var(--bg-accent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  overflow: hidden;
+}
+.chat-tool-call__detail-section {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  padding: 8px 12px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.chat-tool-call__detail-section + .chat-tool-call__detail-section {
+  border-top: 1px solid var(--border);
+}
+.chat-tool-call__detail-section pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.chat-tool-call__detail-section--out pre {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.chat-tool-call__detail-label {
+  margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ===== Subagent 面板 ===== */
+/* 面板 header (单子) */
+  border-bottom-color: transparent;
+}
+
+/* 面板 body */
+
+/* 多子顶栏 */
+  border-bottom-color: transparent;
+}
+
+
+/* ===== 加载动画 ===== */
+.loading-dots { display: flex; gap: 4px; }
+.loading-dots span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.streaming-cursor {
+  display: inline-block;
+  width: 8px; height: 16px;
+  background: var(--accent);
+  margin-left: 2px;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* 错误条 */
+.chat-error {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: var(--danger-subtle);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-size: 14px;
+}
+
+/* 时间脚 */
+.chat-msg-time-foot {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.chat-msg-time-foot--assistant { text-align: left; }
+.chat-msg-time-foot--user { text-align: right; }
+
+/* 辅助：颜色说明标签 */
+.color-swatch {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border-radius: 3px; vertical-align: middle;
+  margin-right: 4px; border: 1px solid var(--border);
+}
+</style>
+
+<!-- 内联 SVG 图标 -->
+<svg display="none" aria-hidden="true">
+  <symbol id="icon-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+  </symbol>
+  <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <polyline points="12 6 12 12 16 14"/>
+  </symbol>
+  <symbol id="icon-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/>
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+    <line x1="12" y1="22.08" x2="12" y2="12"/>
+  </symbol>
+  <symbol id="icon-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="6 9 12 15 18 9"/>
+  </symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="9 18 15 12 9 6"/>
+  </symbol>
+</svg>
+
+</head>
+<body>
+<div class="wrapper">
+
+<!-- ==================== 1. 助手 Markdown 正文 ==================== -->
+<h2>1. 助手 Markdown 正文</h2>
+<p class="note">组件：<code>MessageRenderer</code> / <code>chat-msg-md</code>。使用 <code>react-markdown</code> + <code>remark-gfm</code> 渲染。</p>
+
+<div class="chat-msg-md">
+  <h3>标题示例</h3>
+  <p>这是一段普通文本，包含 <strong>粗体</strong> 和 <em>斜体</em>，还有 <code>行内代码</code> 和 <a href="#">链接</a>。</p>
+  <ul>
+    <li>无序列表项 1</li>
+    <li>无序列表项 2，可以包含 <code>行内等宽</code></li>
+  </ul>
+  <ol>
+    <li>有序列表项 1</li>
+    <li>有序列表项 2</li>
+  </ol>
+  <blockquote>
+    <p>这是一段引用文本。通常用于标注参考文献或强调要点。</p>
+  </blockquote>
+  <pre><code>// 代码块示例
+function greet(name: string): string {
+  return `Hello, ${name}!`;
+}</code></pre>
+  <table>
+    <thead><tr><th>列 A</th><th>列 B</th></tr></thead>
+    <tbody>
+      <tr><td>单元格 1</td><td>单元格 2</td></tr>
+      <tr><td>单元格 3</td><td>单元格 4</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ==================== 2. 助手气泡 ==================== -->
+<h2>2. 消息气泡</h2>
+<p class="note">组件：<code>ChatPage</code> 消息行 → <code>chat-msg-bubble</code>。背景融合（无边框无背景），仅在 <code>max-width: 100%</code> 的前提下 <code>width: fit-content</code> 贴文字。</p>
+
+<h3>助手气泡（默认）</h3>
+<div class="chat-msg-bubble chat-msg-bubble--assistant">
+  <div class="chat-msg-md">
+    <p>助手消息：与页面背景融为一体，无卡片底、无边框、无阴影。</p>
+  </div>
+</div>
+
+<h3>用户气泡</h3>
+<div class="chat-msg-bubble chat-msg-bubble--user" style="margin-left: auto;">
+  <p style="margin: 0; color: var(--chat-text);">用户消息：渐变卡片底 + 嵌套阴影，带微弱内高光。</p>
+</div>
+
+<h3>流式气泡（助手）</h3>
+<div class="chat-msg-bubble chat-msg-bubble--assistant chat-msg-bubble--stream">
+  <div class="chat-msg-md">
+    <p>流式输出中：背景保持与页面主色一致，<span class="streaming-cursor"></span></p>
+  </div>
+</div>
+
+<h3>加载指示器</h3>
+<div class="loading-indicator" style="display:flex;align-items:center;gap:8px;padding:12px;color:var(--muted);font-size:14px;">
+  <span>Thinking</span>
+  <div class="loading-dots">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+<!-- ==================== 3. 工具调用 ==================== -->
+<h2>3. 工具调用</h2>
+<p class="note">组件：<code>ToolCallDisplay</code> / <code>chat-tool-call</code>。默认折叠，点击展开参数/返回值。</p>
+
+<h3>3a. 已完成 — 普通工具（可展开）</h3>
+<div class="chat-tool-call">
+  <button type="button" class="chat-tool-call__trigger">
+    <span class="chat-tool-call__icon">
+      <svg width="14" height="14"><use href="#icon-wrench"/></svg>
+    </span>
+    <span class="chat-tool-call__name">execute_command</span>
+    <span class="chat-tool-call__chevron">
+      <svg width="12" height="12"><use href="#icon-chevron-right"/></svg>
+    </span>
+  </button>
+</div>
+
+<h3>3b. 已完成 — 普通工具（已展开）</h3>
+<div class="chat-tool-call">
+  <button type="button" class="chat-tool-call__trigger">
+    <span class="chat-tool-call__icon">
+      <svg width="14" height="14"><use href="#icon-wrench"/></svg>
+    </span>
+    <span class="chat-tool-call__name">read_file</span>
+    <span class="chat-tool-call__chevron">
+      <svg width="12" height="12"><use href="#icon-chevron-down"/></svg>
+    </span>
+  </button>
+  <div class="chat-tool-call__detail">
+    <div class="chat-tool-call__detail-section">
+      <div class="chat-tool-call__detail-label">Arguments:</div>
+      <pre>{
+  "file_path": "/src/components/Header.tsx",
+  "limit": 100
+}</pre>
+    </div>
+    <div class="chat-tool-call__detail-section chat-tool-call__detail-section--out">
+      <div class="chat-tool-call__detail-label">Result:</div>
+      <pre>import React from 'react';
+
+export const Header = () => {
+  return <header>...</header>;
+};</pre>
+    </div>
+  </div>
+</div>
+
+<h3>3c. 运行中</h3>
+<div class="chat-tool-call">
+  <button type="button" class="chat-tool-call__trigger" disabled>
+    <span class="chat-tool-call__icon chat-tool-call__icon--running">
+      <svg width="14" height="14"><use href="#icon-clock"/></svg>
+    </span>
+    <span class="chat-tool-call__name">execute_command</span>
+    <span class="chat-tool-call__running-label">running</span>
+  </button>
+</div>
+
+<h3>3d. 加载技能行（不可展开）</h3>
+<p class="note">当 <code>read_file</code> 且 <code>file_path</code> 包含 <code>SKILL.md</code> 时，显示为「加载技能」行，图标切换为 PackageIcon。</p>
+<div class="chat-tool-call">
+  <button type="button" class="chat-tool-call__trigger" disabled>
+    <span class="chat-tool-call__icon">
+      <svg width="14" height="14"><use href="#icon-package"/></svg>
+    </span>
+    <span class="chat-tool-call__name">加载技能：imagegen</span>
+  </button>
+</div>
+
+<!-- ==================== 4. Sequence Stack ==================== -->
+<h2>4. 有序序列栈（文本 + 工具交错）</h2>
+<p class="note">组件：<code>chat-sequence-stack</code>。当助手消息包含交错出现的文本事件和工具调用事件时，以纵向 flex + gap 展现。</p>
+
+<div class="chat-sequence-stack">
+  <!-- 第一段文本 -->
+  <div class="chat-msg-md">
+    <p>我先看一下项目结构。</p>
+  </div>
+  <!-- 工具调用 -->
+  <div class="chat-tool-call">
+    <button type="button" class="chat-tool-call__trigger">
+      <span class="chat-tool-call__icon">
+        <svg width="14" height="14"><use href="#icon-wrench"/></svg>
+      </span>
+      <span class="chat-tool-call__name">list_files</span>
+      <span class="chat-tool-call__chevron">
+        <svg width="12" height="12"><use href="#icon-chevron-right"/></svg>
+      </span>
+    </button>
+  </div>
+  <!-- 第二段文本 -->
+  <div class="chat-msg-md">
+    <p>目录结构是这样的。现在添加 <code>sort</code> 功能。</p>
+  </div>
+  <!-- 又一个工具调用 -->
+  <div class="chat-tool-call">
+    <button type="button" class="chat-tool-call__trigger">
+      <span class="chat-tool-call__icon">
+        <svg width="14" height="14"><use href="#icon-wrench"/></svg>
+      </span>
+      <span class="chat-tool-call__name">apply_patch</span>
+      <span class="chat-tool-call__chevron">
+        <svg width="12" height="12"><use href="#icon-chevron-right"/></svg>
+      </span>
+    </button>
+  </div>
+</div>
+
+<!-- ==================== 6. 错误消息 ==================== -->
+<h2>6. 错误消息</h2>
+<div class="chat-error">
+  ⚠️ 请求超时，请稍后重试。
+</div>
+
+<!-- ==================== 7. 时间脚标 ==================== -->
+<h2>7. 时间脚标</h2>
+<div class="chat-msg-time-foot chat-msg-time-foot--assistant">10:42 AM</div>
+<div class="chat-msg-time-foot chat-msg-time-foot--user" style="text-align:right;">10:42 AM</div>
+
+<!-- ==================== 8. 设计令牌速查 ==================== -->
+<h2>8. 设计令牌速查</h2>
+<p class="note">定义在 <code>globals.css</code> 的 <code>:root</code> 中，支持 <code>[data-theme="dark"]</code>（默认）和 <code>[data-theme="light"]</code>。</p>
+
+<table style="width:100%; font-size:13px;">
+  <thead><tr><th>变量</th><th>用途</th><th>Dark 值</th></tr></thead>
+  <tbody>
+    <tr><td><code>--bg</code></td><td>页面主背景</td><td>#12141a</td></tr>
+    <tr><td><code>--card</code></td><td>卡片/面板背景</td><td>#181b22</td></tr>
+    <tr><td><code>--bg-elevated</code></td><td>抬升背景</td><td>#1a1d25</td></tr>
+    <tr><td><code>--chat-text</code></td><td>对话正文色</td><td>#e4e4e7</td></tr>
+    <tr><td><code>--muted</code></td><td>弱化文字</td><td>#71717a</td></tr>
+    <tr><td><code>--accent</code></td><td>品牌强调色</td><td>#ff5c5c</td></tr>
+    <tr><td><code>--accent-2</code></td><td>辅助强调色</td><td>#14b8a6</td></tr>
+    <tr><td><code>--border</code></td><td>边框色</td><td>#27272a</td></tr>
+    <tr><td><code>--font-body</code></td><td>正文字体</td><td>Space Grotesk</td></tr>
+    <tr><td><code>--mono</code></td><td>等宽字体</td><td>JetBrains Mono</td></tr>
+    <tr><td><code>--radius-md</code></td><td>通用圆角</td><td>8px</td></tr>
+    <tr><td><code>--radius-lg</code></td><td>卡片圆角</td><td>12px</td></tr>
+  </tbody>
+</table>
+
+</div>
+</body>
+</html>

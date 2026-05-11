@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useCallback,
   useEffect,
   useRef,
@@ -87,6 +88,113 @@ function threadLabel(record: ChatThreadRecord): string {
   )
 }
 
+
+function LumiToolCall({
+  call,
+  result
+}: {
+  call: { id: string; type: "function"; function: { name: string; arguments: string } }
+  result: string | null
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const hasResult = result !== null
+  const isReadFileSkill =
+    call.function.name === "read_file" &&
+    (call.function.arguments || "").includes("SKILL.md")
+  const isRunning = !hasResult
+
+  let argsDisplay = call.function.arguments
+  try {
+    argsDisplay = JSON.stringify(JSON.parse(call.function.arguments), null, 2)
+  } catch { /* keep raw */ }
+
+  const handleToggle = () => {
+    if (isReadFileSkill || isRunning) return
+    setExpanded((prev) => !prev)
+  }
+
+  let skillName = ""
+  if (isReadFileSkill) {
+    const nm = call.function.arguments.match(/"name"\\s*:\\s*"([^"]+)"/)
+    const fp = call.function.arguments.match(/"file_path"\\s*:\\s*"([^"]+)"/)
+    skillName = nm?.[1] || fp?.[1] || "skill"
+  }
+
+  const label = isReadFileSkill
+    ? `加载技能：${skillName}`
+    : call.function.name
+
+  return (
+    <div className={`lumi-tool-call${isReadFileSkill ? " lumi-tool-call--skill" : ""}`}>
+      <button
+        type="button"
+        className={
+          "lumi-tool-call__trigger" +
+          (expanded ? " lumi-tool-call__trigger--expanded" : "") +
+          (isReadFileSkill || isRunning ? " lumi-tool-call__trigger--disabled" : "")
+        }
+        disabled={isReadFileSkill || isRunning}
+        onClick={handleToggle}
+      >
+        <span
+          className={
+            "lumi-tool-call__icon" +
+            (hasResult
+              ? " lumi-tool-call__icon--ok"
+              : isRunning
+                ? " lumi-tool-call__icon--running"
+                : "")
+          }
+        >
+          {isReadFileSkill ? (
+            <svg className="lumi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16.5 9.4 7.55 4.24a1 1 0 0 0-1.45.9v13.72a1 1 0 0 0 1.45.9L16.5 14.6a1 1 0 0 0 0-1.72Z" />
+              <line x1="3" x2="3" y1="22" y2="2" />
+              <line x1="21" x2="21" y1="22" y2="2" />
+            </svg>
+          ) : isRunning ? (
+            <svg className="lumi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          ) : hasResult ? (
+            <svg className="lumi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
+          ) : (
+            <svg className="lumi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
+          )}
+        </span>
+        <span className="lumi-tool-call__name">{label}</span>
+        {isRunning && (
+          <span className="lumi-tool-call__running-label">running</span>
+        )}
+        {!isReadFileSkill && !isRunning && (
+          <span className={`lumi-tool-call__chevron${expanded ? " lumi-tool-call__chevron--open" : ""}`}>
+            <svg className="lumi-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </span>
+        )}
+      </button>
+      {hasResult && (
+        <div className={`lumi-tool-call__detail${expanded ? " lumi-tool-call__detail--open" : ""}`}>
+          <div className="lumi-tool-call__detail-section">
+            <div className="lumi-tool-call__detail-label">Arguments:</div>
+            <pre>{argsDisplay}</pre>
+          </div>
+          <div className="lumi-tool-call__detail-section">
+            <div className="lumi-tool-call__detail-label">Result:</div>
+            <pre>{result}</pre>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ChatMessageBlock({
   message,
   allMessages,
@@ -108,90 +216,85 @@ function ChatMessageBlock({
 
   if (message.role === "assistant") {
     const text = formatMessagePreview(message)
-    const tools = message.tool_calls
+    const toolCalls = message.tool_calls
+
+    // 收集后续 tool results
+    const toolResults: Record<string, string> = {}
+    for (let j = index + 1; j < allMessages.length; j++) {
+      const next = allMessages[j]
+      if (next.role === "tool" && next.tool_call_id) {
+        toolResults[next.tool_call_id] = next.content ?? ""
+      } else if (next.role !== "tool") {
+        break
+      }
+    }
+
+    const hasContent = !!text
+    const hasTools = toolCalls && toolCalls.length > 0
+    const paragraphs = hasContent ? text.split(/\n{2,}/) : []
 
     return (
       <div className="paper-chat-row paper-chat-row--assistant">
         <div className="paper-chat-bubble paper-chat-bubble--assistant">
-          {text ? <div className="paper-chat-md">{text}</div> : null}
-          {tools?.length ? (
-            <div className="paper-chat-tools">
-              <span className="paper-chat-meta">工具</span>
-              <ul>
-                {tools.map((call) => (
-                  <li key={call.id}>
-                    <code>{call.function.name}</code>
-                    <pre className="paper-chat-json">{call.function.arguments}</pre>
-                  </li>
-                ))}
-              </ul>
+          {hasTools ? (
+            <div className="lumi-sequence-stack">
+              {/* 文本段落与工具调用交错 */}
+              {toolCalls!.map((call, i) => (
+                <Fragment key={call.id}>
+                  {i < paragraphs.length ? (
+                    <div className="paper-chat-md">{paragraphs[i]}</div>
+                  ) : null}
+                  <LumiToolCall
+                    call={call}
+                    result={toolResults[call.id] ?? null}
+                  />
+                </Fragment>
+              ))}
+              {/* 剩余文本段落 */}
+              {paragraphs.slice(toolCalls!.length).map((part, i) => (
+                <div className="paper-chat-md" key={`md-${i}`}>{part}</div>
+              ))}
             </div>
-          ) : null}
+          ) : (
+            <div className="paper-chat-md">{text}</div>
+          )}
         </div>
       </div>
     )
   }
 
+  // 独立 tool 结果：避免与 assistant 中已展示的重复
   if (message.role === "tool") {
     const id = message.tool_call_id
 
-    // 向前查找对应的 assistant tool_call，确定 tool name
+    let handled = false
+    for (let i = index - 1; i >= 0; i--) {
+      const prev = allMessages[i]
+      if (prev.role === "assistant" && prev.tool_calls) {
+        if (prev.tool_calls.some((tc) => tc.id === id)) {
+          handled = true
+        }
+        break
+      }
+      if (prev.role !== "tool") break
+    }
+    if (handled) return null
+
     let toolName = ""
-    let toolArgs: Record<string, unknown> = {}
     for (let i = index - 1; i >= 0; i--) {
       const prev = allMessages[i]
       if (prev.role === "assistant" && prev.tool_calls) {
         const match = prev.tool_calls.find((tc) => tc.id === id)
-        if (match) {
-          toolName = match.function.name
-          try { toolArgs = JSON.parse(match.function.arguments || "{}") } catch { /* ignore */ }
-          break
-        }
+        if (match) { toolName = match.function.name; break }
       }
-    }
-
-    // 解析 tool 执行结果中的 path
-    let resultPath = ""
-    try {
-      const parsed = JSON.parse(message.content ?? "{}")
-      if (parsed.path && typeof parsed.path === "string") {
-        resultPath = parsed.path
-      }
-    } catch { /* ignore */ }
-
-    const showDownload = toolName === "write" && resultPath
-
-    const handleDownload = async () => {
-      try {
-        const content = await readWorkspaceFile(resultPath)
-        if (content === null) return
-        const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = resultPath.split("/").pop() || "file.txt"
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        setTimeout(() => URL.revokeObjectURL(url), 60000)
-      } catch { /* ignore */ }
     }
 
     return (
       <div className="paper-chat-row paper-chat-row--tool">
         <div className="paper-chat-meta">
-          结果 · {id.length > 10 ? `${id.slice(0, 8)}…` : id}
+          结果 · {toolName || id.slice(0, 8)}
         </div>
         <pre className="paper-chat-tool-body">{message.content ?? ""}</pre>
-        {showDownload ? (
-          <button
-            className="paper-secondary-button paper-secondary-button--sm"
-            onClick={handleDownload}
-            type="button"
-            style={{ marginTop: 6 }}>
-            ⬇ 下载文件
-          </button>
-        ) : null}
       </div>
     )
   }
