@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumi Knows You — Logo 备选方案</title>
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&display=swap");
+
+  :root {
+    --bg: #fdfbf7;
+    --surface: #fffaf5;
+    --ink: #2d2622;
+    --ink-soft: rgba(45,38,34,0.62);
+    --ink-faint: rgba(45,38,34,0.38);
+    --ring: rgba(45,38,34,0.06);
+    --ring-strong: rgba(45,38,34,0.1);
+    --accent-a: #d4847a;
+    --accent-b: #a78bfa;
+    --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1614;
+      --surface: #221e1c;
+      --ink: #faf6f1;
+      --ink-soft: rgba(250,246,241,0.72);
+      --ink-faint: rgba(250,246,241,0.45);
+      --ring: rgba(255,245,235,0.08);
+      --ring-strong: rgba(255,245,235,0.14);
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Plus Jakarta Sans", "PingFang SC", sans-serif;
+    padding: 40px 24px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    color: var(--ink-soft);
+    font-size: 15px;
+    margin-bottom: 36px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--ring);
+    border-radius: 24px;
+    padding: 28px 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    transition: box-shadow 400ms var(--ease-spring);
+  }
+  .card:hover {
+    box-shadow: 0 18px 40px -14px rgba(45,38,34,0.1);
+  }
+
+  .logo-bg {
+    width: 56px;
+    height: 56px;
+    border-radius: 22px;
+    background: linear-gradient(145deg, var(--accent-a), var(--accent-b));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 14px 32px -20px rgba(45,38,34,0.06);
+  }
+
+  .logo-bg svg {
+    width: 44px;
+    height: 44px;
+    display: block;
+  }
+
+  .card h3 {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .card p {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  /* ===== 方案 1: 光茧 ===== */
+  @keyframes c1-cocoon { 0%,100%{transform:scale(0.82);opacity:0.55} 50%{transform:scale(1.1);opacity:1} }
+  @keyframes c1-halo { 0%,100%{transform:scale(0.85);opacity:0.08} 50%{transform:scale(1.12);opacity:0.55} }
+  @keyframes c1-spark { 0%,100%{transform:translate(0,0) scale(0.5);opacity:0.2} 33%{transform:translate(-2px,-3px) scale(1);opacity:0.7} 66%{transform:translate(2px,1px) scale(0.7);opacity:0.35} }
+  .c1-cocoon { transform-origin:24px 24px; animation:c1-cocoon 3.2s var(--ease-spring) infinite; }
+  .c1-halo-o { transform-origin:24px 24px; animation:c1-halo 3.2s var(--ease-spring) infinite; }
+  .c1-halo-m { transform-origin:24px 24px; animation:c1-halo 3.2s var(--ease-spring) infinite 0.5s; }
+  .c1-s1 { animation:c1-spark 4.8s var(--ease-spring) infinite; }
+  .c1-s2 { animation:c1-spark 4.5s var(--ease-spring) infinite 1.2s; }
+  .c1-s3 { animation:c1-spark 5.2s var(--ease-spring) infinite 0.6s; }
+
+  /* ===== 方案 2: 星轨 ===== */
+  @keyframes c2-orbit { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+  @keyframes c2-core { 0%,100%{transform:scale(0.88);opacity:0.65} 50%{transform:scale(1.06);opacity:1} }
+  @keyframes c2-dot { 0%,100%{opacity:0.25;r:1.5} 50%{opacity:0.9;r:2.8} }
+  .c2-orbit { transform-origin:24px 24px; animation:c2-orbit 8s linear infinite; }
+  .c2-orbit:nth-child(2) { animation-duration:11s; animation-direction:reverse; }
+  .c2-core { transform-origin:24px 24px; animation:c2-core 2.8s var(--ease-spring) infinite; }
+  .c2-d1 { animation:c2-dot 3.2s var(--ease-spring) infinite; }
+  .c2-d2 { animation:c2-dot 3.2s var(--ease-spring) infinite 0.8s; }
+  .c2-d3 { animation:c2-dot 3.2s var(--ease-spring) infinite 1.6s; }
+
+  /* ===== 方案 3: 水滴涟漪 ===== */
+  @keyframes c3-ripple1 { 0%{transform:scale(0.1);opacity:0.8} 100%{transform:scale(2.2);opacity:0} }
+  @keyframes c3-ripple2 { 0%{transform:scale(0.1);opacity:0.7} 100%{transform:scale(2.2);opacity:0} }
+  @keyframes c3-drop { 0%,100%{transform:translateY(0) scale(1);opacity:0.9} 50%{transform:translateY(-3px) scale(1.08);opacity:1} }
+  .c3-r1 { transform-origin:24px 24px; animation:c3-ripple1 2.4s var(--ease-spring) infinite; }
+  .c3-r2 { transform-origin:24px 24px; animation:c3-ripple2 2.4s var(--ease-spring) infinite 0.8s; }
+  .c3-r3 { transform-origin:24px 24px; animation:c3-ripple1 2.4s var(--ease-spring) infinite 1.6s; }
+  .c3-drop { transform-origin:24px 24px; animation:c3-drop 2.4s var(--ease-spring) infinite; }
+
+  /* ===== 方案 4: 蒲公英 ===== */
+  @keyframes c4-core { 0%,100%{opacity:0.7} 50%{opacity:1} }
+  @keyframes c4-seed1 { 0%{transform:translate(0,0) rotate(0deg);opacity:0} 20%{opacity:0.8} 100%{transform:translate(-14px,-18px) rotate(40deg);opacity:0} }
+  @keyframes c4-seed2 { 0%{transform:translate(0,0) rotate(0deg);opacity:0} 20%{opacity:0.75} 100%{transform:translate(16px,-12px) rotate(-30deg);opacity:0} }
+  @keyframes c4-seed3 { 0%{transform:translate(0,0) rotate(0deg);opacity:0} 20%{opacity:0.7} 100%{transform:translate(-8px,-22px) rotate(15deg);opacity:0} }
+  @keyframes c4-seed4 { 0%{transform:translate(0,0) rotate(0deg);opacity:0} 20%{opacity:0.8} 100%{transform:translate(6px,-16px) rotate(-20deg);opacity:0} }
+  .c4-core { animation:c4-core 2s var(--ease-spring) infinite; }
+  .c4-s1 { animation:c4-seed1 3s var(--ease-spring) infinite; }
+  .c4-s2 { animation:c4-seed2 3s var(--ease-spring) infinite 0.5s; }
+  .c4-s3 { animation:c4-seed3 3s var(--ease-spring) infinite 1s; }
+  .c4-s4 { animation:c4-seed4 3s var(--ease-spring) infinite 1.5s; }
+
+  /* ===== 方案 5: 螺旋星系 ===== */
+  @keyframes c5-galaxy { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+  @keyframes c5-core { 0%,100%{transform:scale(0.85);opacity:0.7} 50%{transform:scale(1.05);opacity:1} }
+  .c5-arm { transform-origin:24px 24px; animation:c5-galaxy 12s linear infinite; }
+  .c5-arm:nth-child(2) { animation-duration:8s; animation-direction:reverse; }
+  .c5-arm:nth-child(3) { animation-duration:16s; }
+  .c5-core { transform-origin:24px 24px; animation:c5-core 3s var(--ease-spring) infinite; }
+
+  /* ===== 方案 6: 呼吸光环 ===== */
+  @keyframes c6-ring1 { 0%,100%{transform:scale(0.3);opacity:0;stroke-dashoffset:0} 50%{transform:scale(1);opacity:0.9;stroke-dashoffset:-200} }
+  @keyframes c6-ring2 { 0%,100%{transform:scale(0.3) rotate(0deg);opacity:0} 50%{transform:scale(1) rotate(180deg);opacity:0.65} }
+  @keyframes c6-core { 0%,100%{opacity:0.5;r:4.5} 50%{opacity:1;r:6} }
+  .c6-r1 { transform-origin:24px 24px; animation:c6-ring1 3.6s var(--ease-spring) infinite; }
+  .c6-r2 { transform-origin:24px 24px; animation:c6-ring2 3.6s var(--ease-spring) infinite 1.2s; }
+  .c6-core { animation:c6-core 3.6s var(--ease-spring) infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card * { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<h1>Lumi Knows You</h1>
+<p class="subtitle">点击对应方案即可采用 · 所有图标支持亮/暗模式</p>
+
+<div class="grid">
+
+  <!-- 方案 1: 光茧 -->
+  <div class="card" data-choice="cocoon">
+    <div class="logo-bg">
+      <svg viewBox="0 0 48 48" fill="none">
+        <defs>
+          <radialGradient id="g1r" cx="50%" cy="50%" r="50%"><stop offset="60%" stopColor="#fffdf9" stopOpacity="0"/><stop offset="80%" stopColor="#fffdf9" stopOpacity="0.35"/><stop offset="100%" stopColor="#fffdf9" stopOpacity="0"/></radialGradient>
+          <radialGradient id="g1c" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#fffdf9" stopOpacity="0.95"/><stop offset="45%" stopColor="#fffdf9" stopOpacity="0.5"/><stop offset="100%" stopColor="#fffdf9" stopOpacity="0"/></radialGradient>
+        </defs>
+        <circle class="c1-halo-o" cx="24" cy="24" r="22" fill="url(#g1r)"/>
+        <circle class="c1-halo-m" cx="24" cy="24" r="14" fill="url(#g1r)"/>
+        <ellipse class="c1-cocoon" cx="24" cy="24" rx="7" ry="9" fill="url(#g1c)"/>
+        <circle class="c1-s1" cx="24" cy="20" r="2.5" fill="#fffdf9" opacity="0.8"/>
+        <circle class="c1-s2" cx="28" cy="25" r="1.8" fill="#fffdf9" opacity="0.5"/>
+        <circle class="c1-s3" cx="20" cy="27" r="1.5" fill="#fffdf9" opacity="0.4"/>
+      </svg>
+    </div>
+    <h3>光茧</h3>
+    <p>椭圆柔光内核呼吸缩放，光环层层扩散，光点漂浮</p>
+  </div>
+
+  <!-- 方案 2: 星轨 -->
+  <div class="card" data-choice="orbit">
+    <div class="logo-bg">
+      <svg viewBox="0 0 48 48" fill="none">
+        <defs>
+          <radialGradient id="g2c" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#fffdf9" stopOpacity="1"/><stop offset="60%" stopColor="#fffdf9" stopOpacity="0.5"/><stop offset="100%" stopColor="#fffdf9" stopOpacity="0"/></radialGradient>
+        </defs>
+        <g class="c2-orbit">
+          <ellipse cx="24" cy="24" rx="20" ry="7" fill="none" stroke="#fffdf9" strokeWidth="0.6" opacity="0.35" transform="rotate(-20 24 24)"/>
+          <circle class="c2-d1" cx="44" cy="24" r="1.5" fill="#fffdf9"/>
+        </g>
+        <g class="c2-orbit">
+          <ellipse cx="24" cy="24" rx="18" ry="5.5" fill="none" stroke="#fffdf9" strokeWidth="0.5" opacity="0.25" transform="rotate(25 24 24)"/>
+          <circle class="c2-d2" cx="42" cy="24" r="1.5" fill="#fffdf9"/>
+        </g>
+        <circle class="c2-core" cx="24" cy="24" r="6" fill="url(#g2c)"/>
+        <circle cx="24" cy="24" r="2.5" fill="#fffdf9"/>
+      </svg>
+    </div>
+    <h3>星轨</h3>
+    <p>双椭圆轨道反向旋转，光点沿轨运行，内核呼吸缩放</p>
+  </div>
+
+  <!-- 方案 3: 水滴涟漪 -->
+  <div class="card" data-choice="ripple">
+    <div class="logo-bg">
+      <svg viewBox="0 0 48 48" fill="none">
+        <circle class="c3-r1" cx="24" cy="24" r="10" fill="none" stroke="#fffdf9" strokeWidth="1.8" opacity="0"/>
+        <circle class="c3-r2" cx="24" cy="24" r="10" fill="none" stroke="#fffdf9" strokeWidth="1.5" opacity="0"/>
+        <circle class="c3-r3" cx="24" cy="24" r="10" fill="none" stroke="#fffdf9" strokeWidth="1.2" opacity="0"/>
+        <ellipse class="c3-drop" cx="24" cy="24" rx="5" ry="6.5" fill="#fffdf9" opacity="0.85"/>
+        <circle cx="23" cy="22" r="1.5" fill="rgba(45,38,34,0.25)"/>
+      </svg>
+    </div>
+    <h3>水滴涟漪</h3>
+    <p>水滴形内核微浮动，同心圆波纹向外扩散消失</p>
+  </div>
+
+  <!-- 方案 4: 蒲公英 -->
+  <div class="card" data-choice="dandelion">
+    <div class="logo-bg">
+      <svg viewBox="0 0 48 48" fill="none">
+        <circle class="c4-core" cx="24" cy="24" r="3.5" fill="#fffdf9" opacity="0.9"/>
+        <!-- 花丝 -->
+        <line x1="24" y1="24" x2="24" y2="14" stroke="#fffdf9" strokeWidth="0.5" opacity="0.4"/>
+        <line x1="24" y1="24" x2="21" y2="15" stroke="#fffdf9" strokeWidth="0.5" opacity="0.35"/>
+        <line x1="24" y1="24" x2="27" y2="15" stroke="#fffdf9" strokeWidth="0.5" opacity="0.35"/>
+        <line x1="24" y1="24" x2="18.5" y2="17" stroke="#fffdf9" strokeWidth="0.5" opacity="0.3"/>
+        <line x1="24" y1="24" x2="29.5" y2="17" stroke="#fffdf9" strokeWidth="0.5" opacity="0.3"/>
+        <!-- 飘散种子 -->
+        <circle class="c4-s1" cx="29" cy="18" r="1.3" fill="#fffdf9" opacity="0"/>
+        <circle class="c4-s2" cx="19" cy="20" r="1.2" fill="#fffdf9" opacity="0"/>
+        <circle class="c4-s3" cx="26" cy="13" r="1.1" fill="#fffdf9" opacity="0"/>
+        <circle class="c4-s4" cx="21" cy="16" r="1" fill="#fffdf9" opacity="0"/>
+      </svg>
+    </div>
+    <h3>蒲公英</h3>
+    <p>中心光核持续发光，光点种子从花心飘散而出</p>
+  </div>
+
+  <!-- 方案 5: 螺旋星系 -->
+  <div class="card" data-choice="galaxy">
+    <div class="logo-bg">
+      <svg viewBox="0 0 48 48" fill="none">
+        <defs>
+          <radialGradient id="g5c" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#fffdf9" stopOpacity="1"/><stop offset="50%" stopColor="#fffdf9" stopOpacity="0.6"/><stop offset="100%" stopColor="#fffdf9" stopOpacity="0"/></radialGradient>
+        </defs>
+        <g class="c5-arm">
+          <path d="M24 24 Q32 16 40 20 Q42 26 38 32 Q30 38 24 24" fill="none" stroke="#fffdf9" strokeWidth="1.2" opacity="0.55"/>
+          <circle cx="38" cy="30" r="2" fill="#fffdf9" opacity="0.7"/>
+        </g>
+        <g class="c5-arm">
+          <path d="M24 24 Q16 32 8 28 Q6 22 10 16 Q18 10 24 24" fill="none" stroke="#fffdf9" strokeWidth="1" opacity="0.4"/>
+          <circle cx="10" cy="18" r="1.8" fill="#fffdf9" opacity="0.55"/>
+        </g>
+        <g class="c5-arm">
+          <path d="M24 24 Q28 12 20 8 Q14 6 12 14 Q10 20 24 24" fill="none" stroke="#fffdf9" strokeWidth="0.7" opacity="0.3"/>
+          <circle cx="14" cy="12" r="1.5" fill="#fffdf9" opacity="0.35"/>
+        </g>
+        <circle class="c5-core" cx="24" cy="24" r="5" fill="url(#g5c)"/>
+        <circle cx="24" cy="24" r="2" fill="#fffdf9"/>
+      </svg>
+    </div>
+    <h3>螺旋星系</h3>
+    <p>三条旋臂以不同速度旋转，中心光核呼吸</p>
+  </div>
+
+  <!-- 方案 6: 呼吸光环 -->
+  <div class="card" data-choice="breath-ring">
+    <div class="logo-bg">
+      <svg viewBox="0 0 48 48" fill="none">
+        <circle class="c6-r1" cx="24" cy="24" r="15" fill="none" stroke="#fffdf9" strokeWidth="1.8" strokeDasharray="80 20" strokeLinecap="round" opacity="0"/>
+        <circle class="c6-r2" cx="24" cy="24" r="15" fill="none" stroke="#fffdf9" strokeWidth="1.2" strokeDasharray="50 40" strokeLinecap="round" opacity="0"/>
+        <circle class="c6-core" cx="24" cy="24" r="5" fill="#fffdf9" opacity="0.85"/>
+      </svg>
+    </div>
+    <h3>呼吸光环</h3>
+    <p>两圈虚线光环交替旋转缩放 + 中心圆呼吸式脉动</p>
+  </div>
+
+  <!-- 方案 7: 羽毛笔 -->
+  <div class="card" data-choice="quill">
+    <style>
+      @keyframes c7-quill { 0%,100%{transform:rotate(-8deg) translateY(0)} 50%{transform:rotate(-3deg) translateY(-3px)} }
+      @keyframes c7-ink { 0%,100%{transform:scale(1);opacity:0.6} 50%{transform:scale(1.4);opacity:1} }
+      .c7-quill { transform-origin:18px 36px; animation:c7-quill 3s var(--ease-spring) infinite; }
+      .c7-ink { transform-origin:36px 36px; animation:c7-ink 3s var(--ease-spring) infinite 0.3s; }
+    </style>
+    <div class="logo-bg">
+      <svg viewBox="0 0 48 48" fill="none">
+        <g class="c7-quill">
+          <!-- 羽毛杆 -->
+          <line x1="18" y1="36" x2="22" y2="6" stroke="#fffdf9" strokeWidth="1.2" strokeLinecap="round"/>
+          <!-- 羽片 -->
+          <path d="M22 6 Q32 10 28 18 Q26 22 22 24" fill="#fffdf9" opacity="0.65"/>
+          <path d="M22 6 Q14 10 16 18 Q18 22 22 24" fill="#fffdf9" opacity="0.5"/>
+          <!-- 笔尖 -->
+          <path d="M18 36 L14 41 L14 35 Z" fill="#fffdf9" opacity="0.8"/>
+        </g>
+        <!-- 墨滴 -->
+        <circle class="c7-ink" cx="36" cy="36" r="3.5" fill="#fffdf9" opacity="0.7"/>
+      </svg>
+    </div>
+    <h3>羽毛笔</h3>
+    <p>羽毛笔轻摆书写，墨滴脉动扩散</p>
+  </div>
+
+  <!-- 方案 8: 萤火 -->
+  <div class="card" data-choice="firefly">
+    <style>
+      @keyframes c8-fly { 0%{transform:translate(0,0)} 25%{transform:translate(8px,-12px)} 50%{transform:translate(4px,-8px)} 75%{transform:translate(-6px,-4px)} 100%{transform:translate(0,0)} }
+      @keyframes c8-glow { 0%,100%{opacity:0.35;r:14} 50%{opacity:0.85;r:20} }
+      .c8-fly { animation:c8-fly 6s var(--ease-spring) infinite; }
+      .c8-glow { animation:c8-glow 2.5s var(--ease-spring) infinite; }
+    </style>
+    <div class="logo-bg">
+      <svg viewBox="0 0 48 48" fill="none">
+        <defs>
+          <radialGradient id="g8g" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#fffdf9" stopOpacity="0.9"/><stop offset="40%" stopColor="#fffdf9" stopOpacity="0.35"/><stop offset="100%" stopColor="#fffdf9" stopOpacity="0"/></radialGradient>
+        </defs>
+        <g class="c8-fly">
+          <circle class="c8-glow" cx="24" cy="24" r="16" fill="url(#g8g)"/>
+          <circle cx="24" cy="24" r="3.5" fill="#fffdf9" opacity="0.95"/>
+          <circle cx="24" cy="24" r="1.5" fill="#fffdf9"/>
+        </g>
+      </svg>
+    </div>
+    <h3>萤火</h3>
+    <p>发光点自由飘移，光晕呼吸式放大收缩</p>
+  </div>
+
+</div>
+
+<script>
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', () => {
+      const choice = card.dataset.choice
+      document.querySelectorAll('.card').forEach(c => c.style.outline = '')
+      card.style.outline = '3px solid var(--accent-b)'
+      card.style.outlineOffset = '4px'
+      card.style.borderRadius = '24px'
+      navigator.clipboard.writeText(choice).then(() => {
+        const h3 = card.querySelector('h3')
+        const orig = h3.textContent
+        h3.textContent = orig + ' ✓ 已复制'
+        setTimeout(() => h3.textContent = orig, 1500)
+      })
+    })
+  })
+</script>
+</body>
+</html>

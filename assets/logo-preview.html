@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumino — 黑猫 Logo 预览</title>
+<style>
+  :root {
+    --bg: #0d0d1a;
+    --ink: #faf6f1;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Plus Jakarta Sans", "PingFang SC", system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    padding: 40px 24px;
+  }
+  h1 {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #e2a63f, #f0c860);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .logos {
+    display: flex;
+    gap: 48px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+  }
+  .logo-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-card span {
+    font-size: 13px;
+    color: rgba(250,246,241,0.5);
+  }
+  .note {
+    margin-top: 24px;
+    font-size: 13px;
+    color: rgba(250,246,241,0.4);
+    max-width: 480px;
+    text-align: center;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+  <h1>Lumino</h1>
+  <div class="logos">
+    <div class="logo-card">
+      <img src="icon.svg" alt="Lumino Logo" width="128" height="128">
+      <span>128×128 — 动态 SVG（眨眼 + 甩尾）</span>
+    </div>
+    <div class="logo-card">
+      <object data="icon.svg" type="image/svg+xml" width="256" height="256">
+        <img src="icon.png" alt="Lumino Logo" width="256" height="256">
+      </object>
+      <span>256×256 — object 嵌入（动画更稳定）</span>
+    </div>
+    <div class="logo-card">
+      <img src="icon.png" alt="Lumino Logo" width="128" height="128">
+      <span>128×128 — 静态 PNG（Chrome 扩展用）</span>
+    </div>
+  </div>
+  <p class="note">
+    动画效果：每 4 秒眨眼一次（琥珀色瞳孔竖直收缩），每 2 秒尾巴甩动一次。<br>
+    深色背景 + 琥珀金配色，呼应「黑暗中发光的猫眼」主题。
+  </p>
+</body>
+</html>

@@ -1,6 +1,8 @@
 // ============================================================
 // 记忆调度器 — chrome.alarms 注册定时任务
 // ============================================================
+// 注意：当前主动 AI 功能已禁用，此模块的定时任务不再被调用。
+// 保留代码以备后续恢复。
 
 import { STORAGE_KEY_DAILY_SCHEDULE } from "./types"
 
@@ -138,6 +140,7 @@ export function isProfileUpdateAlarm(name: string): boolean {
 
 /**
  * 初始化所有定时任务。
+ * 注意：主动 AI 功能已禁用，此函数不再被 background.ts 调用。
  */
 export async function initializeAllSchedules(): Promise<void> {
   await scheduleDailyMemory()

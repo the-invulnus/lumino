@@ -22,10 +22,6 @@ import { runAgentLoop } from "./lib/chat/agent-loop"
 import { registerAllTools } from "./lib/chat/tool-registry"
 import type { LlmSettings } from "./lib/llm/types"
 import { getLlmSettings, hasCompleteLlmSettings } from "./lib/settings"
-import { loadUserProfile } from "./lib/memory/user-profile"
-import { loadDailyMemories } from "./lib/memory/daily-memory"
-import { readWorkspaceFile } from "./lib/fs/workspace"
-import type { UserProfile, DailyMemoryEntry } from "./lib/memory/types"
 import "./styles/paper.css"
 
 registerAllTools()
@@ -181,6 +177,29 @@ function LumiToolCall({
       </button>
       {hasResult && (
         <div className={`lumi-tool-call__detail${expanded ? " lumi-tool-call__detail--open" : ""}`}>
+          {(call.function.name === "read_file" || call.function.name === "write_file") && (
+            <button
+              type="button"
+              className="lumi-tool-call__download"
+              title="下载文件内容"
+              onClick={(e) => {
+                e.stopPropagation()
+                const blob = new Blob([result], { type: "text/plain;charset=utf-8" })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement("a")
+                a.href = url
+                a.download = `${call.function.name}_${call.id.slice(0, 8)}.txt`
+                a.click()
+                URL.revokeObjectURL(url)
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" x2="12" y1="15" y2="3" />
+              </svg>
+            </button>
+          )}
           <div className="lumi-tool-call__detail-section">
             <div className="lumi-tool-call__detail-label">Arguments:</div>
             <pre>{argsDisplay}</pre>
@@ -238,7 +257,6 @@ function ChatMessageBlock({
         <div className="paper-chat-bubble paper-chat-bubble--assistant">
           {hasTools ? (
             <div className="lumi-sequence-stack">
-              {/* 文本段落与工具调用交错 */}
               {toolCalls!.map((call, i) => (
                 <Fragment key={call.id}>
                   {i < paragraphs.length ? (
@@ -250,7 +268,6 @@ function ChatMessageBlock({
                   />
                 </Fragment>
               ))}
-              {/* 剩余文本段落 */}
               {paragraphs.slice(toolCalls!.length).map((part, i) => (
                 <div className="paper-chat-md" key={`md-${i}`}>{part}</div>
               ))}
@@ -302,88 +319,6 @@ function ChatMessageBlock({
   return null
 }
 
-function MemoryPanel({
-  userProfile,
-  dailyMemories
-}: {
-  userProfile: UserProfile | null
-  dailyMemories: DailyMemoryEntry[]
-}) {
-  return (
-    <section className="paper-memory-panel">
-      <div className="paper-memory-section">
-        <h3 className="paper-memory-title">👤 用户画像</h3>
-        {userProfile ? (
-          <div className="paper-memory-card">
-            {userProfile.name && (
-              <p className="paper-memory-row">
-                <span className="paper-memory-label">名称</span> {userProfile.name}
-              </p>
-            )}
-            <p className="paper-memory-row">
-              <span className="paper-memory-label">语言</span>{" "}
-              {userProfile.language === "zh" ? "中文" : "English"}
-            </p>
-            {userProfile.interests.length > 0 && (
-              <p className="paper-memory-row">
-                <span className="paper-memory-label">兴趣</span>
-                <span className="paper-memory-tags">
-                  {userProfile.interests.join(" · ")}
-                </span>
-              </p>
-            )}
-            {userProfile.frequentSites.length > 0 && (
-              <p className="paper-memory-row">
-                <span className="paper-memory-label">常用站点</span>
-                <span className="paper-memory-tags">
-                  {userProfile.frequentSites.slice(0, 8).join(" · ")}
-                </span>
-              </p>
-            )}
-            {userProfile.notes && (
-              <p className="paper-memory-row">
-                <span className="paper-memory-label">备注</span> {userProfile.notes}
-              </p>
-            )}
-            {userProfile.updatedAt > 0 && (
-              <p className="paper-memory-row paper-memory-row--meta">
-                更新于 {new Date(userProfile.updatedAt).toLocaleString("zh-CN")}
-              </p>
-            )}
-          </div>
-        ) : (
-          <p className="paper-memory-empty">暂无画像信息。</p>
-        )}
-      </div>
-
-      <div className="paper-memory-section">
-        <h3 className="paper-memory-title">📅 日记忆</h3>
-        {dailyMemories.length > 0 ? (
-          <div className="paper-memory-list">
-            {dailyMemories.map((memory) => (
-              <div className="paper-memory-card paper-memory-card--sm" key={memory.date}>
-                <p className="paper-memory-row paper-memory-row--meta">
-                  {memory.date}
-                </p>
-                <p className="paper-memory-row">{memory.summary}</p>
-                {memory.keywords.length > 0 && (
-                  <p className="paper-memory-row">
-                    <span className="paper-memory-tags">
-                      {memory.keywords.map((k) => `#${k}`).join(" ")}
-                    </span>
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="paper-memory-empty">暂无日记忆。</p>
-        )}
-      </div>
-    </section>
-  )
-}
-
 function SidePanel() {
   const [threads, setThreads] = useState<ChatThreadRecord[]>([])
   const [activeThreadId, setActiveThreadIdState] = useState<string>("")
@@ -403,9 +338,6 @@ function SidePanel() {
   const activeThreadIdRef = useRef("")
   const sendInFlightRef = useRef(false)
   const draftMapRef = useRef<Record<string, string>>({})
-  const [activeTab, setActiveTab] = useState<"chat" | "memory">("chat")
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [dailyMemories, setDailyMemories] = useState<DailyMemoryEntry[]>([])
 
   useEffect(() => {
     activeThreadIdRef.current = activeThreadId
@@ -486,22 +418,6 @@ function SidePanel() {
   useEffect(() => {
     scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }, [messages, isLoading, activeThreadId])
-
-  // 加载用户画像和记忆
-  useEffect(() => {
-    void (async () => {
-      try {
-        const [profile, memories] = await Promise.all([
-          loadUserProfile(),
-          loadDailyMemories()
-        ])
-        setUserProfile(profile)
-        setDailyMemories(memories.slice(0, 14))
-      } catch {
-        // 加载失败不影响主流程
-      }
-    })()
-  }, [])
 
   const openOptionsPage = useCallback(async () => {
     await chrome.runtime.openOptionsPage()
@@ -669,13 +585,61 @@ function SidePanel() {
             <header className="paper-sp-header">
               <div className="paper-sp-brand">
                 <div aria-hidden className="paper-logo paper-logo--sm">
-                  L
+                  <svg
+                    className="paper-logo-dandelion"
+                    viewBox="0 0 48 48"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <radialGradient id="d-core" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor="#fffdf9" stopOpacity="1" />
+                        <stop offset="50%" stopColor="#fffdf9" stopOpacity="0.5" />
+                        <stop offset="100%" stopColor="#fffdf9" stopOpacity="0" />
+                      </radialGradient>
+                    </defs>
+                    {/* 花芯 */}
+                    <circle className="d-core" cx="24" cy="24" r="8" fill="url(#d-core)" />
+                    <circle cx="24" cy="24" r="3.5" fill="#fffdf9" opacity="0.95" />
+                    {/* 花丝 */}
+                    <line x1="24" y1="24" x2="24" y2="12" stroke="#fffdf9" strokeWidth="0.6" opacity="0.45" />
+                    <line x1="24" y1="24" x2="20" y2="13" stroke="#fffdf9" strokeWidth="0.55" opacity="0.4" />
+                    <line x1="24" y1="24" x2="28" y2="13" stroke="#fffdf9" strokeWidth="0.55" opacity="0.4" />
+                    <line x1="24" y1="24" x2="17" y2="15" stroke="#fffdf9" strokeWidth="0.5" opacity="0.35" />
+                    <line x1="24" y1="24" x2="31" y2="15" stroke="#fffdf9" strokeWidth="0.5" opacity="0.35" />
+                    <line x1="24" y1="24" x2="15" y2="19" stroke="#fffdf9" strokeWidth="0.45" opacity="0.3" />
+                    <line x1="24" y1="24" x2="33" y2="19" stroke="#fffdf9" strokeWidth="0.45" opacity="0.3" />
+                    <line x1="24" y1="24" x2="14" y2="24" stroke="#fffdf9" strokeWidth="0.4" opacity="0.25" />
+                    <line x1="24" y1="24" x2="34" y2="24" stroke="#fffdf9" strokeWidth="0.4" opacity="0.25" />
+                    {/* 飘絮种子 - 上 */}
+                    <g className="d-seed d-seed--1">
+                      <circle cx="32" cy="10" r="2" fill="#fffdf9" opacity="0" />
+                      <path d="M32 10 Q30 7 27 7" fill="none" stroke="#fffdf9" strokeWidth="1.2" opacity="0" strokeLinecap="round" />
+                    </g>
+                    <g className="d-seed d-seed--2">
+                      <circle cx="16" cy="8" r="1.8" fill="#fffdf9" opacity="0" />
+                      <path d="M16 8 Q18 5 21 5" fill="none" stroke="#fffdf9" strokeWidth="1.1" opacity="0" strokeLinecap="round" />
+                    </g>
+                    <g className="d-seed d-seed--3">
+                      <circle cx="20" cy="6" r="2.2" fill="#fffdf9" opacity="0" />
+                      <path d="M20 6 Q17 3 14 3" fill="none" stroke="#fffdf9" strokeWidth="1.3" opacity="0" strokeLinecap="round" />
+                    </g>
+                    {/* 飘絮种子 - 侧 */}
+                    <g className="d-seed d-seed--4">
+                      <circle cx="38" cy="18" r="1.7" fill="#fffdf9" opacity="0" />
+                      <path d="M38 18 Q41 16 44 16" fill="none" stroke="#fffdf9" strokeWidth="1.1" opacity="0" strokeLinecap="round" />
+                    </g>
+                    <g className="d-seed d-seed--5">
+                      <circle cx="8" cy="22" r="1.9" fill="#fffdf9" opacity="0" />
+                      <path d="M8 22 Q5 20 2 20" fill="none" stroke="#fffdf9" strokeWidth="1.2" opacity="0" strokeLinecap="round" />
+                    </g>
+                    <g className="d-seed d-seed--6">
+                      <circle cx="36" cy="28" r="1.5" fill="#fffdf9" opacity="0" />
+                      <path d="M36 28 Q39 30 42 31" fill="none" stroke="#fffdf9" strokeWidth="1" opacity="0" strokeLinecap="round" />
+                    </g>
+                  </svg>
                 </div>
                 <div className="paper-sp-brand-text">
-                  <h1 className="paper-sp-title">Lumino</h1>
-                  <p className="paper-sp-tagline" title="多轮对话 · IndexedDB · OpenAI 兼容格式">
-                    侧栏对话
-                  </p>
+                  <h1 className="paper-sp-title">Lumi Knows You</h1>
                 </div>
               </div>
               <div className="paper-sp-header-actions">
@@ -693,26 +657,6 @@ function SidePanel() {
               </div>
             </header>
 
-            {/* Tab 切换：对话 / 记忆 */}
-            <div className="paper-tabbar">
-              <button
-                aria-pressed={activeTab === "chat"}
-                className={`paper-tab${activeTab === "chat" ? " paper-tab--active" : ""}`}
-                onClick={() => setActiveTab("chat")}
-                type="button">
-                💬 对话
-              </button>
-              <button
-                aria-pressed={activeTab === "memory"}
-                className={`paper-tab${activeTab === "memory" ? " paper-tab--active" : ""}`}
-                onClick={() => setActiveTab("memory")}
-                type="button">
-                🧠 记忆
-              </button>
-            </div>
-
-            {activeTab === "chat" ? (
-              <>
                 <section className="paper-session-strip" aria-label="历史会话">
                   <div className="paper-session-chips" role="list">
                     {isHydrating ? (
@@ -833,13 +777,6 @@ function SidePanel() {
                     ) : null}
                   </div>
                 </section>
-              </>
-            ) : (
-              <MemoryPanel
-                userProfile={userProfile}
-                dailyMemories={dailyMemories}
-              />
-            )}
           </div>
         </div>
       </div>
