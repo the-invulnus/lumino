@@ -11,14 +11,59 @@ import {
   loadAllDailyMemories,
   saveDailyMemory as idbSaveDailyMemory
 } from "./memory-idb"
+import { writeMemoryFile } from "../fs/opfs"
 
 export { loadAllDailyMemories as loadDailyMemories } from "./memory-idb"
 
 /**
- * 保存日记忆条目。
+ * 保存日记忆条目（IndexedDB + OPFS）。
  */
 export async function saveDailyMemory(entry: DailyMemoryEntry): Promise<void> {
   await idbSaveDailyMemory(entry)
+
+  try {
+    const md = dailyMemoryToMarkdown(entry)
+    await writeMemoryFile(`${entry.date}.md`, md)
+  } catch (error) {
+    console.warn("[Lumino] OPFS 记忆文件写入失败", error)
+  }
+}
+
+function dailyMemoryToMarkdown(entry: DailyMemoryEntry): string {
+  const lines: string[] = [
+    `# 日记忆 — ${entry.date}`,
+    "",
+    `生成时间：${new Date(entry.createdAt).toISOString()}`,
+    "",
+    "## 摘要",
+    "",
+    entry.summary,
+    ""
+  ]
+
+  if (entry.keywords.length > 0) {
+    lines.push("## 关键词")
+    lines.push("")
+    lines.push(entry.keywords.map((k) => `- ${k}`).join("\n"))
+    lines.push("")
+  }
+
+  if (entry.manualNotes && entry.manualNotes.length > 0) {
+    lines.push("## 手动笔记")
+    lines.push("")
+    for (const note of entry.manualNotes) {
+      lines.push(`- ${note}`)
+    }
+    lines.push("")
+  }
+
+  if (entry.status) {
+    lines.push(`## 状态：${entry.status}`)
+    if (entry.statusReason) lines.push(`原因：${entry.statusReason}`)
+    lines.push("")
+  }
+
+  return lines.join("\n")
 }
 
 /**

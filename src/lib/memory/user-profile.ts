@@ -10,6 +10,7 @@ import { loadDailyMemories } from "./daily-memory"
 import { getRecentEvents } from "./event-store"
 import type { UserProfile } from "./types"
 import { STORAGE_KEY_PROFILE } from "./types"
+import { writeMemoryFile } from "../fs/opfs"
 
 const DEFAULT_PROFILE: UserProfile = {
   name: "",
@@ -38,7 +39,7 @@ export async function loadUserProfile(
 }
 
 /**
- * 保存用户画像。
+ * 保存用户画像（chrome.storage.local + OPFS）。
  */
 export async function saveUserProfile(
   profile: UserProfile,
@@ -51,6 +52,12 @@ export async function saveUserProfile(
       updatedAt: Date.now()
     }
   })
+
+  try {
+    await writeMemoryFile("profile.json", JSON.stringify(profile, null, 2))
+  } catch (error) {
+    console.warn("[Lumino] OPFS 画像文件写入失败", error)
+  }
 }
 
 /**
@@ -69,6 +76,13 @@ export async function updateUserProfile(
 
   const store = storageArea ?? chrome.storage.local
   await store.set({ [STORAGE_KEY_PROFILE]: updated })
+
+  try {
+    await writeMemoryFile("profile.json", JSON.stringify(updated, null, 2))
+  } catch (error) {
+    console.warn("[Lumino] OPFS 画像文件写入失败", error)
+  }
+
   return updated
 }
 

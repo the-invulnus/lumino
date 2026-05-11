@@ -7,7 +7,6 @@ import {
 } from "react"
 
 import { getActiveThreadId, setActiveThreadId } from "./lib/chat/active-thread-storage"
-import { executeLuminoToolCall, LUMINO_AGENT_TOOLS } from "./lib/chat/agent-tools"
 import { cloneMessages, type OpenAiChatMessage } from "./lib/chat/openai-messages"
 import {
   createEmptyThread,
@@ -18,18 +17,17 @@ import {
   suggestTitleFromMessages,
   type ChatThreadRecord
 } from "./lib/chat/thread-idb"
-import { requestChatCompletionTurn } from "./lib/llm/openai"
+import { runAgentLoop } from "./lib/chat/agent-loop"
+import { registerAllTools } from "./lib/chat/tool-registry"
 import type { LlmSettings } from "./lib/llm/types"
 import { getLlmSettings, hasCompleteLlmSettings } from "./lib/settings"
 import { loadUserProfile } from "./lib/memory/user-profile"
 import { loadDailyMemories } from "./lib/memory/daily-memory"
+import { readWorkspaceFile } from "./lib/fs/workspace"
 import type { UserProfile, DailyMemoryEntry } from "./lib/memory/types"
 import "./styles/paper.css"
 
-const DEFAULT_SYSTEM_PROMPT =
-  "你是 Lumino，在浏览器侧栏里陪伴用户的助手。回答简洁、温暖；若用户需要事实或扩展能力，可合理使用提供的工具。"
-
-const MAX_TOOL_ROUNDS = 8
+registerAllTools()
 
 function SendArrowIcon() {
   return (
@@ -89,7 +87,15 @@ function threadLabel(record: ChatThreadRecord): string {
   )
 }
 
-function ChatMessageBlock({ message }: { message: OpenAiChatMessage }) {
+function ChatMessageBlock({
+  message,
+  allMessages,
+  index
+}: {
+  message: OpenAiChatMessage
+  allMessages: OpenAiChatMessage[]
+  index: number
+}) {
   if (message.role === "user") {
     return (
       <div className="paper-chat-row paper-chat-row--user">
@@ -129,12 +135,63 @@ function ChatMessageBlock({ message }: { message: OpenAiChatMessage }) {
   if (message.role === "tool") {
     const id = message.tool_call_id
 
+    // 向前查找对应的 assistant tool_call，确定 tool name
+    let toolName = ""
+    let toolArgs: Record<string, unknown> = {}
+    for (let i = index - 1; i >= 0; i--) {
+      const prev = allMessages[i]
+      if (prev.role === "assistant" && prev.tool_calls) {
+        const match = prev.tool_calls.find((tc) => tc.id === id)
+        if (match) {
+          toolName = match.function.name
+          try { toolArgs = JSON.parse(match.function.arguments || "{}") } catch { /* ignore */ }
+          break
+        }
+      }
+    }
+
+    // 解析 tool 执行结果中的 path
+    let resultPath = ""
+    try {
+      const parsed = JSON.parse(message.content ?? "{}")
+      if (parsed.path && typeof parsed.path === "string") {
+        resultPath = parsed.path
+      }
+    } catch { /* ignore */ }
+
+    const showDownload = toolName === "write" && resultPath
+
+    const handleDownload = async () => {
+      try {
+        const content = await readWorkspaceFile(resultPath)
+        if (content === null) return
+        const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = resultPath.split("/").pop() || "file.txt"
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        setTimeout(() => URL.revokeObjectURL(url), 60000)
+      } catch { /* ignore */ }
+    }
+
     return (
       <div className="paper-chat-row paper-chat-row--tool">
         <div className="paper-chat-meta">
           结果 · {id.length > 10 ? `${id.slice(0, 8)}…` : id}
         </div>
         <pre className="paper-chat-tool-body">{message.content ?? ""}</pre>
+        {showDownload ? (
+          <button
+            className="paper-secondary-button paper-secondary-button--sm"
+            onClick={handleDownload}
+            type="button"
+            style={{ marginTop: 6 }}>
+            ⬇ 下载文件
+          </button>
+        ) : null}
       </div>
     )
   }
@@ -168,11 +225,7 @@ function MemoryPanel({
               <p className="paper-memory-row">
                 <span className="paper-memory-label">兴趣</span>
                 <span className="paper-memory-tags">
-                  {userProfile.interests.map((item, idx) => (
-                    <span key={idx} className="paper-memory-tag">
-                      {item}
-                    </span>
-                  ))}
+                  {userProfile.interests.join(" · ")}
                 </span>
               </p>
             )}
@@ -180,11 +233,7 @@ function MemoryPanel({
               <p className="paper-memory-row">
                 <span className="paper-memory-label">常用站点</span>
                 <span className="paper-memory-tags">
-                  {userProfile.frequentSites.slice(0, 8).map((site, idx) => (
-                    <span key={idx} className="paper-memory-tag paper-memory-tag--site">
-                      {site}
-                    </span>
-                  ))}
+                  {userProfile.frequentSites.slice(0, 8).join(" · ")}
                 </span>
               </p>
             )}
@@ -193,11 +242,14 @@ function MemoryPanel({
                 <span className="paper-memory-label">备注</span> {userProfile.notes}
               </p>
             )}
+            {userProfile.updatedAt > 0 && (
+              <p className="paper-memory-row paper-memory-row--meta">
+                更新于 {new Date(userProfile.updatedAt).toLocaleString("zh-CN")}
+              </p>
+            )}
           </div>
         ) : (
-          <p className="paper-memory-hint">
-            画像数据正在从浏览行为中学习… 多浏览一段时间后这里会更丰富。
-          </p>
+          <p className="paper-memory-empty">暂无画像信息。</p>
         )}
       </div>
 
@@ -205,26 +257,24 @@ function MemoryPanel({
         <h3 className="paper-memory-title">📅 日记忆</h3>
         {dailyMemories.length > 0 ? (
           <div className="paper-memory-list">
-            {dailyMemories.slice(0, 14).map((memory) => (
-              <div key={memory.date} className="paper-memory-card">
-                <div className="paper-memory-date">{memory.date}</div>
-                <p className="paper-memory-summary">{memory.summary}</p>
+            {dailyMemories.map((memory) => (
+              <div className="paper-memory-card paper-memory-card--sm" key={memory.date}>
+                <p className="paper-memory-row paper-memory-row--meta">
+                  {memory.date}
+                </p>
+                <p className="paper-memory-row">{memory.summary}</p>
                 {memory.keywords.length > 0 && (
-                  <div className="paper-memory-tags">
-                    {memory.keywords.map((kw, idx) => (
-                      <span key={idx} className="paper-memory-tag paper-memory-tag--kw">
-                        {kw}
-                      </span>
-                    ))}
-                  </div>
+                  <p className="paper-memory-row">
+                    <span className="paper-memory-tags">
+                      {memory.keywords.map((k) => `#${k}`).join(" ")}
+                    </span>
+                  </p>
                 )}
               </div>
             ))}
           </div>
         ) : (
-          <p className="paper-memory-hint">
-            日记忆将在每日晚上自动生成。浏览一天后来这里看到「你的一天」。
-          </p>
+          <p className="paper-memory-empty">暂无日记忆。</p>
         )}
       </div>
     </section>
@@ -246,13 +296,13 @@ function SidePanel() {
   const [isLoading, setIsLoading] = useState(false)
   const [isReady, setIsReady] = useState(false)
   const [isHydrating, setIsHydrating] = useState(true)
-  const [activeTab, setActiveTab] = useState<"chat" | "memory">("chat")
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [dailyMemories, setDailyMemories] = useState<DailyMemoryEntry[]>([])
   const scrollAnchorRef = useRef<HTMLDivElement>(null)
   const activeThreadIdRef = useRef("")
   const sendInFlightRef = useRef(false)
   const draftMapRef = useRef<Record<string, string>>({})
+  const [activeTab, setActiveTab] = useState<"chat" | "memory">("chat")
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [dailyMemories, setDailyMemories] = useState<DailyMemoryEntry[]>([])
 
   useEffect(() => {
     activeThreadIdRef.current = activeThreadId
@@ -319,8 +369,6 @@ function SidePanel() {
       } finally {
         if (!cancelled) {
           setIsHydrating(false)
-          loadUserProfile().then(setUserProfile).catch(() => {})
-          loadDailyMemories().then(setDailyMemories).catch(() => {})
         }
       }
     }
@@ -336,6 +384,22 @@ function SidePanel() {
     scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }, [messages, isLoading, activeThreadId])
 
+  // 加载用户画像和记忆
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [profile, memories] = await Promise.all([
+          loadUserProfile(),
+          loadDailyMemories()
+        ])
+        setUserProfile(profile)
+        setDailyMemories(memories.slice(0, 14))
+      } catch {
+        // 加载失败不影响主流程
+      }
+    })()
+  }, [])
+
   const openOptionsPage = useCallback(async () => {
     await chrome.runtime.openOptionsPage()
   }, [])
@@ -349,57 +413,6 @@ function SidePanel() {
       await refreshThreadList()
     },
     [refreshThreadList]
-  )
-
-  const runAssistantTurns = useCallback(
-    async (threadId: string, baseMessages: OpenAiChatMessage[]) => {
-      let working = cloneMessages(baseMessages)
-      let rounds = 0
-
-      while (rounds < MAX_TOOL_ROUNDS) {
-        if (!(await getThread(threadId))) {
-          return
-        }
-
-        rounds += 1
-        const { message: assistant } = await requestChatCompletionTurn(settings, {
-          messages: working,
-          tools: LUMINO_AGENT_TOOLS
-        })
-
-        if (!(await getThread(threadId))) {
-          return
-        }
-
-        working.push({
-          role: "assistant",
-          content: assistant.content,
-          tool_calls: assistant.tool_calls
-        })
-        await persistMessages(threadId, working)
-
-        const calls = assistant.tool_calls
-        if (!calls?.length) {
-          break
-        }
-
-        for (const call of calls) {
-          const content = await executeLuminoToolCall(call)
-          working.push({
-            role: "tool",
-            tool_call_id: call.id,
-            content
-          })
-
-          if (!(await getThread(threadId))) {
-            return
-          }
-
-          await persistMessages(threadId, working)
-        }
-      }
-    },
-    [persistMessages, settings]
   )
 
   const selectThread = useCallback(
@@ -506,15 +519,24 @@ function SidePanel() {
     setDraft("")
 
     try {
-      let next = cloneMessages(messages)
+      const history = cloneMessages(messages)
 
-      if (!next.some((message) => message.role === "system")) {
-        next = [{ role: "system", content: DEFAULT_SYSTEM_PROMPT }, ...next]
-      }
+      const next = await runAgentLoop({
+        settings,
+        threadId,
+        historyMessages: history,
+        userInput: trimmed,
+        onMessagesUpdate: async (msgs) => {
+          setMessages(cloneMessages(msgs))
+          await saveThreadMessages(threadId, msgs)
+          if (threadId === activeThreadIdRef.current) {
+            await refreshThreadList()
+          }
+        }
+      })
 
-      next.push({ role: "user", content: trimmed })
+      setMessages(cloneMessages(next))
       await persistMessages(threadId, next)
-      await runAssistantTurns(threadId, next)
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -541,180 +563,180 @@ function SidePanel() {
       <div className="paper-bezel-outer paper-bezel-outer--side">
         <div className="paper-bezel-inner paper-bezel-inner--side">
           <div className="paper-sidepanel-layout">
+            <header className="paper-sp-header">
+              <div className="paper-sp-brand">
+                <div aria-hidden className="paper-logo paper-logo--sm">
+                  L
+                </div>
+                <div className="paper-sp-brand-text">
+                  <h1 className="paper-sp-title">Lumino</h1>
+                  <p className="paper-sp-tagline" title="多轮对话 · IndexedDB · OpenAI 兼容格式">
+                    侧栏对话
+                  </p>
+                </div>
+              </div>
+              <div className="paper-sp-header-actions">
+                {settings.model ? (
+                  <span className="paper-badge paper-badge--tight" title={settings.model}>
+                    {settings.model}
+                  </span>
+                ) : null}
+                <button
+                  className="paper-icon-text-btn"
+                  onClick={openOptionsPage}
+                  type="button">
+                  设置
+                </button>
+              </div>
+            </header>
 
-            {/* Tab 导航 */}
-            <div className="paper-tabs">
+            {/* Tab 切换：对话 / 记忆 */}
+            <div className="paper-tabbar">
               <button
+                aria-pressed={activeTab === "chat"}
                 className={`paper-tab${activeTab === "chat" ? " paper-tab--active" : ""}`}
                 onClick={() => setActiveTab("chat")}
                 type="button">
-                💬 聊天
+                💬 对话
               </button>
               <button
+                aria-pressed={activeTab === "memory"}
                 className={`paper-tab${activeTab === "memory" ? " paper-tab--active" : ""}`}
                 onClick={() => setActiveTab("memory")}
                 type="button">
-                🧠 主动 AI
+                🧠 记忆
               </button>
             </div>
 
-            {/* 聊天面板 — 用 display 而非条件渲染，保持 DOM 不销毁 */}
-            <div style={{ display: activeTab === "chat" ? "flex" : "none", flexDirection: "column", flex: 1, minHeight: 0 }}>
-              <header className="paper-sp-header">
-                <div className="paper-sp-brand">
-                  <div aria-hidden className="paper-logo paper-logo--sm">
-                    L
+            {activeTab === "chat" ? (
+              <>
+                <section className="paper-session-strip" aria-label="历史会话">
+                  <div className="paper-session-chips" role="list">
+                    {isHydrating ? (
+                      <span className="paper-session-strip-hint">加载中…</span>
+                    ) : (
+                      threads.map((row) => {
+                        const selected = row.id === activeThreadId
+                        const label = threadLabel(row)
+                        const hint = `${label} · ${formatSessionTime(row.updatedAt)}`
+
+                        return (
+                          <div
+                            className={`paper-session-chip${selected ? " paper-session-chip--active" : ""}`}
+                            key={row.id}
+                            role="listitem">
+                            <button
+                              className="paper-session-chip-main"
+                              onClick={() => void selectThread(row.id)}
+                              title={hint}
+                              type="button">
+                              {label}
+                            </button>
+                            <button
+                              aria-label={`删除 ${label}`}
+                              className="paper-session-chip-del"
+                              onClick={(event) => void handleDeleteThread(row.id, event)}
+                              title="删除会话"
+                              type="button">
+                              ×
+                            </button>
+                          </div>
+                        )
+                      })
+                    )}
                   </div>
-                  <div className="paper-sp-brand-text">
-                    <h1 className="paper-sp-title">Lumino</h1>
-                    <p className="paper-sp-tagline" title="多轮对话 · IndexedDB · OpenAI 兼容格式">
-                      侧栏对话
-                    </p>
-                  </div>
-                </div>
-                <div className="paper-sp-header-actions">
-                  {settings.model ? (
-                    <span className="paper-badge paper-badge--tight" title={settings.model}>
-                      {settings.model}
-                    </span>
-                  ) : null}
                   <button
-                    className="paper-secondary-button paper-secondary-button--sm"
-                    onClick={openOptionsPage}
+                    aria-label="新建会话"
+                    className="paper-session-add"
+                    disabled={isHydrating}
+                    onClick={() => void handleNewThread()}
+                    title="新建会话"
                     type="button">
-                    设置
+                    ＋
                   </button>
-                </div>
-              </header>
+                </section>
 
-              <section className="paper-session-strip" aria-label="历史会话">
-                <div className="paper-session-chips" role="list">
-                  {isHydrating ? (
-                    <span className="paper-session-strip-hint">加载中…</span>
-                  ) : (
-                    threads.map((row) => {
-                      const selected = row.id === activeThreadId
-                      const label = threadLabel(row)
-                      const hint = `${label} · ${formatSessionTime(row.updatedAt)}`
-
-                      return (
-                        <div
-                          className={`paper-session-chip${selected ? " paper-session-chip--active" : ""}`}
-                          key={row.id}
-                          role="listitem">
-                          <button
-                            className="paper-session-chip-main"
-                            onClick={() => void selectThread(row.id)}
-                            title={hint}
-                            type="button">
-                            {label}
-                          </button>
-                          <button
-                            aria-label={`删除 ${label}`}
-                            className="paper-session-chip-del"
-                            onClick={(event) => void handleDeleteThread(row.id, event)}
-                            title="删除会话"
-                            type="button">
-                            ×
-                          </button>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-                <button
-                  aria-label="新建会话"
-                  className="paper-session-add"
-                  disabled={isHydrating}
-                  onClick={() => void handleNewThread()}
-                  title="新建会话"
-                  type="button">
-                  ＋
-                </button>
-              </section>
-
-              <section className="paper-chat-panel" aria-busy={isLoading}>
-                {isReady && !isConfigured ? (
-                  <div className="paper-note paper-note--compact">
-                    <p>请先在设置中填写 Base URL、API Key 与模型。</p>
-                    <button
-                      className="paper-secondary-button paper-secondary-button--sm"
-                      onClick={openOptionsPage}
-                      type="button">
-                      打开设置
-                    </button>
-                  </div>
-                ) : null}
-
-                <div className="paper-chat-scroll" role="log" aria-relevant="additions">
-                  {isHydrating ? (
-                    <p className="paper-chat-hint">正在加载…</p>
-                  ) : visibleMessages.length === 0 ? (
-                    <p className="paper-chat-hint">
-                      当前会话还没有消息。
-                      <br />
-                      在下方输入后发送即可。
-                    </p>
-                  ) : (
-                    visibleMessages.map((message, index) => (
-                      <ChatMessageBlock
-                        key={`${activeThreadId}-${index}-${message.role}`}
-                        message={message}
-                      />
-                    ))
-                  )}
-                  <div ref={scrollAnchorRef} />
-                </div>
-
-                <div className="paper-composer">
-                  <div className="paper-composer-row">
-                    <input
-                      aria-label="对话输入"
-                      className="paper-input paper-input--composer"
-                      disabled={isLoading || !isReady || isHydrating}
-                      onChange={(event) => setDraft(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault()
-                          void sendUserMessage()
-                        }
-                      }}
-                      placeholder="输入消息，Enter 发送"
-                      type="text"
-                      value={draft}
-                    />
-                    <button
-                      aria-busy={isLoading}
-                      aria-label={isLoading ? "正在发送" : "发送"}
-                      className="paper-composer-send"
-                      disabled={!isReady || isLoading || isHydrating}
-                      onClick={() => void sendUserMessage()}
-                      type="button">
-                      {isLoading ? (
-                        <span aria-hidden className="paper-spinner paper-spinner--on-accent" />
-                      ) : (
-                        <SendArrowIcon />
-                      )}
-                    </button>
-                  </div>
-
-                  {error ? (
-                    <p className="paper-error paper-error--tight" role="alert">
-                      {error}
-                    </p>
+                <section className="paper-chat-panel" aria-busy={isLoading}>
+                  {isReady && !isConfigured ? (
+                    <div className="paper-note paper-note--compact">
+                      <p>请先在设置中填写 Base URL、API Key 与模型。</p>
+                      <button
+                        className="paper-secondary-button paper-secondary-button--sm"
+                        onClick={openOptionsPage}
+                        type="button">
+                        打开设置
+                      </button>
+                    </div>
                   ) : null}
-                </div>
-              </section>
-            </div>
 
-            {/* 主动 AI 记忆面板 — 用 display 控制显隐 */}
-            <div style={{ display: activeTab === "memory" ? "flex" : "none", flexDirection: "column", flex: 1, minHeight: 0, overflow: "auto" }}>
+                  <div className="paper-chat-scroll" role="log" aria-relevant="additions">
+                    {isHydrating ? (
+                      <p className="paper-chat-hint">正在加载…</p>
+                    ) : visibleMessages.length === 0 ? (
+                      <p className="paper-chat-hint">
+                        当前会话还没有消息。
+                        <br />
+                        在下方输入后发送即可。
+                      </p>
+                    ) : (
+                      visibleMessages.map((message, index) => (
+                        <ChatMessageBlock
+                          key={`${activeThreadId}-${index}-${message.role}`}
+                          message={message}
+                          allMessages={visibleMessages}
+                          index={index}
+                        />
+                      ))
+                    )}
+                    <div ref={scrollAnchorRef} />
+                  </div>
+
+                  <div className="paper-composer">
+                    <div className="paper-composer-row">
+                      <input
+                        aria-label="对话输入"
+                        className="paper-input paper-input--composer"
+                        disabled={isLoading || !isReady || isHydrating}
+                        onChange={(event) => setDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault()
+                            void sendUserMessage()
+                          }
+                        }}
+                        placeholder="输入消息，Enter 发送"
+                        type="text"
+                        value={draft}
+                      />
+                      <button
+                        aria-busy={isLoading}
+                        aria-label={isLoading ? "正在发送" : "发送"}
+                        className="paper-composer-send"
+                        disabled={!isReady || isLoading || isHydrating}
+                        onClick={() => void sendUserMessage()}
+                        type="button">
+                        {isLoading ? (
+                          <span aria-hidden className="paper-spinner paper-spinner--on-accent" />
+                        ) : (
+                          <SendArrowIcon />
+                        )}
+                      </button>
+                    </div>
+
+                    {error ? (
+                      <p className="paper-error paper-error--tight" role="alert">
+                        {error}
+                      </p>
+                    ) : null}
+                  </div>
+                </section>
+              </>
+            ) : (
               <MemoryPanel
                 userProfile={userProfile}
                 dailyMemories={dailyMemories}
               />
-            </div>
-
+            )}
           </div>
         </div>
       </div>

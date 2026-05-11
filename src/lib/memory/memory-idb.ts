@@ -2,8 +2,8 @@
 // 记忆系统 IndexedDB 操作 — 使用统一的 db.ts 连接
 // ============================================================
 
-import type { Layer1Event, DailyMemoryEntry } from "./types"
-import { openDatabase, STORE_EVENTS, STORE_DAILY } from "../db"
+import type { Layer1Event, DailyMemoryEntry, ConversationInsight } from "./types"
+import { openDatabase, STORE_EVENTS, STORE_DAILY, STORE_INSIGHTS } from "../db"
 
 const MAX_EVENT_AGE_DAYS = 7
 const MAX_EVENTS = 5000
@@ -177,4 +177,78 @@ async function cleanupDailyMemories(): Promise<void> {
     tx.onerror = () => reject(tx.error ?? new Error("cleanupDailyMemories failed"))
     tx.onabort = () => reject(tx.error ?? new Error("cleanupDailyMemories aborted"))
   })
+}
+
+// ---- 对话洞察 ----
+
+export async function loadAllInsights(): Promise<ConversationInsight[]> {
+  const db = await openDatabase()
+
+  return new Promise<ConversationInsight[]>((resolve, reject) => {
+    const tx = db.transaction(STORE_INSIGHTS, "readonly")
+    const req = tx.objectStore(STORE_INSIGHTS).getAll()
+
+    req.onsuccess = () => resolve((req.result as ConversationInsight[]) ?? [])
+    req.onerror = () => reject(req.error ?? new Error("loadAllInsights failed"))
+  })
+}
+
+export async function saveInsight(insight: ConversationInsight): Promise<void> {
+  const db = await openDatabase()
+
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_INSIGHTS, "readwrite")
+    tx.objectStore(STORE_INSIGHTS).put(insight)
+
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error ?? new Error("saveInsight failed"))
+    tx.onabort = () => reject(tx.error ?? new Error("saveInsight aborted"))
+  })
+}
+
+export async function appendManualNote(
+  date: string,
+  note: string,
+  source: "agent" | "user" = "agent"
+): Promise<void> {
+  const all = await loadAllDailyMemories()
+  let entry = all.find((m) => m.date === date)
+
+  if (!entry) {
+    entry = {
+      date,
+      createdAt: Date.now(),
+      summary: "",
+      keywords: [],
+      sourceEventIds: [],
+      manualNotes: [note],
+      lastModifiedBy: source,
+      lastModifiedAt: Date.now()
+    }
+  } else {
+    if (!entry.manualNotes) entry.manualNotes = []
+    entry.manualNotes.push(note)
+    entry.lastModifiedBy = source
+    entry.lastModifiedAt = Date.now()
+  }
+
+  await saveDailyMemory(entry)
+}
+
+export async function markMemoryStatus(
+  date: string,
+  status: string,
+  reason: string
+): Promise<void> {
+  const all = await loadAllDailyMemories()
+  const entry = all.find((m) => m.date === date)
+
+  if (!entry) return
+
+  entry.status = status
+  entry.statusReason = reason
+  entry.lastModifiedBy = "agent"
+  entry.lastModifiedAt = Date.now()
+
+  await saveDailyMemory(entry)
 }

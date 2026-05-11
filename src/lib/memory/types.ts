@@ -62,6 +62,41 @@ export type DailyMemoryEntry = {
   keywords: string[]
   /** 引用的 Layer1 事件 ID 集合（用于追溯） */
   sourceEventIds: string[]
+  /** Agent 手动追加的笔记 */
+  manualNotes?: string[]
+  /** 记忆状态：ok / needs_review / dismissed */
+  status?: string
+  /** 状态原因说明 */
+  statusReason?: string
+  /** 最后修改者 */
+  lastModifiedBy?: string
+  /** 最后修改时间 */
+  lastModifiedAt?: number
+}
+
+// --- 对话洞察 ---
+
+export type ConversationInsight = {
+  id: string
+  /** 创建时间 */
+  createdAt: number
+  /** 分类（如 personal_note, todo, decision, fact） */
+  category: string
+  /** 洞察内容 */
+  content: string
+  /** 来源对话 thread id */
+  sourceThreadId?: string
+  /** 过期时间（可选，用于待办类） */
+  expiresAt?: number
+}
+
+// --- 手动笔记 ---
+
+export type ManualNote = {
+  date: string
+  content: string
+  createdAt: number
+  source: "agent" | "user"
 }
 
 // --- 用户画像 ---

@@ -3,11 +3,13 @@
 // ============================================================
 
 const DB_NAME = "lumino"
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export const STORE_THREADS = "threads"
 export const STORE_EVENTS = "layer1_events"
 export const STORE_DAILY = "daily_memories"
+export const STORE_INSIGHTS = "insights"
+export const STORE_PROFILE_UPDATES = "profile_updates"
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -30,20 +32,37 @@ export function openDatabase(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result
+      const oldVersion = event.oldVersion
 
-      if (!db.objectStoreNames.contains(STORE_THREADS)) {
-        db.createObjectStore(STORE_THREADS, { keyPath: "id" })
+      if (oldVersion < 1) {
+        if (!db.objectStoreNames.contains(STORE_THREADS)) {
+          db.createObjectStore(STORE_THREADS, { keyPath: "id" })
+        }
+
+        if (!db.objectStoreNames.contains(STORE_EVENTS)) {
+          const es = db.createObjectStore(STORE_EVENTS, { keyPath: "id" })
+          es.createIndex("timestamp", "timestamp", { unique: false })
+          es.createIndex("type", "type", { unique: false })
+        }
+
+        if (!db.objectStoreNames.contains(STORE_DAILY)) {
+          const ds = db.createObjectStore(STORE_DAILY, { keyPath: "date" })
+          ds.createIndex("createdAt", "createdAt", { unique: false })
+        }
       }
 
-      if (!db.objectStoreNames.contains(STORE_EVENTS)) {
-        const es = db.createObjectStore(STORE_EVENTS, { keyPath: "id" })
-        es.createIndex("timestamp", "timestamp", { unique: false })
-        es.createIndex("type", "type", { unique: false })
-      }
+      if (oldVersion < 2) {
+        if (!db.objectStoreNames.contains(STORE_INSIGHTS)) {
+          const is = db.createObjectStore(STORE_INSIGHTS, { keyPath: "id" })
+          is.createIndex("createdAt", "createdAt", { unique: false })
+          is.createIndex("category", "category", { unique: false })
+          is.createIndex("sourceThreadId", "sourceThreadId", { unique: false })
+        }
 
-      if (!db.objectStoreNames.contains(STORE_DAILY)) {
-        const ds = db.createObjectStore(STORE_DAILY, { keyPath: "date" })
-        ds.createIndex("createdAt", "createdAt", { unique: false })
+        if (!db.objectStoreNames.contains(STORE_PROFILE_UPDATES)) {
+          const ps = db.createObjectStore(STORE_PROFILE_UPDATES, { keyPath: "id" })
+          ps.createIndex("timestamp", "timestamp", { unique: false })
+        }
       }
     }
   })

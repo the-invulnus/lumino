@@ -20,7 +20,8 @@
       "storage",
       "sidePanel",
       "alarms",
-      "tabs"
+      "tabs",
+      "downloads"
     ],
     "host_permissions": [
       "<all_urls>"

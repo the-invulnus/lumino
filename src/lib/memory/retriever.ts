@@ -1,14 +1,19 @@
 // ============================================================
-// Layer 3 检索器 — 从日记忆中检索与当前上下文相关的条目
+// Layer 3 检索器 — BM25 记忆搜索 + temporal decay
 // ============================================================
 
 import { loadDailyMemories } from "./daily-memory"
+import { loadAllInsights } from "./memory-idb"
 import { getRecentEvents } from "./event-store"
+import { tokenize } from "./tokenizer"
+import { buildTermIndex, scoreDocument } from "./bm25"
 import type { DailyMemoryEntry, Layer1Event, RetrievalResult } from "./types"
+
+const HALF_LIFE_DAYS = 14
+const MAX_KEYWORDS = 30
 
 /**
  * 将当前 session 上下文转为关键词列表。
- * 先用简单字符串匹配，后续可升级为 embedding 向量检索。
  */
 export function extractContextKeywords(
   recentEvents: Layer1Event[]
@@ -17,7 +22,6 @@ export function extractContextKeywords(
 
   for (const event of recentEvents) {
     if (event.page) {
-      // 从页面标题和 URL 提取词
       const title = event.page.title
       const words = title
         .split(/[\s\-–—|·,.，。、：:；;！!？?()（）【】\[\]{}<>《》"「」『』\s]+/)
@@ -27,7 +31,6 @@ export function extractContextKeywords(
         keywords.add(word)
       }
 
-      // 域名关键字
       const hostname = event.page.hostname
       const domainParts = hostname.split(".")
       for (const part of domainParts) {
@@ -49,56 +52,23 @@ export function extractContextKeywords(
     }
   }
 
-  return Array.from(keywords).slice(0, 30)
+  return Array.from(keywords).slice(0, MAX_KEYWORDS)
+}
+
+function temporalDecay(createdAt: number): number {
+  const ageDays = (Date.now() - createdAt) / (24 * 60 * 60 * 1000)
+  return Math.pow(0.5, ageDays / HALF_LIFE_DAYS)
 }
 
 /**
- * 计算日记忆条目与关键词列表的相关性得分。
- */
-function scoreDailyMemory(
-  entry: DailyMemoryEntry,
-  keywords: string[]
-): number {
-  let score = 0
-  const summary = entry.summary.toLowerCase()
-  const entryKeywords = entry.keywords.map((k) => k.toLowerCase())
-
-  for (const keyword of keywords) {
-    const kw = keyword.toLowerCase()
-
-    // 关键词在摘要中出现
-    if (summary.includes(kw)) {
-      score += 2
-    }
-
-    // 关键词在关键词列表中出现
-    if (entryKeywords.some((ek) => ek.includes(kw) || kw.includes(ek))) {
-      score += 3
-    }
-  }
-
-  // 最近日期的条目加分
-  const age = Date.now() - entry.createdAt
-  const daysAgo = age / (24 * 60 * 60 * 1000)
-  if (daysAgo < 1) {
-    score += 5
-  } else if (daysAgo < 3) {
-    score += 3
-  } else if (daysAgo < 7) {
-    score += 1
-  }
-
-  return score
-}
-
-/**
- * 检索与当前上下文相关的日记忆和原始事件。
+ * 使用 BM25 检索与当前上下文相关的日记忆和原始事件。
  *
- * 检索策略（简单字符串匹配）：
+ * 检索策略（BM25 + temporal decay）：
  * 1. 从当前 session 事件提取关键词
- * 2. 用关键词在所有日记忆中做字符串匹配
- * 3. 按匹配度排序返回前 5 条
- * 4. 回退层：同时返回最近 10 条原始事件
+ * 2. 用 BM25 在所有日记忆中评分
+ * 3. 应用 temporal decay（14 天半衰期）
+ * 4. 返回 top-5
+ * 5. 回退层：同时返回最近 10 条原始事件
  */
 export async function retrieveContext(
   recentEvents?: Layer1Event[]
@@ -106,6 +76,7 @@ export async function retrieveContext(
   const events = recentEvents ?? (await getRecentEvents(50))
   const keywords = extractContextKeywords(events)
   const allMemories = await loadDailyMemories()
+  const allInsights = await loadAllInsights()
 
   if (keywords.length === 0) {
     return {
@@ -114,13 +85,31 @@ export async function retrieveContext(
     }
   }
 
-  // 计算每个日记忆的相关性得分
-  const scored = allMemories.map((entry) => ({
-    entry,
-    score: scoreDailyMemory(entry, keywords)
+  const queryText = keywords.join(" ")
+  const queryTokens = tokenize(queryText)
+
+  if (queryTokens.length === 0) {
+    return {
+      dailyMemories: allMemories.slice(0, 3),
+      rawEvents: events.slice(0, 10)
+    }
+  }
+
+  const docs = allMemories.map((m) => ({
+    id: `mem_${m.date}`,
+    tokens: tokenize([m.summary, ...m.keywords].join(" "))
   }))
 
-  // 按得分降序，取前 5
+  const index = buildTermIndex(docs)
+
+  const scored = allMemories.map((entry) => {
+    const docId = `mem_${entry.date}`
+    const docTokens = tokenize([entry.summary, ...entry.keywords].join(" "))
+    const bm25 = scoreDocument(docId, docTokens, queryTokens, index)
+    const decay = temporalDecay(entry.createdAt)
+    return { entry, score: bm25 * decay }
+  })
+
   const topMemories = scored
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score)
