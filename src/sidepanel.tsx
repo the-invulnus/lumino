@@ -22,6 +22,7 @@ import { runAgentLoop } from "./lib/chat/agent-loop"
 import { registerAllTools } from "./lib/chat/tool-registry"
 import type { LlmSettings } from "./lib/llm/types"
 import { getLlmSettings, hasCompleteLlmSettings } from "./lib/settings"
+import { exportWorkspaceFile } from "./lib/fs/workspace"
 import "./styles/paper.css"
 import blackCatGif from "data-base64:~black_cat.gif"
 
@@ -204,31 +205,42 @@ function LumiToolCall({
       </button>
       {hasResult && (
         <div className={`lumi-tool-call__detail${expanded ? " lumi-tool-call__detail--open" : ""}`}>
-          {(call.function.name === "read_file" || call.function.name === "write_file") && (
-            <button
-              type="button"
-              className="lumi-tool-call__download"
-              title="下载文件内容"
-              onClick={(e) => {
-                e.stopPropagation()
-                const blob = new Blob([result], { type: "text/plain;charset=utf-8" })
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement("a")
-                a.href = url
-                a.download = `${call.function.name}_${call.id.slice(0, 8)}.txt`
-                a.click()
-                URL.revokeObjectURL(url)
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" x2="12" y1="15" y2="3" />
-              </svg>
-            </button>
-          )}
           <div className="lumi-tool-call__detail-section">
-            <div className="lumi-tool-call__detail-label">Arguments:</div>
+            <div className="lumi-tool-call__detail-label-row">
+              <span className="lumi-tool-call__detail-label">Arguments:</span>
+              {(call.function.name === "read_file" || call.function.name === "write_file") && (() => {
+                let filePath: string | null = null
+                try {
+                  const args = JSON.parse(call.function.arguments)
+                  filePath = args.file_path || null
+                } catch { /* ignore */ }
+                if (!filePath) return null
+                return (
+                <button
+                  type="button"
+                  className="lumi-tool-call__download"
+                  title={`下载 ${filePath}`}
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    const exported = await exportWorkspaceFile(filePath!)
+                    if (!exported) return
+                    const url = URL.createObjectURL(exported.blob)
+                    const a = document.createElement("a")
+                    a.href = url
+                    a.download = exported.filename
+                    a.click()
+                    URL.revokeObjectURL(url)
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" x2="12" y1="15" y2="3" />
+                  </svg>
+                </button>
+                )
+              })()}
+            </div>
             <pre>{argsDisplay}</pre>
           </div>
           <div className="lumi-tool-call__detail-section">
@@ -363,7 +375,10 @@ function SidePanel() {
   const [isHydrating, setIsHydrating] = useState(true)
   const scrollAnchorRef = useRef<HTMLDivElement>(null)
   const activeThreadIdRef = useRef("")
-  const sendInFlightRef = useRef(false)
+  /** 每个 thread 独立跟踪是否正在发送请求 */
+  const sendInFlightMapRef = useRef<Record<string, boolean>>({})
+  /** 每个 thread 的 AbortController，切换 tab 时 cancel 旧请求 */
+  const abortMapRef = useRef<Record<string, AbortController>>({})
   const draftMapRef = useRef<Record<string, string>>({})
 
   useEffect(() => {
@@ -555,11 +570,13 @@ function SidePanel() {
       return
     }
 
-    if (sendInFlightRef.current) {
+    // 仅阻止当前 thread 重复发送，不阻止其他 thread
+    if (sendInFlightMapRef.current[threadId]) {
       return
     }
 
-    sendInFlightRef.current = true
+    // 切换 tab 时取消旧的未完成请求
+    sendInFlightMapRef.current[threadId] = true
     setIsLoading(true)
     setError("")
     setDraft("")
@@ -582,24 +599,54 @@ function SidePanel() {
       // 保持一份同步引用，避免 React setState 异步导致流式 delta 拼错消息
       let streamingContent = ""
 
+      // 流式期间累积的工具调用
+      let streamingToolCalls: Array<{ id: string; name: string; arguments: string }> = []
+
       const next = await runAgentLoop({
         settings,
         threadId,
         historyMessages: history,
         userInput: trimmed,
-        onStreamChunk: ({ delta }) => {
+        onStreamChunk: ({ delta, tool_calls }) => {
+          if (activeThreadIdRef.current !== threadId) return
           streamingContent += delta
+          // 合并工具调用增量（按 index 去重聚合）
+          if (tool_calls) {
+            for (const tc of tool_calls) {
+              // 使用 tool_calls 在数组中的隐式顺序作为 key
+              const key = tc.name || tc.id || `tool_${streamingToolCalls.length}`
+              const existing = streamingToolCalls.find(
+                (t) => (tc.id && t.id === tc.id) || (!tc.id && t.name === tc.name)
+              )
+              if (existing) {
+                // 更新 arguments（流式累积）和 id
+                if (tc.id) existing.id = tc.id
+                existing.arguments += tc.arguments
+              } else {
+                streamingToolCalls.push(tc)
+              }
+            }
+          }
           // 直接基于 baseMessages 构造，不依赖 prev（避免 React 批处理竞态）
           const msgs = cloneMessages(baseMessages)
           msgs.push({
             role: "assistant",
-            content: streamingContent
+            content: streamingContent,
+            tool_calls: streamingToolCalls.length > 0
+              ? streamingToolCalls.map((tc) => ({
+                  id: tc.id || `call_streaming`,
+                  type: "function" as const,
+                  function: { name: tc.name, arguments: tc.arguments }
+                }))
+              : undefined
           })
           setMessages(msgs)
         },
         onMessagesUpdate: async (msgs) => {
-          // 工具调用完成后的完整更新（覆盖流式累积的中间状态）
-          setMessages(cloneMessages(msgs))
+          // 工具调用完成后的完整更新 —— 仅在仍是当前 tab 时更新 UI
+          if (threadId === activeThreadIdRef.current) {
+            setMessages(cloneMessages(msgs))
+          }
           await saveThreadMessages(threadId, msgs)
           if (threadId === activeThreadIdRef.current) {
             await refreshThreadList()
@@ -607,18 +654,24 @@ function SidePanel() {
         }
       })
 
-      // 用完整 messages 替换流式累积的中间状态
-      setMessages(cloneMessages(next))
+      // 用完整 messages 替换流式累积的中间状态 —— 仅在仍是当前 tab
+      if (threadId === activeThreadIdRef.current) {
+        setMessages(cloneMessages(next))
+      }
       await persistMessages(threadId, next)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "请求模型失败，请检查配置后重试。"
-      )
+      if (threadId === activeThreadIdRef.current) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "请求模型失败，请检查配置后重试。"
+        )
+      }
     } finally {
-      sendInFlightRef.current = false
-      setIsLoading(false)
+      delete sendInFlightMapRef.current[threadId]
+      if (threadId === activeThreadIdRef.current) {
+        setIsLoading(false)
+      }
     }
   }
 
@@ -650,11 +703,6 @@ function SidePanel() {
                 </div>
               </div>
               <div className="paper-sp-header-actions">
-                {settings.model ? (
-                  <span className="paper-badge paper-badge--tight" title={settings.model}>
-                    {settings.model}
-                  </span>
-                ) : null}
                 <button
                   className="paper-icon-text-btn"
                   onClick={openOptionsPage}
@@ -788,22 +836,10 @@ function SidePanel() {
 
           {/* 右侧导航栏 */}
           <nav className="paper-side-nav" aria-label="功能导航">
-            {/* 折叠按钮 */}
-            <button className="paper-side-nav-btn" type="button" title="折叠侧栏">
-              <span className="paper-side-nav-btn-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <path d="M9 3v18" />
-                </svg>
-              </span>
-            </button>
-
-            <div className="paper-side-nav-divider" />
-
             {/* Chat - 激活态 */}
             <button className="paper-side-nav-btn paper-side-nav-btn--active" type="button" title="Chat">
               <span className="paper-side-nav-btn-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
               </span>

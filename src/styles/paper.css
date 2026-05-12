@@ -141,12 +141,23 @@ textarea {
   padding: 0;
 }
 
+/* 左右分栏：主内容 + 导航 */
+.paper-sidepanel-layout-row {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .paper-sidepanel-layout {
   display: flex;
   flex: 1;
   flex-direction: column;
   gap: 10px;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* 顶栏：单行信息密度 */
@@ -245,6 +256,7 @@ textarea {
   flex-shrink: 0;
   gap: 8px;
   min-height: 0;
+  min-width: 0;
   padding: 2px 0 4px;
 }
 
@@ -252,8 +264,8 @@ textarea {
   display: flex;
   flex: 1;
   gap: 0;
-  mask-image: linear-gradient(to right, transparent 0%, #000 12px, #000 calc(100% - 24px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 12px, #000 calc(100% - 24px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 8px, #000 calc(100% - 14px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 8px, #000 calc(100% - 14px), transparent 100%);
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
@@ -352,35 +364,30 @@ textarea {
 
 .paper-session-add {
   align-items: center;
-  align-self: stretch;
-  background: rgba(167, 139, 250, 0.14);
-  border: 1px solid rgba(167, 139, 250, 0.35);
-  border-radius: 999px;
-  color: #6d5a9e;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--lumi-ink-faint);
   cursor: pointer;
   display: flex;
   flex-shrink: 0;
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 400;
+  height: 28px;
   justify-content: center;
   line-height: 1;
-  min-width: 34px;
-  padding: 0 2px;
-}
-
-@media (prefers-color-scheme: dark) {
-  .paper-session-add {
-    color: #ddd6fe;
-  }
+  transition: color 180ms var(--lumi-ease-spring), background-color 180ms var(--lumi-ease-spring);
+  width: 28px;
 }
 
 .paper-session-add:hover:not(:disabled) {
-  border-color: rgba(167, 139, 250, 0.55);
+  background: var(--lumi-ring);
+  color: var(--lumi-ink);
 }
 
 .paper-session-add:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 0.35;
 }
 
 /* 对话主区：吃掉剩余高度 */
@@ -1411,27 +1418,29 @@ textarea {
   position: relative;
 }
 
+.lumi-tool-call__detail-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
 .lumi-tool-call__download {
-  position: absolute;
-  top: 6px;
-  right: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  border: 1px solid var(--lumi-ring-strong);
-  background: var(--lumi-surface-solid);
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
   color: var(--lumi-ink-faint);
   cursor: pointer;
   padding: 0;
-  transition: color 180ms var(--lumi-ease-spring), border-color 180ms var(--lumi-ease-spring);
+  transition: color 150ms var(--lumi-ease-spring);
 }
 
 .lumi-tool-call__download:hover {
-  color: var(--lumi-ink);
-  border-color: var(--lumi-ink-faint);
+  color: var(--lumi-accent-a);
 }
 
 .lumi-tool-call__detail--open {
@@ -1532,4 +1541,69 @@ textarea {
   border: 1px solid var(--lumi-danger-border, #fecaca);
   border-radius: 6px;
   padding: 8px 10px;
+}
+
+/* —— 右侧导航栏 —— */
+.paper-side-nav {
+  align-items: center;
+  border-left: 1px solid var(--lumi-ring);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 10px;
+  overflow-y: auto;
+  padding: 14px 6px;
+  scrollbar-width: none;
+  width: 48px;
+}
+
+.paper-side-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.paper-side-nav-btn {
+  align-items: center;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  color: var(--lumi-ink-faint);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+  padding: 4px 2px;
+  transition: color 180ms var(--lumi-ease-spring), background-color 180ms var(--lumi-ease-spring);
+  width: 100%;
+}
+
+.paper-side-nav-btn:hover {
+  color: var(--lumi-ink-soft);
+  background: var(--lumi-ring);
+}
+
+.paper-side-nav-btn--active {
+  color: var(--lumi-accent-a);
+}
+
+.paper-side-nav-btn--active .paper-side-nav-btn-icon {
+  background: var(--lumi-surface-solid);
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(45, 38, 34, 0.06);
+}
+
+.paper-side-nav-btn-icon {
+  align-items: center;
+  display: flex;
+  height: 30px;
+  justify-content: center;
+  padding: 3px;
+  width: 30px;
+}
+
+.paper-side-nav-btn-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
 }

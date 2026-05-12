@@ -52,7 +52,7 @@ export type AgentLoopInput = {
   userInput: string
   onMessagesUpdate?: (messages: OpenAiChatMessage[]) => Promise<void>
   /** 流式内容增量回调，逐 token 推送 */
-  onStreamChunk?: (chunk: { delta: string; tool_call_name?: string }) => void
+  onStreamChunk?: (chunk: { delta: string; tool_calls?: Array<{ id: string; name: string; arguments: string }> }) => void
 }
 
 export async function runAgentLoop(

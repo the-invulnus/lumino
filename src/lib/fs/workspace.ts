@@ -108,6 +108,62 @@ export async function listWorkspaceDir(
   return entries.sort((a, b) => a.name.localeCompare(b.name))
 }
 
+function mimeTypeForFilename(filename: string): string {
+  const ext = filename.split(".").pop()?.toLowerCase()
+  const map: Record<string, string> = {
+    js: "application/javascript",
+    mjs: "application/javascript",
+    ts: "application/typescript",
+    tsx: "application/typescript",
+    jsx: "application/javascript",
+    json: "application/json",
+    html: "text/html",
+    htm: "text/html",
+    css: "text/css",
+    svg: "image/svg+xml",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    webp: "image/webp",
+    ico: "image/x-icon",
+    pdf: "application/pdf",
+    xml: "application/xml",
+    md: "text/markdown",
+    yaml: "text/yaml",
+    yml: "text/yaml",
+    toml: "text/plain",
+    csv: "text/csv",
+    sh: "text/x-shellscript",
+    bash: "text/x-shellscript",
+    zsh: "text/x-shellscript",
+    py: "text/x-python",
+    rb: "text/x-ruby",
+    rs: "text/x-rust",
+    go: "text/x-go",
+    java: "text/x-java",
+    c: "text/x-c",
+    h: "text/x-c",
+    cpp: "text/x-c++",
+    hpp: "text/x-c++",
+    sql: "application/sql",
+    wasm: "application/wasm",
+    zip: "application/zip",
+    gz: "application/gzip",
+    tar: "application/x-tar",
+    mp3: "audio/mpeg",
+    wav: "audio/wav",
+    mp4: "video/mp4",
+    webm: "video/webm",
+    woff2: "font/woff2",
+    woff: "font/woff",
+    ttf: "font/ttf",
+    txt: "text/plain",
+    log: "text/plain",
+  }
+  return map[ext || ""] || "application/octet-stream"
+}
+
 export async function exportWorkspaceFile(
   path: string
 ): Promise<{ blob: Blob; filename: string } | null> {
@@ -116,7 +172,8 @@ export async function exportWorkspaceFile(
 
   const parts = path.replace(/^\/+/, "").split("/")
   const filename = parts.pop() || "export.txt"
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
+  const mimeType = mimeTypeForFilename(filename)
+  const blob = new Blob([content], { type: `${mimeType};charset=utf-8` })
 
   return { blob, filename }
 }
