@@ -951,7 +951,7 @@ textarea {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   max-height: min(52vh, 420px);
   min-height: 160px;
   overflow-y: auto;
@@ -1303,12 +1303,16 @@ textarea {
 .lumi-sequence-stack {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
 }
 
 .lumi-sequence-stack > * {
   margin: 0;
+}
+
+.lumi-sequence-stack > .paper-chat-md:empty {
+  display: none;
 }
 
 /* —— 工具调用容器（可折叠） —— */

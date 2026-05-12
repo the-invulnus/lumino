@@ -289,7 +289,9 @@ function ChatMessageBlock({
 
     const hasContent = !!text
     const hasTools = toolCalls && toolCalls.length > 0
-    const paragraphs = hasContent ? text.split(/\n{2,}/) : []
+    const paragraphs = hasContent
+      ? text.split(/\n{2,}/).filter((p) => p.trim().length > 0)
+      : []
 
     return (
       <div className="paper-chat-row paper-chat-row--assistant">
