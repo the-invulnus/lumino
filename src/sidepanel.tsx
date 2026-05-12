@@ -574,16 +574,31 @@ function SidePanel() {
     try {
       const history = cloneMessages(messages)
 
+      // 先乐观添加用户消息（同步 push 到本地数组，再一次性 setMessages）
+      const userMsg: OpenAiChatMessage = { role: "user", content: trimmed }
+      const baseMessages = [...history, userMsg]
+      setMessages(cloneMessages(baseMessages))
+
+      // 保持一份同步引用，避免 React setState 异步导致流式 delta 拼错消息
+      let streamingContent = ""
+
       const next = await runAgentLoop({
         settings,
         threadId,
         historyMessages: history,
         userInput: trimmed,
-        onUserMessageSent: async (msgs) => {
-          // 乐观更新：用户消息立刻上屏
-          setMessages(cloneMessages(msgs))
+        onStreamChunk: ({ delta }) => {
+          streamingContent += delta
+          // 直接基于 baseMessages 构造，不依赖 prev（避免 React 批处理竞态）
+          const msgs = cloneMessages(baseMessages)
+          msgs.push({
+            role: "assistant",
+            content: streamingContent
+          })
+          setMessages(msgs)
         },
         onMessagesUpdate: async (msgs) => {
+          // 工具调用完成后的完整更新（覆盖流式累积的中间状态）
           setMessages(cloneMessages(msgs))
           await saveThreadMessages(threadId, msgs)
           if (threadId === activeThreadIdRef.current) {
@@ -592,6 +607,7 @@ function SidePanel() {
         }
       })
 
+      // 用完整 messages 替换流式累积的中间状态
       setMessages(cloneMessages(next))
       await persistMessages(threadId, next)
     } catch (requestError) {
@@ -619,6 +635,7 @@ function SidePanel() {
 
       <div className="paper-bezel-outer paper-bezel-outer--side">
         <div className="paper-bezel-inner paper-bezel-inner--side">
+          <div className="paper-sidepanel-layout-row">
           <div className="paper-sidepanel-layout">
             <header className="paper-sp-header">
               <div className="paper-sp-brand">
@@ -736,7 +753,7 @@ function SidePanel() {
                         disabled={isLoading || !isReady || isHydrating}
                         onChange={(event) => setDraft(event.target.value)}
                         onKeyDown={(event) => {
-                          if (event.key === "Enter") {
+                          if (event.key === "Enter" && !event.nativeEvent.isComposing) {
                             event.preventDefault()
                             void sendUserMessage()
                           }
@@ -767,6 +784,32 @@ function SidePanel() {
                     ) : null}
                   </div>
                 </section>
+          </div>
+
+          {/* 右侧导航栏 */}
+          <nav className="paper-side-nav" aria-label="功能导航">
+            {/* 折叠按钮 */}
+            <button className="paper-side-nav-btn" type="button" title="折叠侧栏">
+              <span className="paper-side-nav-btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M9 3v18" />
+                </svg>
+              </span>
+            </button>
+
+            <div className="paper-side-nav-divider" />
+
+            {/* Chat - 激活态 */}
+            <button className="paper-side-nav-btn paper-side-nav-btn--active" type="button" title="Chat">
+              <span className="paper-side-nav-btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </span>
+              <span className="paper-side-nav-btn-label">Chat</span>
+            </button>
+          </nav>
           </div>
         </div>
       </div>
