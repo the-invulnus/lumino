@@ -8,7 +8,7 @@ import {
   CAPTURE_PAGE_MESSAGE,
   CAPTURE_PAGE_RESULT_MESSAGE
 } from "./types"
-import { getCollectionConfig, formatDateKey } from "./collection-config"
+import { getCollectionConfig, formatDateKey, isUrlIgnored } from "./collection-config"
 import { insertPageVisit } from "./page-visit-idb"
 
 const DWELL_CHECK_ALARM = "lumino/dwell-check"
@@ -41,6 +41,14 @@ export async function registerTabOpen(
     await settleTimer(tabId, oldTimer, Date.now())
   }
 
+  // 检查是否在忽略列表中
+  const cfg = await getCollectionConfig()
+  if (isUrlIgnored(url, cfg.ignoredUrlPatterns)) {
+    delete timers[String(tabId)]
+    await chrome.storage.local.set({ [STORAGE_KEY_TAB_TIMERS]: timers })
+    return
+  }
+
   timers[String(tabId)] = {
     startMs: Date.now(),
     url,
@@ -63,6 +71,8 @@ async function settleTimer(
   const cfg = await getCollectionConfig()
   if (!cfg.enablePageVisits) return
 
+  if (isUrlIgnored(timer.url, cfg.ignoredUrlPatterns)) return
+
   const rawDwellMs = settledAt - timer.startMs
   const effective = computeEffectiveDwell(rawDwellMs, timer.wasActive, cfg)
 
@@ -73,16 +83,7 @@ async function settleTimer(
     return
   }
 
-  if (
-    !timer.url ||
-    timer.url.startsWith("chrome://") ||
-    timer.url.startsWith("chrome-extension://")
-  ) {
-    return
-  }
-
   try {
-    // 向 content script 请求采集页面 Markdown
     const response = await chrome.tabs.sendMessage(tabId, {
       type: CAPTURE_PAGE_MESSAGE
     })
@@ -113,9 +114,6 @@ async function settleTimer(
   }
 }
 
-/**
- * 标记某个 tab 被用户激活过。
- */
 export async function markTabActive(tabId: number): Promise<void> {
   const data = await chrome.storage.local.get(STORAGE_KEY_TAB_TIMERS)
   const timers: Record<string, TabTimer> =
@@ -128,9 +126,6 @@ export async function markTabActive(tabId: number): Promise<void> {
   }
 }
 
-/**
- * Tab 关闭时结算并清理计时器。
- */
 export async function settleAndRemoveTabTimer(tabId: number): Promise<void> {
   const data = await chrome.storage.local.get(STORAGE_KEY_TAB_TIMERS)
   const timers: Record<string, TabTimer> =
@@ -144,9 +139,6 @@ export async function settleAndRemoveTabTimer(tabId: number): Promise<void> {
   }
 }
 
-/**
- * 计算有效浏览时长。
- */
 export function computeEffectiveDwell(
   rawDwellMs: number,
   wasActive: boolean,
@@ -164,9 +156,6 @@ export function computeEffectiveDwell(
   return effective
 }
 
-/**
- * 定时巡检：遍历当前打开的 tab 和 timer，结算已达标的页面。
- */
 export async function runDwellCheck(config?: CollectionConfig): Promise<void> {
   const cfg = config ?? (await getCollectionConfig())
   if (!cfg.enablePageVisits) return
@@ -182,7 +171,6 @@ export async function runDwellCheck(config?: CollectionConfig): Promise<void> {
     tabs.filter((t) => t.id != null).map((t) => [String(t.id), t.url ?? ""])
   )
 
-  // 清理已关闭 tab + URL 已变化的 tab
   let changed = false
   for (const tabIdStr of Object.keys(timers)) {
     const timer = timers[tabIdStr]
@@ -202,7 +190,6 @@ export async function runDwellCheck(config?: CollectionConfig): Promise<void> {
     await chrome.storage.local.set({ [STORAGE_KEY_TAB_TIMERS]: timers })
   }
 
-  // 对仍存活且 URL 未变的 timer，检查是否达到阈值
   for (const tab of tabs) {
     const tabId = tab.id
     if (tabId == null) continue

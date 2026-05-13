@@ -103,11 +103,7 @@ export const STORAGE_KEY_COLLECTION_CONFIG = "lumino_collection_config" as const
 export const TAB_OPEN_MESSAGE = "lumino/tab-open" as const
 export const INPUT_EVENT_MESSAGE = "lumino/input-event" as const
 export const COPY_EVENT_MESSAGE = "lumino/copy-event" as const
-
-/** Background → Content Script: 请求采集当前页面 Markdown */
 export const CAPTURE_PAGE_MESSAGE = "lumino/capture-page" as const
-
-/** Content Script → Background: 返回页面 Markdown 采集结果 */
 export const CAPTURE_PAGE_RESULT_MESSAGE = "lumino/capture-page-result" as const
 
 export type TabOpenMessage = {
@@ -167,6 +163,25 @@ export type CollectionConfig = {
   ignoredUrlPatterns: string[]
 }
 
+/** 内置的默认忽略规则，用户可删改 */
+export const BUILTIN_IGNORED_PATTERNS: string[] = [
+  "chrome://",
+  "chrome-extension://",
+  "moz-extension://",
+  "edge://",
+  "about:",
+  "file://",
+  "localhost",
+  "127\\.",
+  "192\\.168\\.",
+  "10\\.",
+  "172\\.(1[6-9]|2[0-9]|3[01])\\.",
+  "\\.bank\\.|\\bbank\\.|\\bbanking\\.|paypal\\.com|stripe\\.com|wise\\.com|venmo\\.com|cashapp\\.com|alipay\\.com",
+  "\\.gov\\.|\\.gov$|\\.mil$|\btax\\.|\\birs\\b",
+  "\\bhealthcare\\b|\\bhospital\\b|\\bclinic\\b|\\bpharmacy\\b|\\bmedical\\b",
+  "\\b18jin|\\bonlyfans\\b|\\bporn\\b|\\bxvideos?\\b|\\bredtube\\b|\\byouporn\\b"
+]
+
 export const DEFAULT_COLLECTION_CONFIG: CollectionConfig = {
   enablePageVisits: true,
   enableInputEvents: true,
@@ -178,5 +193,5 @@ export const DEFAULT_COLLECTION_CONFIG: CollectionConfig = {
   dwellDecayRatio: 0.3,
   backgroundTabCoeff: 0.1,
   dwellCheckIntervalMs: 60_000,
-  ignoredUrlPatterns: []
+  ignoredUrlPatterns: [...BUILTIN_IGNORED_PATTERNS]
 }
