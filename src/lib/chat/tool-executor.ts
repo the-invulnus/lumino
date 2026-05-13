@@ -10,7 +10,8 @@ export function registerTool(name: string, handler: ToolHandler): void {
 }
 
 export async function executeToolCall(
-  call: OpenAiToolCall
+  call: OpenAiToolCall,
+  signal?: AbortSignal
 ): Promise<string> {
   const name = call.function.name
   const handler = toolRegistry.get(name)
@@ -25,6 +26,10 @@ export async function executeToolCall(
 
   try {
     const args = JSON.parse(call.function.arguments || "{}") as Record<string, unknown>
+    // 检查是否已中止
+    if (signal?.aborted) {
+      throw new DOMException("工具执行被中止", "AbortError")
+    }
     const rawResult = await handler(args)
 
     // 驱逐判定：大工具结果自动写入 OPFS，用预览替换返回内容

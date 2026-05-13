@@ -410,6 +410,35 @@ function SidePanel() {
       })
   }, [])
 
+  // 监听 chrome.storage 变化，options 页面保存后实时更新配置
+  useEffect(() => {
+    const SETTINGS_KEYS = ["baseUrl", "apiKey", "model"]
+
+    function handleChanged(
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string
+    ) {
+      if (areaName !== "sync") return
+
+      const hasSettingsChange = SETTINGS_KEYS.some((key) => key in changes)
+      if (!hasSettingsChange) return
+
+      getLlmSettings()
+        .then((nextSettings) => {
+          setSettings(nextSettings)
+        })
+        .catch(() => {
+          /* 静默忽略 */
+        })
+    }
+
+    chrome.storage.onChanged.addListener(handleChanged)
+
+    return () => {
+      chrome.storage.onChanged.removeListener(handleChanged)
+    }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
 
@@ -466,6 +495,15 @@ function SidePanel() {
 
   const openOptionsPage = useCallback(async () => {
     await chrome.runtime.openOptionsPage()
+  }, [])
+
+  const handleStop = useCallback(() => {
+    const threadId = activeThreadIdRef.current
+    const controller = abortMapRef.current[threadId]
+    if (controller) {
+      controller.abort()
+      delete abortMapRef.current[threadId]
+    }
   }, [])
 
   const persistMessages = useCallback(
@@ -583,6 +621,10 @@ function SidePanel() {
     setError("")
     setDraft("")
 
+    // 创建 AbortController，用于用户主动打断
+    const abortController = new AbortController()
+    abortMapRef.current[threadId] = abortController
+
     console.log("[lumino:sidepanel]", "开始请求，当前消息数:", messages.length)
 
     try {
@@ -598,6 +640,7 @@ function SidePanel() {
         threadId,
         historyMessages: history,
         userInput: trimmed,
+        signal: abortController.signal,
         onMessagesUpdate: async (msgs) => {
           // 仅在仍是当前 tab 时更新 UI
           if (threadId === activeThreadIdRef.current) {
@@ -614,7 +657,9 @@ function SidePanel() {
       }
       await persistMessages(threadId, next)
     } catch (requestError) {
-      if (threadId === activeThreadIdRef.current) {
+      if (requestError instanceof DOMException && requestError.name === "AbortError") {
+        // 用户主动中止，不显示错误
+      } else if (threadId === activeThreadIdRef.current) {
         setError(
           requestError instanceof Error
             ? requestError.message
@@ -755,6 +800,13 @@ function SidePanel() {
                       <span className="lumi-running-dot" />
                       <span className="lumi-running-dot" />
                       <span>运行中…</span>
+                      <button
+                        className="paper-secondary-button paper-secondary-button--sm"
+                        onClick={handleStop}
+                        style={{ marginLeft: "0.75rem" }}
+                        type="button">
+                        停止
+                      </button>
                     </div>
                   )}
 

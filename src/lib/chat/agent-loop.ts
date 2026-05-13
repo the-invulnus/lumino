@@ -51,13 +51,14 @@ export type AgentLoopInput = {
   historyMessages: OpenAiChatMessage[]
   userInput: string
   onMessagesUpdate?: (messages: OpenAiChatMessage[]) => Promise<void>
-  /** 流式内容增量回调，逐 token 推送 */
+  /** AbortSignal 用于中断 agent 循环 */
+  signal?: AbortSignal
 }
 
 export async function runAgentLoop(
   input: AgentLoopInput
 ): Promise<OpenAiChatMessage[]> {
-  const { settings, historyMessages, userInput, onMessagesUpdate } = input
+  const { settings, historyMessages, userInput, onMessagesUpdate, signal } = input
   const startTime = Date.now()
 
   const messages: OpenAiChatMessage[] = [
@@ -72,6 +73,12 @@ export async function runAgentLoop(
   let totalToolCalls = 0
 
   while (true) {
+    // 检查是否被中止
+    if (signal?.aborted) {
+      debugLog("Agent 循环被用户中止")
+      throw new DOMException("用户中止了请求", "AbortError")
+    }
+
     debugLog(`第 ${totalToolCalls + 1} 次 LLM 调用，当前消息数=${messages.length}`)
 
     const systemMessages = await buildAgentMessages(
@@ -97,6 +104,7 @@ export async function runAgentLoop(
         messages: requestMessages,
         tools: LUMINO_AGENT_TOOLS
       }, {
+        signal,
         timeoutMs: LLM_REQUEST_TIMEOUT_MS
       }),
       LLM_REQUEST_TIMEOUT_MS + 5_000,
@@ -141,7 +149,7 @@ export async function runAgentLoop(
       const toolStart = Date.now()
 
       const toolResult = await withTimeout(
-        executeToolCall(call),
+        executeToolCall(call, signal),
         TOOL_EXEC_TIMEOUT_MS,
         `工具 ${call.function.name}`
       )

@@ -86,6 +86,7 @@ function IndexOptions() {
       setCollectionConfig(fresh)
       setIgnoredPatternsText(fresh.ignoredUrlPatterns.join("\n"))
       setStatus("好啦，已经收进小抽屉里了。")
+      setTimeout(() => window.close(), 800)
     } catch {
       setStatus("保存失败，请稍后重试。")
     } finally {
