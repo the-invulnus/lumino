@@ -372,8 +372,9 @@ function SidePanel() {
     apiKey: "",
     model: ""
   })
-  const [isLoading, setIsLoading] = useState(false)
   const [isReady, setIsReady] = useState(false)
+  /** 每个 thread 独立的加载状态 */
+  const [loadingThreadIds, setLoadingThreadIds] = useState<Set<string>>(new Set())
   const [isHydrating, setIsHydrating] = useState(true)
   const scrollAnchorRef = useRef<HTMLDivElement>(null)
   const activeThreadIdRef = useRef("")
@@ -461,7 +462,7 @@ function SidePanel() {
 
   useEffect(() => {
     scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
-  }, [messages, isLoading, activeThreadId])
+  }, [messages, loadingThreadIds, activeThreadId])
 
   const openOptionsPage = useCallback(async () => {
     await chrome.runtime.openOptionsPage()
@@ -577,88 +578,39 @@ function SidePanel() {
       return
     }
 
-    // 切换 tab 时取消旧的未完成请求
     sendInFlightMapRef.current[threadId] = true
-    setIsLoading(true)
+    setLoadingThreadIds((prev) => new Set(prev).add(threadId))
     setError("")
     setDraft("")
 
-    // 将 agent 状态输出到 console 以便调试
-    const statusLog = (...args: unknown[]) => {
-      console.log("[lumino:sidepanel]", ...args)
-      setError("")  // 清除旧错误
-    }
-    statusLog("开始请求，当前消息数:", messages.length)
+    console.log("[lumino:sidepanel]", "开始请求，当前消息数:", messages.length)
 
     try {
       const history = cloneMessages(messages)
 
-      // 先乐观添加用户消息（同步 push 到本地数组，再一次性 setMessages）
+      // 先乐观添加用户消息
       const userMsg: OpenAiChatMessage = { role: "user", content: trimmed }
       const baseMessages = [...history, userMsg]
       setMessages(cloneMessages(baseMessages))
-
-      // 保持一份同步引用，避免 React setState 异步导致流式 delta 拼错消息
-      let streamingContent = ""
-
-      // 流式期间累积的工具调用
-      let streamingToolCalls: Array<{ id: string; name: string; arguments: string }> = []
 
       const next = await runAgentLoop({
         settings,
         threadId,
         historyMessages: history,
         userInput: trimmed,
-        onStreamChunk: ({ delta, tool_calls }) => {
-          if (activeThreadIdRef.current !== threadId) return
-          streamingContent += delta
-          // 合并工具调用增量（按 index 去重聚合）
-          if (tool_calls) {
-            for (const tc of tool_calls) {
-              // 使用 tool_calls 在数组中的隐式顺序作为 key
-              const key = tc.name || tc.id || `tool_${streamingToolCalls.length}`
-              const existing = streamingToolCalls.find(
-                (t) => (tc.id && t.id === tc.id) || (!tc.id && t.name === tc.name)
-              )
-              if (existing) {
-                // 更新 arguments（流式累积）和 id
-                if (tc.id) existing.id = tc.id
-                existing.arguments += tc.arguments
-              } else {
-                streamingToolCalls.push(tc)
-              }
-            }
-          }
-          // 直接基于 baseMessages 构造，不依赖 prev（避免 React 批处理竞态）
-          const msgs = cloneMessages(baseMessages)
-          msgs.push({
-            role: "assistant",
-            content: streamingContent,
-            tool_calls: streamingToolCalls.length > 0
-              ? streamingToolCalls.map((tc) => ({
-                  id: tc.id || `call_streaming`,
-                  type: "function" as const,
-                  function: { name: tc.name, arguments: tc.arguments }
-                }))
-              : undefined
-          })
-          setMessages(msgs)
-        },
         onMessagesUpdate: async (msgs) => {
-          // 工具调用完成后的完整更新 —— 仅在仍是当前 tab 时更新 UI
+          // 仅在仍是当前 tab 时更新 UI
           if (threadId === activeThreadIdRef.current) {
             setMessages(cloneMessages(msgs))
           }
           await saveThreadMessages(threadId, msgs)
-          if (threadId === activeThreadIdRef.current) {
-            await refreshThreadList()
-          }
         }
       })
 
-      // 用完整 messages 替换流式累积的中间状态 —— 仅在仍是当前 tab
+      // 仅在仍是当前 tab 时更新 UI
       if (threadId === activeThreadIdRef.current) {
         setMessages(cloneMessages(next))
+        await refreshThreadList()
       }
       await persistMessages(threadId, next)
     } catch (requestError) {
@@ -671,9 +623,11 @@ function SidePanel() {
       }
     } finally {
       delete sendInFlightMapRef.current[threadId]
-      if (threadId === activeThreadIdRef.current) {
-        setIsLoading(false)
-      }
+      setLoadingThreadIds((prev) => {
+        const next = new Set(prev)
+        next.delete(threadId)
+        return next
+      })
     }
   }
 
@@ -760,7 +714,7 @@ function SidePanel() {
                   </button>
                 </section>
 
-                <section className="paper-chat-panel" aria-busy={isLoading}>
+                <section className="paper-chat-panel" aria-busy={loadingThreadIds.has(activeThreadId)}>
                   {isReady && !isConfigured ? (
                     <div className="paper-note paper-note--compact">
                       <p>请先在设置中填写 Base URL、API Key 与模型。</p>
@@ -795,12 +749,21 @@ function SidePanel() {
                     <div ref={scrollAnchorRef} />
                   </div>
 
+                  {loadingThreadIds.has(activeThreadId) && (
+                    <div className="lumi-running-indicator">
+                      <span className="lumi-running-dot" />
+                      <span className="lumi-running-dot" />
+                      <span className="lumi-running-dot" />
+                      <span>运行中…</span>
+                    </div>
+                  )}
+
                   <div className="paper-composer">
                     <div className="paper-composer-row">
                       <input
                         aria-label="对话输入"
                         className="paper-input paper-input--composer"
-                        disabled={isLoading || !isReady || isHydrating}
+                        disabled={loadingThreadIds.has(activeThreadId) || !isReady || isHydrating}
                         onChange={(event) => setDraft(event.target.value)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" && !event.nativeEvent.isComposing) {
@@ -813,13 +776,13 @@ function SidePanel() {
                         value={draft}
                       />
                       <button
-                        aria-busy={isLoading}
-                        aria-label={isLoading ? "正在发送" : "发送"}
+                        aria-busy={loadingThreadIds.has(activeThreadId)}
+                        aria-label={loadingThreadIds.has(activeThreadId) ? "正在发送" : "发送"}
                         className="paper-composer-send"
-                        disabled={!isReady || isLoading || isHydrating}
+                        disabled={!isReady || loadingThreadIds.has(activeThreadId) || isHydrating}
                         onClick={() => void sendUserMessage()}
                         type="button">
-                        {isLoading ? (
+                        {loadingThreadIds.has(activeThreadId) ? (
                           <span aria-hidden className="paper-spinner paper-spinner--on-accent" />
                         ) : (
                           <SendArrowIcon />

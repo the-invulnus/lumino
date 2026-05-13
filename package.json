@@ -18,6 +18,8 @@
   "manifest": {
     "permissions": [
       "storage",
+        "history",
+        "bookmarks",
       "sidePanel",
       "alarms",
       "tabs",

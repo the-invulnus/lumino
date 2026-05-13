@@ -2,8 +2,8 @@
 // 记忆系统 IndexedDB 操作 — 使用统一的 db.ts 连接
 // ============================================================
 
-import type { Layer1Event, DailyMemoryEntry, ConversationInsight } from "./types"
-import { openDatabase, STORE_EVENTS, STORE_DAILY, STORE_INSIGHTS } from "../db"
+import type { Layer1Event, DailyMemoryEntry, ConversationInsight, BookmarkChangeEvent } from "./types"
+import { openDatabase, STORE_EVENTS, STORE_DAILY, STORE_INSIGHTS, STORE_BOOKMARK_CHANGES } from "../db"
 
 const MAX_EVENT_AGE_DAYS = 7
 const MAX_EVENTS = 5000
@@ -90,6 +90,91 @@ export async function getSessionEvents(sessionStartMs: number): Promise<Layer1Ev
 export async function getRecentEvents(limit = 50): Promise<Layer1Event[]> {
   const all = await loadAllEvents()
   return all.sort((a, b) => b.timestamp - a.timestamp).slice(0, limit)
+}
+
+// ---- 按 dateKey 查询事件 ----
+
+export async function getEventsByDateKey(
+  dateKey: string
+): Promise<Layer1Event[]> {
+  const db = await openDatabase()
+
+  return new Promise<Layer1Event[]>((resolve, reject) => {
+    const tx = db.transaction(STORE_EVENTS, "readonly")
+    const index = tx.objectStore(STORE_EVENTS).index("dateKey")
+
+    if (!index) {
+      resolve([])
+      return
+    }
+
+    const req = index.getAll(IDBKeyRange.only(dateKey))
+    req.onsuccess = () => resolve((req.result as Layer1Event[]) ?? [])
+    req.onerror = () => reject(req.error ?? new Error("getEventsByDateKey failed"))
+  })
+}
+
+export async function getEventsByDateKeyAndStatus(
+  dateKey: string,
+  dwellStatus: string
+): Promise<Layer1Event[]> {
+  const all = await getEventsByDateKey(dateKey)
+  return all.filter((e) => e.dwellStatus === dwellStatus)
+}
+
+// ---- 按 dwellStatus 查询事件 ----
+
+export async function getEventsByDwellStatus(
+  status: string
+): Promise<Layer1Event[]> {
+  const db = await openDatabase()
+
+  return new Promise<Layer1Event[]>((resolve, reject) => {
+    const tx = db.transaction(STORE_EVENTS, "readonly")
+    const index = tx.objectStore(STORE_EVENTS).index("dwellStatus")
+
+    if (!index) {
+      resolve([])
+      return
+    }
+
+    const req = index.getAll(IDBKeyRange.only(status))
+    req.onsuccess = () => resolve((req.result as Layer1Event[]) ?? [])
+    req.onerror = () => reject(req.error ?? new Error("getEventsByDwellStatus failed"))
+  })
+}
+
+// ---- 更新 dwell 信息 ----
+
+export async function updateEventDwell(
+  eventId: string,
+  dwellMs: number,
+  dwellStatus: "confirmed" | "settled" | "discarded"
+): Promise<void> {
+  const db = await openDatabase()
+
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_EVENTS, "readwrite")
+    const store = tx.objectStore(STORE_EVENTS)
+    const getReq = store.get(eventId)
+
+    getReq.onsuccess = () => {
+      const event = getReq.result as Layer1Event | undefined
+      if (!event) {
+        resolve()
+        return
+      }
+
+      event.dwellMs = dwellMs
+      event.dwellStatus = dwellStatus
+      store.put(event)
+    }
+
+    getReq.onerror = () => reject(getReq.error ?? new Error("updateEventDwell get failed"))
+
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error ?? new Error("updateEventDwell failed"))
+  })
 }
 
 async function cleanupEvents(): Promise<void> {
@@ -251,4 +336,116 @@ export async function markMemoryStatus(
   entry.lastModifiedAt = Date.now()
 
   await saveDailyMemory(entry)
+}
+
+// ---- 书签变更事件 ----
+
+export async function appendBookmarkChange(
+  event: BookmarkChangeEvent
+): Promise<void> {
+  const db = await openDatabase()
+
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_BOOKMARK_CHANGES, "readwrite")
+    tx.objectStore(STORE_BOOKMARK_CHANGES).put(event)
+
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error ?? new Error("appendBookmarkChange failed"))
+    tx.onabort = () => reject(tx.error ?? new Error("appendBookmarkChange aborted"))
+  })
+}
+
+export async function getBookmarkChangesByDateKey(
+  dateKey: string
+): Promise<BookmarkChangeEvent[]> {
+  const db = await openDatabase()
+
+  return new Promise<BookmarkChangeEvent[]>((resolve, reject) => {
+    const tx = db.transaction(STORE_BOOKMARK_CHANGES, "readonly")
+    const index = tx.objectStore(STORE_BOOKMARK_CHANGES).index("dateKey")
+
+    if (!index) {
+      resolve([])
+      return
+    }
+
+    const req = index.getAll(IDBKeyRange.only(dateKey))
+    req.onsuccess = () => resolve((req.result as BookmarkChangeEvent[]) ?? [])
+    req.onerror = () => reject(req.error ?? new Error("getBookmarkChangesByDateKey failed"))
+  })
+}
+
+// ---- 诊断 / 调试 ----
+
+/**
+ * 获取 IndexedDB 存储统计信息。
+ * 用于在 sidepanel 或控制台调试时调用。
+ */
+export async function getStorageStats(): Promise<{
+  dbName: string
+  dbVersion: number
+  stores: Record<string, number>
+  layer1EventCount: number
+  bookmarkChangeCount: number
+  pendingDwellCount: number
+  confirmedDwellCount: number
+}> {
+  const db = await openDatabase()
+  const storeNames = Array.from(db.objectStoreNames) as string[]
+  const stores: Record<string, number> = {}
+
+  let layer1EventCount = 0
+  let bookmarkChangeCount = 0
+  let pendingDwellCount = 0
+  let confirmedDwellCount = 0
+
+  for (const name of storeNames) {
+    try {
+      const tx = db.transaction(name, "readonly")
+      const count = await new Promise<number>((resolve, reject) => {
+        const req = tx.objectStore(name).count()
+        req.onsuccess = () => resolve(req.result)
+        req.onerror = () => reject(req.error)
+      })
+      stores[name] = count
+
+      if (name === STORE_EVENTS) {
+        layer1EventCount = count
+
+        // 统计 dwellStatus 分布
+        try {
+          const statTx = db.transaction(STORE_EVENTS, "readonly")
+          const statStore = statTx.objectStore(STORE_EVENTS)
+          const allEvents = await new Promise<unknown[]>((resolve, reject) => {
+            const req = statStore.getAll()
+            req.onsuccess = () => resolve(req.result as unknown[])
+            req.onerror = () => reject(req.error)
+          })
+
+          pendingDwellCount = (allEvents as Array<{ dwellStatus?: string }>)
+            .filter((e) => e.dwellStatus === "pending").length
+          confirmedDwellCount = (allEvents as Array<{ dwellStatus?: string }>)
+            .filter((e) => e.dwellStatus === "confirmed").length
+        } catch {
+          // ignore stat errors
+        }
+      }
+
+      if (name === STORE_BOOKMARK_CHANGES) {
+        bookmarkChangeCount = count
+      }
+    } catch {
+      stores[name] = -1
+    }
+  }
+
+  return {
+    dbName: db.name,
+    dbVersion: db.version,
+    stores,
+    layer1EventCount,
+    bookmarkChangeCount,
+    pendingDwellCount,
+    confirmedDwellCount
+  }
 }

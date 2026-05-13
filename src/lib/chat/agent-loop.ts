@@ -1,6 +1,6 @@
 import type { OpenAiChatMessage, OpenAiToolCall } from "./openai-messages"
 import type { LlmSettings } from "../llm/types"
-import { requestChatCompletionStream, type StreamChunk } from "../llm/openai"
+import { requestChatCompletionTurn } from "../llm/openai"
 import { executeToolCall } from "./tool-executor"
 import { buildAgentMessages } from "./system-prompt"
 import { LUMINO_AGENT_TOOLS } from "./tool-definitions"
@@ -52,13 +52,12 @@ export type AgentLoopInput = {
   userInput: string
   onMessagesUpdate?: (messages: OpenAiChatMessage[]) => Promise<void>
   /** 流式内容增量回调，逐 token 推送 */
-  onStreamChunk?: (chunk: { delta: string; tool_calls?: Array<{ id: string; name: string; arguments: string }> }) => void
 }
 
 export async function runAgentLoop(
   input: AgentLoopInput
 ): Promise<OpenAiChatMessage[]> {
-  const { settings, historyMessages, userInput, onMessagesUpdate, onStreamChunk } = input
+  const { settings, historyMessages, userInput, onMessagesUpdate } = input
   const startTime = Date.now()
 
   const messages: OpenAiChatMessage[] = [
@@ -90,36 +89,26 @@ export async function runAgentLoop(
       ...(systemMessages as OpenAiChatMessage[]),
     ]
 
-    debugLog("→ 请求 LLM (streaming)...")
+    debugLog("→ 请求 LLM...")
     const llmStart = Date.now()
 
-    // 流式请求：内容逐步累积，tool_calls 在流结束后一次性获得
-    let streamedContent = ""
     const result = await withTimeout(
-      requestChatCompletionStream(settings, {
+      requestChatCompletionTurn(settings, {
         messages: requestMessages,
         tools: LUMINO_AGENT_TOOLS
-      }, (chunk: StreamChunk) => {
-        if (chunk.delta) {
-          streamedContent += chunk.delta
-          // 通知 UI：流式增量
-          if (onStreamChunk) {
-            onStreamChunk({ delta: chunk.delta })
-          }
-        }
       }, {
         timeoutMs: LLM_REQUEST_TIMEOUT_MS
       }),
       LLM_REQUEST_TIMEOUT_MS + 5_000,
-      "LLM 流式请求"
+      "LLM 请求"
     )
 
-    debugLog(`← LLM 响应，耗时 ${Date.now() - llmStart}ms，finishReason=${result.finishReason || "unknown"}, content=${streamedContent.length}chars, tools=${result.tool_calls?.length || 0}`)
+    debugLog(`← LLM 响应，耗时 ${Date.now() - llmStart}ms，finishReason=${result.finishReason || "unknown"}, content=${result.message.content?.length || 0}chars, tools=${result.message.tool_calls?.length || 0}`)
 
     const assistantMsg = {
       role: "assistant" as const,
-      content: streamedContent || result.content || null,
-      tool_calls: result.tool_calls
+      content: result.message.content,
+      tool_calls: result.message.tool_calls
     }
 
     // 检测空响应：既没有文本也没有工具调用

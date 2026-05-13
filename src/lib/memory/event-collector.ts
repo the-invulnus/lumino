@@ -3,12 +3,22 @@
 // ============================================================
 
 import type {
+  ClickMeta,
   InputMeta,
   Layer1Event,
   Layer1EventType,
-  PageMeta
+  PageMeta,
+  ScrollMeta
 } from "./types"
 import { isPrivacyUrl } from "./privacy-filter"
+import { formatDateKey } from "./collection-config"
+
+/**
+ * 生成唯一事件 ID。
+ */
+function generateEventId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+}
 
 /**
  * 截取页面文本的前 N 个字符作为上下文摘要。
@@ -20,7 +30,6 @@ function extractTextSnippet(doc: Document, maxLength = 3000): string {
   }
 
   const text = body.innerText ?? ""
-  // 清理多余空白
   const cleaned = text.replace(/\s{2,}/g, " ").trim()
   return cleaned.length > maxLength
     ? cleaned.slice(0, maxLength) + "…"
@@ -64,8 +73,57 @@ export function buildInputMeta(
 }
 
 /**
+ * 构建滚动元数据。
+ */
+export function buildScrollMeta(doc: Document): ScrollMeta {
+  const scrollHeight = doc.documentElement.scrollHeight - doc.documentElement.clientHeight
+  if (scrollHeight <= 0) {
+    return { scrollDepth: 0 }
+  }
+
+  const scrollY = window.scrollY
+  const depth = Math.min(100, Math.round((scrollY / scrollHeight) * 100))
+
+  return { scrollDepth: depth }
+}
+
+/**
+ * 构建点击元数据。
+ */
+export function buildClickMeta(
+  element: HTMLElement
+): ClickMeta {
+  const tag = element.tagName.toLowerCase()
+  const href =
+    element instanceof HTMLAnchorElement
+      ? element.href
+      : element.closest("a")?.href
+
+  let elementType: ClickMeta["elementType"] = "other"
+
+  if (tag === "a" || element.closest("a")) {
+    elementType = "link"
+  } else if (tag === "button" || element.closest("button")) {
+    elementType = "button"
+  } else if (
+    tag === "input" &&
+    (element as HTMLInputElement).type === "search"
+  ) {
+    elementType = "search"
+  } else if (element.closest("nav")) {
+    elementType = "navigation"
+  }
+
+  const label =
+    element.textContent?.trim().slice(0, 200) ??
+    (element as HTMLInputElement).value?.slice(0, 200) ??
+    ""
+
+  return { elementType, label, href }
+}
+
+/**
  * 构建一个模糊的 CSS 选择器用于标识元素。
- * 注意：仅用于记忆关联，不保证唯一性。
  */
 function buildSelectorHint(
   element: HTMLElement
@@ -106,13 +164,6 @@ function buildSelectorHint(
 }
 
 /**
- * 生成唯一事件 ID。
- */
-export function generateEventId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-}
-
-/**
  * 创建 Layer1Event 对象。
  */
 export function createLayer1Event(
@@ -121,26 +172,73 @@ export function createLayer1Event(
   windowId: number,
   sessionStartMs: number,
   doc: Document,
-  inputElement?: HTMLInputElement | HTMLTextAreaElement | HTMLElement
+  options?: {
+    inputElement?: HTMLInputElement | HTMLTextAreaElement | HTMLElement
+    inputSource?: "typing" | "paste"
+    pastedLength?: number
+    clickElement?: HTMLElement
+    dwellMs?: number
+  }
 ): Layer1Event | null {
   const url = doc.location.href
   if (isPrivacyUrl(url)) {
     return null
   }
 
-  const page = buildPageMeta(doc)
-  const input = inputElement ? buildInputMeta(inputElement) : undefined
-
-  return {
+  const timestamp = Date.now()
+  const event: Layer1Event = {
     id: generateEventId(),
     type,
-    timestamp: Date.now(),
+    timestamp,
+    dateKey: formatDateKey(timestamp),
     tabId,
     windowId,
-    sessionStartMs,
-    page,
-    input
+    sessionStartMs
   }
+
+  if (
+    type === "page_visit" ||
+    type === "tab_switch"
+  ) {
+    event.page = buildPageMeta(doc)
+    if (type === "page_visit") {
+      event.dwellStatus = "pending"
+    }
+  }
+
+  if (type === "page_scroll") {
+    event.page = buildPageMeta(doc)
+    event.scroll = buildScrollMeta(doc)
+  }
+
+  if (type === "page_dwell_end" && options?.dwellMs != null) {
+    event.page = buildPageMeta(doc)
+    event.dwellMs = options.dwellMs
+    event.dwellStatus = "settled"
+  }
+
+  if (type === "page_click" && options?.clickElement) {
+    event.page = buildPageMeta(doc)
+    event.click = buildClickMeta(options.clickElement)
+  }
+
+  if (
+    (type === "input_focus" ||
+      type === "input_blur" ||
+      type === "input_type") &&
+    options?.inputElement
+  ) {
+    event.page = buildPageMeta(doc)
+    event.input = buildInputMeta(options.inputElement)
+    if (options.inputSource) {
+      event.input.inputSource = options.inputSource
+    }
+    if (options.pastedLength != null) {
+      event.input.pastedLength = options.pastedLength
+    }
+  }
+
+  return event
 }
 
 /**

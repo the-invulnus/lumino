@@ -3,12 +3,13 @@
 // ============================================================
 
 const DB_NAME = "lumino"
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 export const STORE_THREADS = "threads"
 export const STORE_EVENTS = "layer1_events"
 export const STORE_DAILY = "daily_memories"
 export const STORE_INSIGHTS = "insights"
+export const STORE_BOOKMARK_CHANGES = "bookmark_changes"
 export const STORE_PROFILE_UPDATES = "profile_updates"
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -62,6 +63,31 @@ export function openDatabase(): Promise<IDBDatabase> {
         if (!db.objectStoreNames.contains(STORE_PROFILE_UPDATES)) {
           const ps = db.createObjectStore(STORE_PROFILE_UPDATES, { keyPath: "id" })
           ps.createIndex("timestamp", "timestamp", { unique: false })
+        }
+      }
+
+      if (oldVersion < 3) {
+        // --- Layer1 事件新增索引 ---
+        if (db.objectStoreNames.contains(STORE_EVENTS)) {
+          const tx = (event.target as IDBOpenDBRequest).transaction
+          if (tx) {
+            const es = tx.objectStore(STORE_EVENTS)
+            if (!es.indexNames.contains("dateKey")) {
+              es.createIndex("dateKey", "dateKey", { unique: false })
+            }
+            if (!es.indexNames.contains("dwellStatus")) {
+              es.createIndex("dwellStatus", "dwellStatus", { unique: false })
+            }
+          }
+        }
+
+        // --- 书签变更 store ---
+        if (!db.objectStoreNames.contains(STORE_BOOKMARK_CHANGES)) {
+          const bs = db.createObjectStore(STORE_BOOKMARK_CHANGES, { keyPath: "id" })
+          bs.createIndex("dateKey", "dateKey", { unique: false })
+          bs.createIndex("timestamp", "timestamp", { unique: false })
+          bs.createIndex("action", "action", { unique: false })
+          bs.createIndex("bookmarkId", "bookmarkId", { unique: false })
         }
       }
     }

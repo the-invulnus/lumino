@@ -1611,3 +1611,36 @@ textarea {
   letter-spacing: 0.02em;
   line-height: 1.1;
 }
+
+/* —— 运行状态指示器 —— */
+.lumi-running-indicator {
+  align-items: center;
+  color: var(--lumi-accent-a);
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  gap: 5px;
+  padding: 2px 0 0;
+}
+
+.lumi-running-dot {
+  animation: lumi-dot-blink 1.2s var(--lumi-ease-spring) infinite;
+  background: var(--lumi-accent-a);
+  border-radius: 50%;
+  height: 6px;
+  width: 6px;
+}
+
+.lumi-running-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.lumi-running-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes lumi-dot-blink {
+  0%, 100% { opacity: 0.3; transform: scale(0.75); }
+  50% { opacity: 1; transform: scale(1); }
+}
