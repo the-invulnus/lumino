@@ -1,11 +1,10 @@
-import { loadDailyMemories } from "../../memory/daily-memory"
-import { saveDailyMemory } from "../../memory/memory-idb"
-import { loadAllInsights, saveInsight } from "../../memory/memory-idb"
 import {
-  buildSearchIndex,
-  searchIndex
-} from "../../memory/search-index"
-import type { DailyMemoryEntry, ConversationInsight } from "../../memory/types"
+  loadAllDailyMemories,
+  saveDailyMemory,
+  appendManualNote
+} from "../../memory/daily-memory"
+import { readDailyMemoryMd, listDailyMemoryDates } from "../../memory/daily-memory-md"
+import type { DailyMemoryEntry } from "../../memory/types"
 
 const SENSITIVE_PATTERNS = [
   /\b\d{6}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]\b/,
@@ -29,8 +28,7 @@ export async function handleMemoryGet(
   args: Record<string, unknown>
 ): Promise<string> {
   const date = (args.date as string) || new Date().toISOString().slice(0, 10)
-  const allMemories = await loadDailyMemories()
-  const memory = allMemories.find((m) => m.date === date)
+  const memory = await readDailyMemoryMd(date)
 
   if (!memory) {
     return JSON.stringify({
@@ -45,11 +43,11 @@ export async function handleMemoryGet(
       date: memory.date,
       summary: memory.summary,
       keywords: memory.keywords,
-      manualNotes: (memory as DailyMemoryEntry & { manualNotes?: string[] }).manualNotes ?? [],
-      status: (memory as DailyMemoryEntry & { status?: string }).status ?? null,
-      statusReason: (memory as DailyMemoryEntry & { statusReason?: string }).statusReason ?? null,
-      lastModifiedBy: (memory as DailyMemoryEntry & { lastModifiedBy?: string }).lastModifiedBy ?? null,
-      lastModifiedAt: (memory as DailyMemoryEntry & { lastModifiedAt?: number }).lastModifiedAt ?? null
+      manualNotes: memory.manualNotes ?? [],
+      status: memory.status ?? null,
+      statusReason: memory.statusReason ?? null,
+      lastModifiedBy: memory.lastModifiedBy ?? null,
+      lastModifiedAt: memory.lastModifiedAt ?? null
     },
     null,
     2
@@ -66,22 +64,25 @@ export async function handleMemorySearch(
     return JSON.stringify({ results: [], message: "查询词为空。" })
   }
 
-  const allMemories = await loadDailyMemories()
-  const allInsights = await loadAllInsights()
+  const allMemories = await loadAllDailyMemories()
 
-  const index = buildSearchIndex(allMemories, allInsights)
-  const results = searchIndex(index, query, limit)
+  // 简单的文本匹配搜索
+  const q = query.toLowerCase()
+  const results = allMemories
+    .map((m) => {
+      let score = 0
+      if (m.summary.toLowerCase().includes(q)) score += 3
+      for (const kw of m.keywords) {
+        if (kw.toLowerCase().includes(q)) score += 2
+      }
+      if (m.date.includes(q)) score += 1
+      return { date: m.date, summary: m.summary, score }
+    })
+    .filter((r) => r.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
 
-  return JSON.stringify(
-    results.map((r) => ({
-      date: r.date,
-      type: r.type,
-      text: r.text,
-      score: Math.round(r.score * 100) / 100
-    })),
-    null,
-    2
-  )
+  return JSON.stringify(results, null, 2)
 }
 
 export async function handleMemoryAppendNote(
@@ -91,61 +92,17 @@ export async function handleMemoryAppendNote(
 ): Promise<string> {
   const sensitive = checkSensitiveContent(note)
   if (sensitive) {
-    return JSON.stringify({ error: sensitive, message: "笔记包含敏感信息，已拒绝写入。" })
+    return JSON.stringify({
+      error: sensitive,
+      message: "笔记包含敏感信息，已拒绝写入。"
+    })
   }
 
-  const allMemories = await loadDailyMemories()
-  let memory = allMemories.find((m) => m.date === date)
-
-  if (!memory) {
-    memory = {
-      date,
-      createdAt: Date.now(),
-      summary: "",
-      keywords: [],
-      sourceEventIds: []
-    }
-  }
-
-  const extended = memory as DailyMemoryEntry & {
-    manualNotes?: string[]
-    lastModifiedBy?: string
-    lastModifiedAt?: number
-  }
-
-  if (!extended.manualNotes) {
-    extended.manualNotes = []
-  }
-  extended.manualNotes.push(note)
-  extended.lastModifiedBy = source
-  extended.lastModifiedAt = Date.now()
-
-  await saveDailyMemory(memory)
+  await appendManualNote(date, note, source as "agent" | "user")
 
   return JSON.stringify({
     success: true,
     date,
     message: `已追加笔记到 ${date}`
-  })
-}
-
-export async function handleSaveInsight(
-  insight: Omit<ConversationInsight, "id">
-): Promise<string> {
-  const contentText = insight.content
-  const sensitive = checkSensitiveContent(contentText)
-  if (sensitive) {
-    return JSON.stringify({ error: sensitive, message: "洞察包含敏感信息，已拒绝写入。" })
-  }
-
-  const id = `insight_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-  const full: ConversationInsight = { ...insight, id }
-
-  await saveInsight(full)
-
-  return JSON.stringify({
-    success: true,
-    id,
-    message: "洞察已保存。"
   })
 }

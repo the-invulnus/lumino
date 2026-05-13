@@ -3,14 +3,14 @@
 // ============================================================
 
 const DB_NAME = "lumino"
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 export const STORE_THREADS = "threads"
-export const STORE_EVENTS = "layer1_events"
-export const STORE_DAILY = "daily_memories"
-export const STORE_INSIGHTS = "insights"
+export const STORE_PAGE_VISITS = "page_visits"
 export const STORE_BOOKMARK_CHANGES = "bookmark_changes"
-export const STORE_PROFILE_UPDATES = "profile_updates"
+export const STORE_INPUT_EVENTS = "input_events"
+export const STORE_DOWNLOAD_RECORDS = "download_records"
+export const STORE_COPY_RECORDS = "copy_records"
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -20,6 +20,7 @@ export function openDatabase(): Promise<IDBDatabase> {
   }
 
   dbPromise = new Promise((resolve, reject) => {
+    // 先尝试打开 v4，如果失败则删库重建
     const request = indexedDB.open(DB_NAME, DB_VERSION)
 
     request.onerror = () => {
@@ -33,63 +34,44 @@ export function openDatabase(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result
-      const oldVersion = event.oldVersion
 
-      if (oldVersion < 1) {
-        if (!db.objectStoreNames.contains(STORE_THREADS)) {
-          db.createObjectStore(STORE_THREADS, { keyPath: "id" })
-        }
-
-        if (!db.objectStoreNames.contains(STORE_EVENTS)) {
-          const es = db.createObjectStore(STORE_EVENTS, { keyPath: "id" })
-          es.createIndex("timestamp", "timestamp", { unique: false })
-          es.createIndex("type", "type", { unique: false })
-        }
-
-        if (!db.objectStoreNames.contains(STORE_DAILY)) {
-          const ds = db.createObjectStore(STORE_DAILY, { keyPath: "date" })
-          ds.createIndex("createdAt", "createdAt", { unique: false })
-        }
+      // 删除所有旧表，从零重建
+      const allNames = Array.from(db.objectStoreNames)
+      for (const name of allNames) {
+        db.deleteObjectStore(name)
       }
 
-      if (oldVersion < 2) {
-        if (!db.objectStoreNames.contains(STORE_INSIGHTS)) {
-          const is = db.createObjectStore(STORE_INSIGHTS, { keyPath: "id" })
-          is.createIndex("createdAt", "createdAt", { unique: false })
-          is.createIndex("category", "category", { unique: false })
-          is.createIndex("sourceThreadId", "sourceThreadId", { unique: false })
-        }
+      // threads
+      db.createObjectStore(STORE_THREADS, { keyPath: "id" })
 
-        if (!db.objectStoreNames.contains(STORE_PROFILE_UPDATES)) {
-          const ps = db.createObjectStore(STORE_PROFILE_UPDATES, { keyPath: "id" })
-          ps.createIndex("timestamp", "timestamp", { unique: false })
-        }
-      }
+      // page_visits
+      const pv = db.createObjectStore(STORE_PAGE_VISITS, { keyPath: "id" })
+      pv.createIndex("dateKey", "dateKey", { unique: false })
+      pv.createIndex("hostname", "hostname", { unique: false })
+      pv.createIndex("timestamp", "timestamp", { unique: false })
 
-      if (oldVersion < 3) {
-        // --- Layer1 事件新增索引 ---
-        if (db.objectStoreNames.contains(STORE_EVENTS)) {
-          const tx = (event.target as IDBOpenDBRequest).transaction
-          if (tx) {
-            const es = tx.objectStore(STORE_EVENTS)
-            if (!es.indexNames.contains("dateKey")) {
-              es.createIndex("dateKey", "dateKey", { unique: false })
-            }
-            if (!es.indexNames.contains("dwellStatus")) {
-              es.createIndex("dwellStatus", "dwellStatus", { unique: false })
-            }
-          }
-        }
+      // bookmark_changes
+      const bc = db.createObjectStore(STORE_BOOKMARK_CHANGES, { keyPath: "id" })
+      bc.createIndex("dateKey", "dateKey", { unique: false })
+      bc.createIndex("action", "action", { unique: false })
+      bc.createIndex("timestamp", "timestamp", { unique: false })
 
-        // --- 书签变更 store ---
-        if (!db.objectStoreNames.contains(STORE_BOOKMARK_CHANGES)) {
-          const bs = db.createObjectStore(STORE_BOOKMARK_CHANGES, { keyPath: "id" })
-          bs.createIndex("dateKey", "dateKey", { unique: false })
-          bs.createIndex("timestamp", "timestamp", { unique: false })
-          bs.createIndex("action", "action", { unique: false })
-          bs.createIndex("bookmarkId", "bookmarkId", { unique: false })
-        }
-      }
+      // input_events
+      const ie = db.createObjectStore(STORE_INPUT_EVENTS, { keyPath: "id" })
+      ie.createIndex("dateKey", "dateKey", { unique: false })
+      ie.createIndex("hostname", "hostname", { unique: false })
+      ie.createIndex("timestamp", "timestamp", { unique: false })
+
+      // download_records
+      const dr = db.createObjectStore(STORE_DOWNLOAD_RECORDS, { keyPath: "id" })
+      dr.createIndex("dateKey", "dateKey", { unique: false })
+      dr.createIndex("timestamp", "timestamp", { unique: false })
+
+      // copy_records
+      const cr = db.createObjectStore(STORE_COPY_RECORDS, { keyPath: "id" })
+      cr.createIndex("dateKey", "dateKey", { unique: false })
+      cr.createIndex("hostname", "hostname", { unique: false })
+      cr.createIndex("timestamp", "timestamp", { unique: false })
     }
   })
 

@@ -1,121 +1,111 @@
 // ============================================================
-// Layer 2 日记忆 — LLM 将 Layer1 事件总结为日记忆
+// Layer 2 日记忆 — LLM 将采集数据总结为日记忆
 // ============================================================
 
 import { requestChatCompletion } from "../llm/openai"
 import type { LlmSettings } from "../llm/types"
 import { getLlmSettings, hasCompleteLlmSettings } from "../settings"
-import { getEventsByDate } from "./event-store"
-import type { DailyMemoryEntry, Layer1Event } from "./types"
+import type { DailyMemoryEntry, PageVisitRecord, InputEventRecord, CopyRecord } from "./types"
+import { getPageVisitsByDateKey } from "./page-visit-idb"
+import { getInputEventsByDateKey } from "./input-event-idb"
+import { getCopyRecordsByDateKey } from "./copy-record-idb"
+import { getBookmarkChangesByDateKey } from "./memory-idb"
 import {
-  loadAllDailyMemories,
-  saveDailyMemory as idbSaveDailyMemory
-} from "./memory-idb"
-import { writeMemoryFile } from "../fs/opfs"
+  writeDailyMemoryMd,
+  readDailyMemoryMd,
+  listDailyMemoryDates,
+  deleteDailyMemoryMd
+} from "./daily-memory-md"
 
-export { loadAllDailyMemories as loadDailyMemories } from "./memory-idb"
+export { listDailyMemoryDates, readDailyMemoryMd, deleteDailyMemoryMd }
 
 /**
- * 保存日记忆条目（IndexedDB + OPFS）。
+ * 加载日记忆条目（从 OPFS MD 文件）。
+ */
+export async function loadDailyMemoryEntry(
+  date: string
+): Promise<DailyMemoryEntry | null> {
+  return readDailyMemoryMd(date)
+}
+
+/**
+ * 加载所有日记忆条目。
+ */
+export async function loadAllDailyMemories(): Promise<DailyMemoryEntry[]> {
+  const dates = await listDailyMemoryDates()
+  const entries: DailyMemoryEntry[] = []
+
+  for (const date of dates) {
+    const entry = await readDailyMemoryMd(date)
+    if (entry) entries.push(entry)
+  }
+
+  return entries
+}
+
+/**
+ * 保存日记忆条目（写入 OPFS MD 文件）。
  */
 export async function saveDailyMemory(entry: DailyMemoryEntry): Promise<void> {
-  await idbSaveDailyMemory(entry)
-
-  try {
-    const md = dailyMemoryToMarkdown(entry)
-    await writeMemoryFile(`${entry.date}.md`, md)
-  } catch (error) {
-    console.warn("[Lumino] OPFS 记忆文件写入失败", error)
-  }
-}
-
-function dailyMemoryToMarkdown(entry: DailyMemoryEntry): string {
-  const lines: string[] = [
-    `# 日记忆 — ${entry.date}`,
-    "",
-    `生成时间：${new Date(entry.createdAt).toISOString()}`,
-    "",
-    "## 摘要",
-    "",
-    entry.summary,
-    ""
-  ]
-
-  if (entry.keywords.length > 0) {
-    lines.push("## 关键词")
-    lines.push("")
-    lines.push(entry.keywords.map((k) => `- ${k}`).join("\n"))
-    lines.push("")
-  }
-
-  if (entry.manualNotes && entry.manualNotes.length > 0) {
-    lines.push("## 手动笔记")
-    lines.push("")
-    for (const note of entry.manualNotes) {
-      lines.push(`- ${note}`)
-    }
-    lines.push("")
-  }
-
-  if (entry.status) {
-    lines.push(`## 状态：${entry.status}`)
-    if (entry.statusReason) lines.push(`原因：${entry.statusReason}`)
-    lines.push("")
-  }
-
-  return lines.join("\n")
+  await writeDailyMemoryMd(entry)
 }
 
 /**
- * 将 Layer1 事件格式化为 LLM prompt 可用的文本。
+ * 将采集数据格式化为 LLM prompt 可用的文本。
  */
-function formatEventsForLLM(events: Layer1Event[]): string {
-  if (events.length === 0) {
-    return "（今日无浏览事件）"
-  }
-
-  const pageVisits = events.filter((e) => e.type === "page_visit" && e.page)
-  const inputEvents = events.filter(
-    (e) => (e.type === "input_focus" || e.type === "input_type") && e.input
-  )
-
+function formatDataForLLM(
+  pageVisits: PageVisitRecord[],
+  inputEvents: InputEventRecord[],
+  bookmarks: unknown[],
+  copyRecords: CopyRecord[]
+): string {
   const lines: string[] = []
 
   if (pageVisits.length > 0) {
-    lines.push("## 访问的页面")
-
-    const urlCount = new Map<string, number>()
-    const urlTitle = new Map<string, string>()
-
-    for (const event of pageVisits) {
-      const url = event.page!.url
-      urlCount.set(url, (urlCount.get(url) ?? 0) + 1)
-      if (!urlTitle.has(url)) {
-        urlTitle.set(url, event.page!.title)
-      }
-    }
-
-    for (const [url, count] of urlCount) {
-      const title = urlTitle.get(url) ?? ""
-      const suffix = count > 1 ? `（访问 ${count} 次）` : ""
-      lines.push(`- ${title} — ${url} ${suffix}`)
+    lines.push("## 浏览的页面")
+    for (const pv of pageVisits) {
+      const duration = formatDuration(pv.dwellMs)
+      lines.push(`- ${pv.title} — ${pv.url}（停留 ${duration}）`)
     }
   }
 
   if (inputEvents.length > 0) {
     lines.push("\n## 输入交互")
-    for (const event of inputEvents.slice(0, 20)) {
-      const input = event.input!
-      const text = input.text
-        ? `"${input.text.slice(0, 80)}"`
-        : "（聚焦/离开）"
+    for (const ie of inputEvents.slice(0, 20)) {
+      const text = ie.text ? `"${ie.text.slice(0, 80)}"` : ""
       lines.push(
-        `- [${event.type}] ${input.nodeType} ${input.placeholder ? `placeholder="${input.placeholder}"` : ""} ${text}`
+        `- [${ie.inputSource}] ${ie.nodeType} ${text}`
       )
     }
   }
 
+  if (bookmarks.length > 0) {
+    lines.push("\n## 书签操作")
+    for (const bm of bookmarks as Array<{ action: string; title: string }>) {
+      lines.push(`- ${bm.action}: ${bm.title}`)
+    }
+  }
+
+  if (copyRecords.length > 0) {
+    lines.push("\n## 复制内容")
+    for (const cr of copyRecords) {
+      lines.push(`- [${cr.hostname}] "${cr.text.slice(0, 120)}"`)
+    }
+  }
+
+  if (lines.length === 0) {
+    return "（今日无采集数据）"
+  }
+
   return lines.join("\n")
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 60_000) return `${Math.round(ms / 1000)}秒`
+  const minutes = Math.round(ms / 60_000)
+  if (minutes < 60) return `${minutes}分钟`
+  const hours = Math.round(minutes / 60)
+  return `${hours}小时${minutes % 60}分钟`
 }
 
 /**
@@ -125,9 +115,18 @@ export async function generateDailyMemory(
   date: string,
   settings?: LlmSettings
 ): Promise<DailyMemoryEntry> {
-  const events = await getEventsByDate(date)
+  // 从各 IDB 表获取当天数据
+  const [pageVisits, inputEvents, bookmarks, copyRecords] = await Promise.all([
+    getPageVisitsByDateKey(date),
+    getInputEventsByDateKey(date),
+    getBookmarkChangesByDateKey(date),
+    getCopyRecordsByDateKey(date)
+  ])
 
-  if (events.length === 0) {
+  const totalEvents =
+    pageVisits.length + inputEvents.length + bookmarks.length + copyRecords.length
+
+  if (totalEvents === 0) {
     return {
       date,
       createdAt: Date.now(),
@@ -140,22 +139,24 @@ export async function generateDailyMemory(
   const llmSettings = settings ?? (await getLlmSettings())
 
   if (!hasCompleteLlmSettings(llmSettings)) {
-    const pageCount = events.filter((e) => e.type === "page_visit").length
-    const inputCount = events.filter(
-      (e) => e.type === "input_focus" || e.type === "input_type"
-    ).length
+    const pagesList = pageVisits.map((pv) => pv.title).filter(Boolean)
+    const topics = [...new Set(pagesList)].slice(0, 5)
 
     return {
       date,
       createdAt: Date.now(),
-      summary: `今日浏览了 ${pageCount} 个页面，进行了 ${inputCount} 次输入交互。`,
-      keywords: [],
-      sourceEventIds: events.map((e) => e.id)
+      summary: `今日浏览了 ${pageVisits.length} 个页面，进行了 ${inputEvents.length} 次输入交互。${topics.length > 0 ? `主要关注：${topics.join("、")}` : ""}`,
+      keywords: topics,
+      sourceEventIds: [
+        ...pageVisits.map((p) => p.id),
+        ...inputEvents.map((i) => i.id)
+      ]
     }
   }
 
   try {
-    const formatted = formatEventsForLLM(events)
+    const formatted = formatDataForLLM(pageVisits, inputEvents, bookmarks, copyRecords)
+
     const systemPrompt = `你是一个浏览行为分析助手。根据用户一天的浏览记录，生成一份简洁的日记忆摘要。
 
 要求：
@@ -174,10 +175,7 @@ export async function generateDailyMemory(
       content: string
     }> = [
       { role: "system", content: systemPrompt },
-      {
-        role: "user",
-        content: `日期：${date}\n\n浏览记录：\n${formatted}`
-      }
+      { role: "user", content: `日期：${date}\n\n采集数据：\n${formatted}` }
     ]
 
     const response = await requestChatCompletion(llmSettings, messages)
@@ -200,15 +198,18 @@ export async function generateDailyMemory(
       createdAt: Date.now(),
       summary: parsed.summary ?? response.slice(0, 500),
       keywords: parsed.keywords ?? [],
-      sourceEventIds: events.map((e) => e.id)
+      sourceEventIds: [
+        ...pageVisits.map((p) => p.id),
+        ...inputEvents.map((i) => i.id)
+      ]
     }
   } catch (error) {
     return {
       date,
       createdAt: Date.now(),
-      summary: `今日共记录 ${events.length} 个浏览事件。（LLM 摘要生成失败：${error instanceof Error ? error.message : "未知错误"}）`,
+      summary: `今日共记录 ${totalEvents} 个事件。（LLM 摘要生成失败：${error instanceof Error ? error.message : "未知错误"}）`,
       keywords: [],
-      sourceEventIds: events.map((e) => e.id)
+      sourceEventIds: []
     }
   }
 }
@@ -229,4 +230,54 @@ export async function generateAndSaveDailyMemory(
     console.error("[Lumino] 日记忆生成失败", error)
     return null
   }
+}
+
+/**
+ * 追加手动笔记到指定日期的日记忆。
+ */
+export async function appendManualNote(
+  date: string,
+  note: string,
+  source: "agent" | "user" = "agent"
+): Promise<void> {
+  const existing = await readDailyMemoryMd(date)
+
+  const entry: DailyMemoryEntry = existing ?? {
+    date,
+    createdAt: Date.now(),
+    summary: "",
+    keywords: [],
+    sourceEventIds: [],
+    manualNotes: [note],
+    lastModifiedBy: source,
+    lastModifiedAt: Date.now()
+  }
+
+  if (existing) {
+    if (!entry.manualNotes) entry.manualNotes = []
+    entry.manualNotes.push(note)
+    entry.lastModifiedBy = source
+    entry.lastModifiedAt = Date.now()
+  }
+
+  await saveDailyMemory(entry)
+}
+
+/**
+ * 标记某天记忆的状态。
+ */
+export async function markMemoryStatus(
+  date: string,
+  status: string,
+  reason: string
+): Promise<void> {
+  const existing = await readDailyMemoryMd(date)
+  if (!existing) return
+
+  existing.status = status
+  existing.statusReason = reason
+  existing.lastModifiedBy = "agent"
+  existing.lastModifiedAt = Date.now()
+
+  await saveDailyMemory(existing)
 }

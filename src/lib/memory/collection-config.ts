@@ -3,7 +3,10 @@
 // ============================================================
 
 import type { CollectionConfig } from "./types"
-import { DEFAULT_COLLECTION_CONFIG, STORAGE_KEY_COLLECTION_CONFIG } from "./types"
+import {
+  DEFAULT_COLLECTION_CONFIG,
+  STORAGE_KEY_COLLECTION_CONFIG
+} from "./types"
 
 /**
  * 读取采集配置。
@@ -48,4 +51,30 @@ export function formatDateKey(timestamp: number): string {
   const m = String(d.getMonth() + 1).padStart(2, "0")
   const day = String(d.getDate()).padStart(2, "0")
   return `${y}-${m}-${day}`
+}
+
+/**
+ * 检查 URL 是否匹配忽略模式。
+ * 返回 true 表示应跳过采集。
+ */
+export function isUrlIgnored(url: string, patterns: string[]): boolean {
+  if (patterns.length === 0) return false
+
+  try {
+    const hostname = new URL(url).hostname
+    for (const pattern of patterns) {
+      try {
+        const re = new RegExp(pattern, "i")
+        if (re.test(url) || re.test(hostname)) {
+          return true
+        }
+      } catch {
+        // 无效正则，跳过
+      }
+    }
+  } catch {
+    // 无效 URL，默认不忽略
+  }
+
+  return false
 }

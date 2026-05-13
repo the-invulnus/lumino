@@ -1,5 +1,5 @@
 import { loadUserProfile } from "../memory/user-profile"
-import { loadDailyMemories } from "../memory/daily-memory"
+import { loadAllDailyMemories } from "../memory/daily-memory"
 
 export const STATIC_SYSTEM_PROMPT = `你是 Lumino，运行在用户浏览器侧栏中的智能助手。
 
@@ -66,7 +66,7 @@ export async function buildDynamicSystemBlock(): Promise<string> {
   const today = new Date().toISOString().slice(0, 10)
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
 
-  const allMemories = await loadDailyMemories()
+  const allMemories = await loadAllDailyMemories()
   const recentMemories = allMemories
     .filter((m) => m.date === today || m.date === yesterday)
     .sort((a, b) => b.createdAt - a.createdAt)
