@@ -1,0 +1,13 @@
+@@ -14,7 +14,11 @@
+ import { insertInputEvent } from "./lib/memory/input-event-idb"
+ import { insertCopyRecord } from "./lib/memory/copy-record-idb"
+ import { insertDownloadRecord } from "./lib/memory/download-record-idb"
+-import { OPEN_SIDE_PANEL_MESSAGE } from "./lib/side-panel-bridge"
++import {
++  OPEN_SIDE_PANEL_MESSAGE,
++  AGENT_RUNNING_STATE_MESSAGE,
++  type AgentRunningStateMessage
++} from "./lib/side-panel-bridge"
+ 
+ export {}
+ 

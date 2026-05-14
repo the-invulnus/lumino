@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>悬浮按钮 - 呼吸蒙版效果</title>
+<style>
+  :root {
+    --btn-size: 56px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  .desktop {
+    width: 400px;
+    height: 300px;
+    background: #fafafa;
+    border-radius: 16px;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 24px;
+  }
+
+  .card {
+    position: absolute;
+    top: 20px; left: 20px; right: 20px; bottom: 80px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    padding: 20px;
+    color: #444;
+    font-size: 13px;
+    line-height: 1.7;
+    overflow-y: auto;
+  }
+  .card .placeholder {
+    background: #eee;
+    height: 10px;
+    border-radius: 5px;
+    margin-bottom: 12px;
+    animation: shimmer 2s infinite;
+  }
+  .card .placeholder:nth-child(2) { width: 85%; animation-delay: 0.3s; }
+  .card .placeholder:nth-child(3) { width: 60%; animation-delay: 0.6s; }
+  @keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ========== 悬浮按钮 ========== */
+  .fab {
+    width: var(--btn-size);
+    height: var(--btn-size);
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(108,92,231,0.35);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    z-index: 10;
+
+    /* mask: 内圈可见，外圈渐变透明 */
+    -webkit-mask-image: radial-gradient(
+      circle,
+      black 20%,
+      transparent 70%
+    );
+    mask-image: radial-gradient(
+      circle,
+      black 20%,
+      transparent 70%
+    );
+    mask-size: 200% 200%;
+    -webkit-mask-size: 200% 200%;
+    mask-position: center;
+    -webkit-mask-position: center;
+  }
+
+  .fab:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 24px rgba(108,92,231,0.45);
+  }
+  .fab:active {
+    transform: scale(0.96);
+  }
+
+  /* 执行中：呼吸动画 */
+  .fab.pulsing {
+    animation: breathe-mask 1.4s ease-in-out infinite;
+  }
+
+  @keyframes breathe-mask {
+    0%, 100% {
+      /* 呼气：mask 缩小，边缘透明区域变大，图标被蒙住更多 */
+      -webkit-mask-size: 110% 110%;
+      mask-size: 110% 110%;
+    }
+    50% {
+      /* 吸气：mask 放大，图标几乎完全露出 */
+      -webkit-mask-size: 200% 200%;
+      mask-size: 200% 200%;
+    }
+  }
+
+  /* 静止态：mask 完全展开，图标完整可见 */
+  .fab:not(.pulsing) {
+    -webkit-mask-size: 200% 200%;
+    mask-size: 200% 200%;
+  }
+
+  .fab svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 6px rgba(255,255,255,0.5));
+    pointer-events: none;
+  }
+
+  /* ========== 控制栏 ========== */
+  .controls {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    background: #fff;
+    padding: 12px 20px;
+    border-radius: 40px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+  }
+  .controls button {
+    padding: 8px 20px;
+    border-radius: 24px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-start {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+  }
+  .btn-start:hover { opacity: 0.9; }
+  .btn-stop {
+    background: #f0f0f0;
+    color: #444;
+  }
+  .btn-stop:hover { background: #e0e0e0; }
+  .status {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: #888;
+    padding: 0 8px;
+  }
+  .status .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    background: #ccc;
+    transition: background 0.3s;
+  }
+  .status .dot.active {
+    background: #8b5cf6;
+    box-shadow: 0 0 8px rgba(139,92,246,0.4);
+  }
+</style>
+</head>
+<body>
+
+  <div class="desktop">
+    <div class="card">
+      <div class="placeholder"></div>
+      <div class="placeholder"></div>
+      <div class="placeholder"></div>
+      <p style="margin-top:20px;color:#999;font-size:12px;">模拟页面内容区域</p>
+    </div>
+
+    <button class="fab" id="fab" title="AI Agent">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 3l1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5z"/>
+        <path d="M18 14l.75 2.75L21.5 17.5l-2.75.75L18 21l-.75-2.75L14.5 17.5l2.75-.75z"/>
+        <path d="M6 2l.5 1.75L8.25 4.25 6.5 4.75 6 6.5l-.5-1.75L3.75 4.25 5.5 4.75z"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="controls">
+    <span class="status">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">空闲</span>
+    </span>
+    <button class="btn-start" id="btnStart">▶ 模拟 Agent 执行</button>
+    <button class="btn-stop" id="btnStop" disabled>⏹ 停止</button>
+  </div>
+
+<script>
+  const fab = document.getElementById('fab');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const btnStart = document.getElementById('btnStart');
+  const btnStop = document.getElementById('btnStop');
+
+  btnStart.addEventListener('click', () => {
+    fab.classList.add('pulsing');
+    statusDot.classList.add('active');
+    statusText.textContent = 'Agent 执行中…';
+    btnStart.disabled = true;
+    btnStop.disabled = false;
+  });
+
+  btnStop.addEventListener('click', () => {
+    fab.classList.remove('pulsing');
+    statusDot.classList.remove('active');
+    statusText.textContent = '空闲';
+    btnStart.disabled = false;
+    btnStop.disabled = true;
+  });
+</script>
+</body>
+</html>

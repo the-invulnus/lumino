@@ -26,7 +26,11 @@ import { insertInputEvent } from "./lib/memory/input-event-idb"
 import { insertCopyRecord } from "./lib/memory/copy-record-idb"
 import { insertDownloadRecord } from "./lib/memory/download-record-idb"
 import { setupBookmarkWatchers } from "./lib/memory/bookmark-watcher"
-import { OPEN_SIDE_PANEL_MESSAGE } from "./lib/side-panel-bridge"
+import {
+  OPEN_SIDE_PANEL_MESSAGE,
+  AGENT_RUNNING_STATE_MESSAGE,
+  type AgentRunningStateMessage
+} from "./lib/side-panel-bridge"
 
 export {}
 
@@ -55,6 +59,21 @@ function setupMessageHandlers(): void {
         void chrome.sidePanel.open({ windowId })
       }
       return
+    }
+
+    // Side Panel → Service Worker：agent 运行状态变更，转发到当前活跃 tab
+    if (message?.type === AGENT_RUNNING_STATE_MESSAGE) {
+      const payload = (message as AgentRunningStateMessage).payload
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        for (const tab of tabs) {
+          if (tab.id != null) {
+            chrome.tabs.sendMessage(tab.id, {
+              type: AGENT_RUNNING_STATE_MESSAGE,
+              payload
+            }).catch(() => { /* tab 可能未注入 content script */ })
+          }
+        }
+      })
     }
 
     if (message?.type === TAB_OPEN_MESSAGE) {

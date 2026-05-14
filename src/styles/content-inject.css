@@ -44,3 +44,36 @@
   object-fit: cover;
   display: block;
 }
+
+/* ===== Agent 执行中：呼吸蒙版 ===== */
+#lumino-floating-button.lumino-fab--pulsing {
+  /* mask: 内圈可见，外圈渐变透明 */
+  -webkit-mask-image: radial-gradient(
+    circle,
+    black 20%,
+    transparent 70%
+  );
+  mask-image: radial-gradient(
+    circle,
+    black 20%,
+    transparent 70%
+  );
+  mask-size: 200% 200%;
+  -webkit-mask-size: 200% 200%;
+  mask-position: center;
+  -webkit-mask-position: center;
+  animation: lumino-breathe-mask 1.4s ease-in-out infinite;
+}
+
+@keyframes lumino-breathe-mask {
+  0%, 100% {
+    /* 呼气：mask 缩小，边缘透明区域变大 */
+    -webkit-mask-size: 110% 110%;
+    mask-size: 110% 110%;
+  }
+  50% {
+    /* 吸气：mask 放大，按钮几乎完全露出 */
+    -webkit-mask-size: 200% 200%;
+    mask-size: 200% 200%;
+  }
+}

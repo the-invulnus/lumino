@@ -1,6 +1,8 @@
 import {
   OPEN_SIDE_PANEL_MESSAGE,
-  type OpenSidePanelMessage
+  AGENT_RUNNING_STATE_MESSAGE,
+  type OpenSidePanelMessage,
+  type AgentRunningStateMessage
 } from "../lib/side-panel-bridge"
 
 export const FLOATING_BUTTON_ID = "lumino-floating-button"
@@ -152,6 +154,22 @@ export function mountFloatingButton(ownerDocument: Document = document) {
 
   const button = createFloatingButton(ownerDocument)
   button.addEventListener("click", requestOpenSidePanel)
+
+  // 监听 agent 运行状态，切换呼吸蒙版动画
+  chrome.runtime.onMessage.addListener((message) => {
+    if (
+      message &&
+      typeof message === "object" &&
+      (message as AgentRunningStateMessage).type === AGENT_RUNNING_STATE_MESSAGE
+    ) {
+      const payload = (message as AgentRunningStateMessage).payload
+      if (payload.running) {
+        button.classList.add("lumino-fab--pulsing")
+      } else {
+        button.classList.remove("lumino-fab--pulsing")
+      }
+    }
+  })
 
   ownerDocument.body.append(button)
   enableDrag(button)

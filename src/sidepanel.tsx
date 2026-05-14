@@ -23,6 +23,7 @@ import { registerAllTools } from "./lib/chat/tool-registry"
 import type { LlmSettings } from "./lib/llm/types"
 import { getLlmSettings, hasCompleteLlmSettings } from "./lib/settings"
 import { exportWorkspaceFile } from "./lib/fs/workspace"
+import { AGENT_RUNNING_STATE_MESSAGE } from "./lib/side-panel-bridge"
 import "./styles/paper.css"
 import blackCatGif from "data-base64:~black_cat.gif"
 
@@ -627,6 +628,12 @@ function SidePanel() {
 
     console.log("[lumino:sidepanel]", "开始请求，当前消息数:", messages.length)
 
+    // 通知 content script：agent 开始运行
+    chrome.runtime.sendMessage({
+      type: AGENT_RUNNING_STATE_MESSAGE,
+      payload: { running: true }
+    }).catch(() => { /* ignore */ })
+
     try {
       const history = cloneMessages(messages)
 
@@ -667,6 +674,12 @@ function SidePanel() {
         )
       }
     } finally {
+      // 通知 content script：agent 停止运行
+      chrome.runtime.sendMessage({
+        type: AGENT_RUNNING_STATE_MESSAGE,
+        payload: { running: false }
+      }).catch(() => { /* ignore */ })
+
       delete sendInFlightMapRef.current[threadId]
       setLoadingThreadIds((prev) => {
         const next = new Set(prev)
