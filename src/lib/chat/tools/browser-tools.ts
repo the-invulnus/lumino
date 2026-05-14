@@ -9,6 +9,20 @@ function getActiveTab(): Promise<chrome.tabs.Tab> {
   })
 }
 
+// ── resolveTabId ──
+// 优先使用 args.tab_id，未提供时回退到当前活跃 tab
+// agent 在任务开始时调用 get_active_tab_id 锁定 tab，
+// 后续工具调用都带上 tab_id 确保操作不会受用户切换 tab 影响
+
+async function resolveTabId(args: Record<string, unknown>): Promise<number> {
+  if (typeof args.tab_id === "number" && args.tab_id > 0) {
+    return args.tab_id
+  }
+  const tab = await getActiveTab()
+  if (!tab.id) throw new Error("no_tab_id")
+  return tab.id
+}
+
 // ── get_page_content ──
 // 提取当前页面文本内容，支持三种模式
 
@@ -19,12 +33,16 @@ export async function handleGetPageContent(
   const selector = args.selector as string | undefined
   const maxChars = (args.max_chars as number) || 8000
 
-  const tab = await getActiveTab()
-  if (!tab.id) return JSON.stringify({ error: "no_tab_id" })
+  let tabId: number
+  try {
+    tabId = await resolveTabId(args)
+  } catch {
+    return JSON.stringify({ error: "no_tab_id" })
+  }
 
   try {
     const [result] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
+      target: { tabId },
       func: (m: string, sel: string | null, max: number) => {
         let text = ""
 
@@ -79,14 +97,18 @@ export async function handleGetPageContent(
 // 获取用户在页面中选中的文本
 
 export async function handleTakeSelection(
-  _args: Record<string, unknown>
+  args: Record<string, unknown>
 ): Promise<string> {
-  const tab = await getActiveTab()
-  if (!tab.id) return JSON.stringify({ error: "no_tab_id" })
+  let tabId: number
+  try {
+    tabId = await resolveTabId(args)
+  } catch {
+    return JSON.stringify({ error: "no_tab_id" })
+  }
 
   try {
     const [result] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
+      target: { tabId },
       func: () => {
         const sel = window.getSelection()
         if (!sel || sel.isCollapsed) {
@@ -138,53 +160,67 @@ export async function handleFillForm(
     return JSON.stringify({ error: "no_fields", message: "请提供要填充的字段列表" })
   }
 
-  const tab = await getActiveTab()
-  if (!tab.id) return JSON.stringify({ error: "no_tab_id" })
+  let tabId: number
+  try {
+    tabId = await resolveTabId(args)
+  } catch {
+    return JSON.stringify({ error: "no_tab_id" })
+  }
 
   try {
     const [result] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
+      target: { tabId },
       func: (f: Array<{ selector: string; value: string }>) => {
-        const results: Array<{ selector: string; success: boolean; error?: string }> = []
+        const results: Array<Record<string, unknown>> = []
 
         for (const { selector, value } of f) {
           try {
-            const el = document.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null
+            const el = document.querySelector(selector)
             if (!el) {
-              results.push({ selector, success: false, error: "元素未找到" })
+              results.push({ selector, success: false, error: "element_not_found" })
               continue
             }
 
-            // 触发 focus + input + change 事件，确保 React/Vue 框架感知
-            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-              HTMLInputElement.prototype, "value"
-            )?.set
-            const nativeTextareaValueSetter = Object.getOwnPropertyDescriptor(
-              HTMLTextAreaElement.prototype, "value"
-            )?.set
+            const tag = el.tagName.toLowerCase()
 
-            if (el instanceof HTMLSelectElement) {
+            if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+              el.focus()
+              el.value = ""
+              el.dispatchEvent(new Event("focus", { bubbles: true }))
               el.value = value
-            } else if (el instanceof HTMLTextAreaElement && nativeTextareaValueSetter) {
-              nativeTextareaValueSetter.call(el, value)
-            } else if (el instanceof HTMLInputElement && nativeInputValueSetter) {
-              nativeInputValueSetter.call(el, value)
+              el.dispatchEvent(new Event("input", { bubbles: true }))
+              el.dispatchEvent(new Event("change", { bubbles: true }))
+              el.dispatchEvent(new Event("blur", { bubbles: true }))
+              results.push({ selector, success: true, tag, type: el.type || tag })
+            } else if (el instanceof HTMLSelectElement) {
+              el.focus()
+              el.dispatchEvent(new Event("focus", { bubbles: true }))
+              // 尝试按 value 或 text 匹配选项
+              let matched = false
+              for (let i = 0; i < el.options.length; i++) {
+                if (el.options[i].value === value || el.options[i].text === value) {
+                  el.selectedIndex = i
+                  matched = true
+                  break
+                }
+              }
+              el.dispatchEvent(new Event("input", { bubbles: true }))
+              el.dispatchEvent(new Event("change", { bubbles: true }))
+              el.dispatchEvent(new Event("blur", { bubbles: true }))
+              results.push({ selector, success: matched, tag, matched })
+            } else if (el.getAttribute("contenteditable") === "true" || el.getAttribute("contenteditable") === "") {
+              el.textContent = value
+              el.dispatchEvent(new Event("input", { bubbles: true }))
+              results.push({ selector, success: true, tag, contenteditable: true })
             } else {
-              ;(el as HTMLInputElement).value = value
+              results.push({ selector, success: false, error: "unsupported_element", tag })
             }
-
-            el.dispatchEvent(new Event("input", { bubbles: true }))
-            el.dispatchEvent(new Event("change", { bubbles: true }))
-            el.dispatchEvent(new FocusEvent("focus", { bubbles: true }))
-            el.dispatchEvent(new FocusEvent("blur", { bubbles: true }))
-
-            results.push({ selector, success: true })
           } catch (e) {
-            results.push({ selector, success: false, error: String(e) })
+            results.push({ selector, success: false, error: e instanceof Error ? e.message : String(e) })
           }
         }
 
-        return JSON.stringify(results)
+        return JSON.stringify({ results })
       },
       args: [fields]
     })
@@ -203,7 +239,7 @@ export async function handleFillForm(
 }
 
 // ── click_element ──
-// 在当前页面模拟点击元素
+// 在页面中点击指定元素
 
 export async function handleClickElement(
   args: Record<string, unknown>
@@ -213,34 +249,56 @@ export async function handleClickElement(
     return JSON.stringify({ error: "no_selector", message: "请提供 CSS 选择器" })
   }
 
-  const tab = await getActiveTab()
-  if (!tab.id) return JSON.stringify({ error: "no_tab_id" })
+  let tabId: number
+  try {
+    tabId = await resolveTabId(args)
+  } catch {
+    return JSON.stringify({ error: "no_tab_id" })
+  }
 
   try {
     const [result] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
+      target: { tabId },
       func: (sel: string) => {
-        const el = document.querySelector(sel) as HTMLElement | null
+        const el = document.querySelector(sel)
         if (!el) {
-          return JSON.stringify({ success: false, error: "元素未找到", selector: sel })
+          return JSON.stringify({ error: "element_not_found", selector: sel })
         }
 
-        // 如果元素不可见，尝试滚动到可见区域
-        if (el.scrollIntoView) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" })
+        if (el instanceof HTMLButtonElement ||
+            el instanceof HTMLInputElement ||
+            el instanceof HTMLSelectElement) {
+          if (el.disabled) {
+            return JSON.stringify({ error: "element_disabled", selector: sel, tag: el.tagName.toLowerCase() })
+          }
         }
 
-        // 如果元素被禁用，返回失败
-        if ((el as HTMLButtonElement).disabled) {
-          return JSON.stringify({ success: false, error: "元素被禁用", selector: sel })
+        // 先滚动到可见区域
+        el.scrollIntoView({ behavior: "instant", block: "center" })
+
+        const rect = el.getBoundingClientRect()
+        const x = rect.left + rect.width / 2
+        const y = rect.top + rect.height / 2
+
+        // 模拟完整点击序列
+        el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, clientX: x, clientY: y }))
+        el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: x, clientY: y }))
+        el.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: x, clientY: y }))
+
+        // 如果是链接，也尝试触发导航
+        if (el instanceof HTMLAnchorElement && el.href) {
+          return JSON.stringify({
+            success: true,
+            tag: "a",
+            href: el.href,
+            text: el.textContent?.trim().slice(0, 200) || ""
+          })
         }
 
-        el.click()
         return JSON.stringify({
           success: true,
-          selector: sel,
-          tag: el.tagName,
-          text: el.textContent?.slice(0, 100) || ""
+          tag: el.tagName.toLowerCase(),
+          text: el.textContent?.trim().slice(0, 200) || ""
         })
       },
       args: [selector]
@@ -260,34 +318,34 @@ export async function handleClickElement(
 }
 
 // ── screenshot ──
-// 截取当前页面可见区域
+// 对当前页面截图
 
 export async function handleScreenshot(
   args: Record<string, unknown>
 ): Promise<string> {
-  const format = (args.format as string) || "jpeg"
+  const format = (args.format as string) === "png" ? "png" : "jpeg"
   const quality = (args.quality as number) ?? 80
 
-  const tab = await getActiveTab()
-  if (!tab.id) return JSON.stringify({ error: "no_tab_id" })
-  if (!tab.windowId) return JSON.stringify({ error: "no_window_id" })
+  let tabId: number
+  try {
+    tabId = await resolveTabId(args)
+  } catch {
+    return JSON.stringify({ error: "no_tab_id" })
+  }
 
   try {
-    const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
-      format: format as "jpeg" | "png",
-      quality: format === "jpeg" ? quality : undefined
-    })
+    const dataUrl = await chrome.tabs.captureVisibleTab(tabId as unknown as number | undefined, { format, quality })
 
-    // 返回 data URL 摘要信息（完整 base64 太长，不该注入 LLM context）
-    const sizeBytes = Math.round((dataUrl.length * 3) / 4)
+    if (!dataUrl) {
+      return JSON.stringify({ error: "capture_failed" })
+    }
+
     return JSON.stringify({
-      success: true,
       format,
-      quality,
-      size_bytes: sizeBytes,
-      // 缩略信息：前 100 字符，让模型知道截图已生成
-      data_url_prefix: dataUrl.slice(0, 80) + "...",
-      note: "截图已生成（base64 data URL）。完整内容过长，已存放在工具结果中。若模型支持 vision，可通过此 data_url 查看截图。"
+      quality: format === "jpeg" ? quality : undefined,
+      data_url_prefix: dataUrl.slice(0, 60) + "...",
+      size_bytes: dataUrl.length,
+      data_url: dataUrl
     })
   } catch (error) {
     return JSON.stringify({
@@ -298,38 +356,38 @@ export async function handleScreenshot(
 }
 
 // ── inspect_element ──
-// 通用 DOM 探查：分析指定元素的标签、属性、可交互性及子元素结构
+// 探查页面 DOM 结构
 
 export async function handleInspectElement(
   args: Record<string, unknown>
 ): Promise<string> {
-  const selector = (args.selector as string) || null
-  const depth = (args.depth as number) || 2
+  const selector = args.selector as string | undefined | null
+  const depth = (args.depth as number) ?? 2
   const includeChildren = args.include_children !== false
 
-  const tab = await getActiveTab()
-  if (!tab.id) return JSON.stringify({ error: "no_tab_id" })
-
-  if (!tab.url || tab.url.startsWith("chrome://") || tab.url.startsWith("chrome-extension://") || tab.url.startsWith("about:")) {
-    return JSON.stringify({
-      error: "cannot_inject",
-      url: tab.url,
-      message: "无法在 chrome:// / chrome-extension:// / about: 页面注入脚本，请切换到普通网页。"
-    })
+  let tabId: number
+  try {
+    tabId = await resolveTabId(args)
+  } catch {
+    return JSON.stringify({ error: "no_tab_id" })
   }
 
   try {
     const [result] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: (sel: string | null, maxDepth: number, showChildren: boolean) => {
+      target: { tabId },
+      func: (
+        sel: string | null | undefined,
+        maxDepth: number,
+        showChildren: boolean
+      ) => {
         try {
           function isVisible(el: Element): boolean {
-            const rect = el.getBoundingClientRect()
-            if (rect.width === 0 && rect.height === 0) return false
             const style = window.getComputedStyle(el)
-            if (style.display === "none" || style.visibility === "hidden") return false
-            if (parseFloat(style.opacity) === 0) return false
-            return true
+            if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+              return false
+            }
+            const rect = el.getBoundingClientRect()
+            return rect.width > 0 && rect.height > 0
           }
 
           function getInteractivity(el: Element): Record<string, unknown> {
@@ -343,9 +401,9 @@ export async function handleInspectElement(
             if (el instanceof HTMLButtonElement ||
                 el instanceof HTMLAnchorElement ||
                 (el instanceof HTMLInputElement && (
-                  (el as HTMLInputElement).type === "submit" ||
-                  (el as HTMLInputElement).type === "button" ||
-                  (el as HTMLInputElement).type === "reset"
+                  el.type === "submit" ||
+                  el.type === "button" ||
+                  el.type === "reset"
                 ))) {
               info.clickable = true
               info.disabled = (el as HTMLButtonElement | HTMLInputElement).disabled || false
@@ -370,7 +428,7 @@ export async function handleInspectElement(
           function getLabel(el: Element): string | null {
             const input = el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
             if (input.id) {
-              const labelEl = document.querySelector('label[for="' + CSS.escape(input.id) + '"]')
+              const labelEl = document.querySelector(`label[for="${CSS.escape(input.id)}"]`)
               if (labelEl) return labelEl.textContent?.trim() || null
             }
             const parentLabel = input.closest("label")
@@ -383,23 +441,23 @@ export async function handleInspectElement(
           function buildSelectors(el: Element): string[] {
             const selectors: string[] = []
             const input = el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-            if (input.id) selectors.push("#" + CSS.escape(input.id))
+            if (input.id) selectors.push(`#${CSS.escape(input.id)}`)
 
             const tag = el.tagName.toLowerCase()
 
             if ((input as HTMLInputElement).name) {
-              selectors.push(tag + '[name="' + (input as HTMLInputElement).name + '"]')
+              selectors.push(`${tag}[name="${(input as HTMLInputElement).name}"]`)
             }
 
             if (input instanceof HTMLInputElement && input.type && input.name) {
-              selectors.push('input[type="' + input.type + '"][name="' + input.name + '"]')
+              selectors.push(`input[type="${input.type}"][name="${input.name}"]`)
             }
 
-            const ph = (input as HTMLInputElement | HTMLTextAreaElement).placeholder
-            if (ph) selectors.push(tag + '[placeholder="' + ph + '"]')
+            const ph = (input as HTMLInputElement).placeholder
+            if (ph) selectors.push(`${tag}[placeholder="${ph}"]`)
 
             const ariaLabel = input.getAttribute("aria-label")
-            if (ariaLabel) selectors.push('[aria-label="' + ariaLabel + '"]')
+            if (ariaLabel) selectors.push(`[aria-label="${ariaLabel}"]`)
 
             const testId = input.getAttribute("data-testid")
             if (testId) selectors.push('[data-testid="' + testId + '"]')

@@ -45,6 +45,7 @@ import {
 } from "./lib/side-panel-bridge"
 import { getLlmSettings } from "./lib/settings"
 import { runAgentLoop } from "./lib/chat/agent-loop"
+import { registerAllTools } from "./lib/chat/tool-registry"
 import type { OpenAiChatMessage } from "./lib/chat/openai-messages"
 import { saveThreadMessages } from "./lib/chat/thread-idb"
 
@@ -96,6 +97,7 @@ async function executeAgentInBackground(
   userInput: string
 ) {
   const abortController = new AbortController()
+  registerAllTools()
   runningAgents.set(threadId, abortController)
   runningThreadIds.add(threadId)
   broadcastAgentRunningState()

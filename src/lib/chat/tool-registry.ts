@@ -10,7 +10,7 @@ import {
   handleRm,
   handleExport
 } from "./tools/fs-tools"
-import { handleCurrentPage, handleTabs } from "./tools/system-tools"
+import { handleCurrentPage, handleTabs, handleGetActiveTabId } from "./tools/system-tools"
 import {
   handleGetPageContent,
   handleTakeSelection,
@@ -43,6 +43,7 @@ export function registerAllTools(): void {
   // 浏览器系统工具
   registerTool("current_page", handleCurrentPage)
   registerTool("tabs", handleTabs)
+  registerTool("get_active_tab_id", handleGetActiveTabId)
 
   // 浏览器交互工具
   registerTool("get_page_content", handleGetPageContent)

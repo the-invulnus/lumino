@@ -43,3 +43,27 @@ export async function handleTabs(
     })
   }
 }
+
+// ── get_active_tab_id ──
+// 返回当前活跃 tab 的 id，agent 后续可使用此 id 锁定工作页面
+
+export async function handleGetActiveTabId(
+  _args: Record<string, unknown>
+): Promise<string> {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+    if (!tab) {
+      return JSON.stringify({ error: "no_active_tab" })
+    }
+    return JSON.stringify({
+      tab_id: tab.id,
+      url: tab.url ?? "",
+      title: tab.title ?? ""
+    })
+  } catch (error) {
+    return JSON.stringify({
+      error: "get_active_tab_id_failed",
+      message: error instanceof Error ? error.message : String(error)
+    })
+  }
+}

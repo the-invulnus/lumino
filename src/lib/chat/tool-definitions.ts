@@ -256,6 +256,19 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
       }
     }
   },
+  {
+    type: "function",
+    function: {
+      name: "get_active_tab_id",
+      description:
+        "获取当前活跃标签页的 id。在任务的首次浏览器操作前调用此工具，获取当前页面的 tab_id，之后所有浏览器交互工具（get_page_content、take_selection、inspect_element、fill_form、click_element、screenshot）都通过 tab_id 参数指定目标标签页，确保操作不受用户切换标签页的影响。",
+      parameters: {
+        type: "object",
+        properties: {},
+        additionalProperties: false
+      }
+    }
+  },
   // ── 浏览器交互工具 ──
   {
     type: "function",
@@ -266,6 +279,10 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
       parameters: {
         type: "object",
         properties: {
+          tab_id: {
+            type: "number",
+            description: "目标标签页的 ID。首次操作时先调用 get_active_tab_id 获取，后续所有浏览器操作都传入此值以锁定工作页面，避免用户切换标签页导致操作错误页面。不传则使用当前活跃标签页。"
+          },
           mode: {
             type: "string",
             description: "提取模式：text（正文文本，默认）、full_html（完整HTML源码）、structured（按选择器提取结构化列表）",
@@ -292,7 +309,12 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
         "获取用户在当前页面中选中的文本。返回选中的文本内容、长度，以及选中文本前后的上下文（各约50字符）。如果用户没有选中任何文本，返回 selected: false。",
       parameters: {
         type: "object",
-        properties: {},
+        properties: {
+          tab_id: {
+            type: "number",
+            description: "目标标签页的 ID。首次操作时先调用 get_active_tab_id 获取，后续所有浏览器操作都传入此值以锁定工作页面，避免用户切换标签页导致操作错误页面。不传则使用当前活跃标签页。"
+          }
+        },
         additionalProperties: false
       }
     }
@@ -306,6 +328,10 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
       parameters: {
         type: "object",
         properties: {
+          tab_id: {
+            type: "number",
+            description: "目标标签页的 ID。首次操作时先调用 get_active_tab_id 获取，后续所有浏览器操作都传入此值以锁定工作页面，避免用户切换标签页导致操作错误页面。不传则使用当前活跃标签页。"
+          },
           selector: {
             type: "string",
             description: "CSS 选择器，用于定位要探查的元素。不传则自动探测页面中最可能的交互区域。"
@@ -332,6 +358,10 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
       parameters: {
         type: "object",
         properties: {
+          tab_id: {
+            type: "number",
+            description: "目标标签页的 ID。首次操作时先调用 get_active_tab_id 获取，后续所有浏览器操作都传入此值以锁定工作页面，避免用户切换标签页导致操作错误页面。不传则使用当前活跃标签页。"
+          },
           fields: {
             type: "array",
             description: "要填充的字段列表",
@@ -366,6 +396,10 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
       parameters: {
         type: "object",
         properties: {
+          tab_id: {
+            type: "number",
+            description: "目标标签页的 ID。首次操作时先调用 get_active_tab_id 获取，后续所有浏览器操作都传入此值以锁定工作页面，避免用户切换标签页导致操作错误页面。不传则使用当前活跃标签页。"
+          },
           selector: {
             type: "string",
             description: "CSS 选择器，用于定位要点击的元素"
@@ -385,6 +419,10 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
       parameters: {
         type: "object",
         properties: {
+          tab_id: {
+            type: "number",
+            description: "目标标签页的 ID。首次操作时先调用 get_active_tab_id 获取，后续所有浏览器操作都传入此值以锁定工作页面，避免用户切换标签页导致操作错误页面。不传则使用当前活跃标签页。"
+          },
           format: {
             type: "string",
             description: "截图格式，jpeg 或 png。默认 jpeg。",
