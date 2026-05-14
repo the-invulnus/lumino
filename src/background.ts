@@ -28,11 +28,110 @@ import { insertDownloadRecord } from "./lib/memory/download-record-idb"
 import { setupBookmarkWatchers } from "./lib/memory/bookmark-watcher"
 import {
   OPEN_SIDE_PANEL_MESSAGE,
+  START_AGENT_MESSAGE,
+  STOP_AGENT_MESSAGE,
+  AGENT_PROGRESS_MESSAGE,
+  AGENT_COMPLETE_MESSAGE,
+  AGENT_ERROR_MESSAGE,
   AGENT_RUNNING_STATE_MESSAGE,
+  type StartAgentMessage,
+  type StopAgentMessage,
+  type AgentProgressMessage,
+  type AgentCompleteMessage,
+  type AgentErrorMessage,
   type AgentRunningStateMessage
 } from "./lib/side-panel-bridge"
+import { getLlmSettings } from "./lib/settings"
+import { runAgentLoop } from "./lib/chat/agent-loop"
+import type { OpenAiChatMessage } from "./lib/chat/openai-messages"
+import { saveThreadMessages } from "./lib/chat/thread-idb"
 
 export {}
+
+// ============================================================
+// Agent 执行管理（在 Service Worker 中运行，不依赖 Side Panel 生命周期）
+// ============================================================
+
+/** 当前正在执行的 agent 的 AbortController 映射 */
+const runningAgents = new Map<string, AbortController>()
+
+/** 所有正在运行的 threadId Set（用于全局状态判断） */
+const runningThreadIds = new Set<string>()
+
+/** 广播 agent 运行状态到所有 content scripts */
+function broadcastAgentRunningState() {
+  const running = runningThreadIds.size > 0
+  chrome.tabs.query({}, (tabs) => {
+    for (const tab of tabs) {
+      if (tab.id != null) {
+        chrome.tabs.sendMessage(tab.id, {
+          type: AGENT_RUNNING_STATE_MESSAGE,
+          payload: { running }
+        } as AgentRunningStateMessage).catch(() => { /* tab 可能未注入 */ })
+      }
+    }
+  })
+}
+
+/** 在 Service Worker 中执行 agent loop */
+async function executeAgentInBackground(
+  threadId: string,
+  historyMessages: OpenAiChatMessage[],
+  userInput: string
+) {
+  const abortController = new AbortController()
+  runningAgents.set(threadId, abortController)
+  runningThreadIds.add(threadId)
+  broadcastAgentRunningState()
+
+  try {
+    const settings = await getLlmSettings()
+
+    const result = await runAgentLoop({
+      settings,
+      threadId,
+      historyMessages,
+      userInput,
+      signal: abortController.signal,
+      onMessagesUpdate: async (msgs) => {
+        if (abortController.signal.aborted) return
+        await saveThreadMessages(threadId, msgs)
+
+        // 推送进度到 Side Panel
+        chrome.runtime.sendMessage({
+          type: AGENT_PROGRESS_MESSAGE,
+          payload: { threadId, messages: msgs }
+        } as AgentProgressMessage).catch(() => { /* Side Panel 可能已关闭 */ })
+      }
+    })
+
+    await saveThreadMessages(threadId, result)
+
+    // 通知 Side Panel 执行完成
+    chrome.runtime.sendMessage({
+      type: AGENT_COMPLETE_MESSAGE,
+      payload: { threadId, messages: result }
+    } as AgentCompleteMessage).catch(() => { /* ignore */ })
+
+    return result
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      // 用户主动中止，不报错
+      return
+    }
+
+    const errorMsg = err instanceof Error ? err.message : "请求模型失败，请检查配置后重试。"
+
+    chrome.runtime.sendMessage({
+      type: AGENT_ERROR_MESSAGE,
+      payload: { threadId, error: errorMsg }
+    } as AgentErrorMessage).catch(() => { /* ignore */ })
+  } finally {
+    runningAgents.delete(threadId)
+    runningThreadIds.delete(threadId)
+    broadcastAgentRunningState()
+  }
+}
 
 // ---- 浏览器 API 初始化 ----
 
@@ -47,6 +146,7 @@ function enableOpenPanelOnActionClick() {
 
 function setupMessageHandlers(): void {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // ---- Side Panel 打开 ----
     if (message?.type === OPEN_SIDE_PANEL_MESSAGE) {
       const tabId = sender.tab?.id
       const windowId = sender.tab?.windowId
@@ -61,7 +161,43 @@ function setupMessageHandlers(): void {
       return
     }
 
-    // Side Panel → Service Worker：agent 运行状态变更，转发到当前活跃 tab
+    // ---- Side Panel → SW：启动 agent ----
+    if (message?.type === START_AGENT_MESSAGE) {
+      const { threadId, historyMessages, userInput } = (message as StartAgentMessage).payload
+
+      // 如果同一个 thread 已在运行，忽略
+      if (runningAgents.has(threadId)) return
+
+      console.log("[lumino:bg]", "启动 agent, threadId:", threadId)
+      void executeAgentInBackground(
+        threadId,
+        historyMessages as OpenAiChatMessage[],
+        userInput
+      )
+      return
+    }
+
+    // ---- Side Panel → SW：中止 agent ----
+    if (message?.type === STOP_AGENT_MESSAGE) {
+      const { threadId } = (message as StopAgentMessage).payload
+      const controller = runningAgents.get(threadId)
+      if (controller) {
+        console.log("[lumino:bg]", "中止 agent, threadId:", threadId)
+        controller.abort()
+        runningAgents.delete(threadId)
+        runningThreadIds.delete(threadId)
+        broadcastAgentRunningState()
+      }
+      return
+    }
+
+    // ---- 查询当前运行状态（Side Panel 打开时可以查询） ----
+    if (message?.type === "lumino/query-running-state") {
+      sendResponse({ runningThreadIds: Array.from(runningThreadIds) })
+      return true // 保持回调
+    }
+
+    // ---- Content Script → SW：查询运行状态 ----
     if (message?.type === AGENT_RUNNING_STATE_MESSAGE) {
       const payload = (message as AgentRunningStateMessage).payload
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -70,10 +206,11 @@ function setupMessageHandlers(): void {
             chrome.tabs.sendMessage(tab.id, {
               type: AGENT_RUNNING_STATE_MESSAGE,
               payload
-            }).catch(() => { /* tab 可能未注入 content script */ })
+            } as AgentRunningStateMessage).catch(() => { })
           }
         }
       })
+      return
     }
 
     if (message?.type === TAB_OPEN_MESSAGE) {
@@ -164,6 +301,16 @@ function setupTabListeners(): void {
         registerTabOpen(tabId, url, tab.title ?? "").catch((err) =>
           console.warn("[Lumino] registerTabOpen 失败:", err)
         )
+
+        // 页面刷新/导航后，重新广播运行状态给 content script
+        if (runningThreadIds.size > 0) {
+          setTimeout(() => {
+            chrome.tabs.sendMessage(tabId, {
+              type: AGENT_RUNNING_STATE_MESSAGE,
+              payload: { running: true }
+            } as AgentRunningStateMessage).catch(() => { })
+          }, 500)
+        }
       }
     }
   })
@@ -235,6 +382,11 @@ async function boot(): Promise<void> {
   } catch (e) {
     console.warn("[Lumino] IDB 诊断失败:", e)
   }
+
+  // SW 启动后，广播当前运行状态到所有 content script
+  setTimeout(() => {
+    broadcastAgentRunningState()
+  }, 1000)
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {

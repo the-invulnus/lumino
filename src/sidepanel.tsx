@@ -18,12 +18,23 @@ import {
   suggestTitleFromMessages,
   type ChatThreadRecord
 } from "./lib/chat/thread-idb"
-import { runAgentLoop } from "./lib/chat/agent-loop"
+// agent loop 现在在 Service Worker 中运行
 import { registerAllTools } from "./lib/chat/tool-registry"
 import type { LlmSettings } from "./lib/llm/types"
 import { getLlmSettings, hasCompleteLlmSettings } from "./lib/settings"
 import { exportWorkspaceFile } from "./lib/fs/workspace"
-import { AGENT_RUNNING_STATE_MESSAGE } from "./lib/side-panel-bridge"
+import {
+  START_AGENT_MESSAGE,
+  STOP_AGENT_MESSAGE,
+  AGENT_PROGRESS_MESSAGE,
+  AGENT_COMPLETE_MESSAGE,
+  AGENT_ERROR_MESSAGE,
+  type StartAgentMessage,
+  type StopAgentMessage,
+  type AgentProgressMessage,
+  type AgentCompleteMessage,
+  type AgentErrorMessage
+} from "./lib/side-panel-bridge"
 import "./styles/paper.css"
 import blackCatGif from "data-base64:~black_cat.gif"
 
@@ -500,11 +511,10 @@ function SidePanel() {
 
   const handleStop = useCallback(() => {
     const threadId = activeThreadIdRef.current
-    const controller = abortMapRef.current[threadId]
-    if (controller) {
-      controller.abort()
-      delete abortMapRef.current[threadId]
-    }
+    chrome.runtime.sendMessage({
+      type: STOP_AGENT_MESSAGE,
+      payload: { threadId }
+    } as StopAgentMessage).catch(() => { /* ignore */ })
   }, [])
 
   const persistMessages = useCallback(
@@ -622,72 +632,77 @@ function SidePanel() {
     setError("")
     setDraft("")
 
-    // 创建 AbortController，用于用户主动打断
-    const abortController = new AbortController()
-    abortMapRef.current[threadId] = abortController
-
     console.log("[lumino:sidepanel]", "开始请求，当前消息数:", messages.length)
 
-    // 通知 content script：agent 开始运行
+    // 先乐观添加用户消息到本地
+    const history = cloneMessages(messages)
+    const userMsg: OpenAiChatMessage = { role: "user", content: trimmed }
+    const baseMessages = [...history, userMsg]
+    setMessages(cloneMessages(baseMessages))
+
+    // 通过 Service Worker 发起 agent 执行（不依赖 Side Panel 生命周期）
     chrome.runtime.sendMessage({
-      type: AGENT_RUNNING_STATE_MESSAGE,
-      payload: { running: true }
-    }).catch(() => { /* ignore */ })
-
-    try {
-      const history = cloneMessages(messages)
-
-      // 先乐观添加用户消息
-      const userMsg: OpenAiChatMessage = { role: "user", content: trimmed }
-      const baseMessages = [...history, userMsg]
-      setMessages(cloneMessages(baseMessages))
-
-      const next = await runAgentLoop({
-        settings,
-        threadId,
-        historyMessages: history,
-        userInput: trimmed,
-        signal: abortController.signal,
-        onMessagesUpdate: async (msgs) => {
-          // 仅在仍是当前 tab 时更新 UI
-          if (threadId === activeThreadIdRef.current) {
-            setMessages(cloneMessages(msgs))
-          }
-          await saveThreadMessages(threadId, msgs)
-        }
-      })
-
-      // 仅在仍是当前 tab 时更新 UI
-      if (threadId === activeThreadIdRef.current) {
-        setMessages(cloneMessages(next))
-        await refreshThreadList()
-      }
-      await persistMessages(threadId, next)
-    } catch (requestError) {
-      if (requestError instanceof DOMException && requestError.name === "AbortError") {
-        // 用户主动中止，不显示错误
-      } else if (threadId === activeThreadIdRef.current) {
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "请求模型失败，请检查配置后重试。"
-        )
-      }
-    } finally {
-      // 通知 content script：agent 停止运行
-      chrome.runtime.sendMessage({
-        type: AGENT_RUNNING_STATE_MESSAGE,
-        payload: { running: false }
-      }).catch(() => { /* ignore */ })
-
-      delete sendInFlightMapRef.current[threadId]
-      setLoadingThreadIds((prev) => {
-        const next = new Set(prev)
-        next.delete(threadId)
-        return next
-      })
-    }
+      type: START_AGENT_MESSAGE,
+      payload: { threadId, historyMessages: history, userInput: trimmed }
+    } as StartAgentMessage).catch((err) => {
+      console.warn("[lumino:sidepanel]", "启动 agent 失败:", err)
+      setError("启动失败，请重试。")
+    })
   }
+
+
+  // 监听来自 Service Worker 的 agent 进度/完成/错误消息
+  useEffect(() => {
+    function handleAgentProgress(message: unknown) {
+      if (!message || typeof message !== "object") return
+
+      const msg = message as AgentProgressMessage
+      if (msg.type === AGENT_PROGRESS_MESSAGE) {
+        const { threadId, messages: msgs } = msg.payload
+        if (threadId === activeThreadIdRef.current) {
+          setMessages(cloneMessages(msgs as OpenAiChatMessage[]))
+        }
+        saveThreadMessages(threadId, msgs as OpenAiChatMessage[]).catch(() => {})
+        return
+      }
+
+      const completeMsg = message as AgentCompleteMessage
+      if (completeMsg.type === AGENT_COMPLETE_MESSAGE) {
+        const { threadId, messages: msgs } = completeMsg.payload
+        delete sendInFlightMapRef.current[threadId]
+        setLoadingThreadIds((prev) => {
+          const next = new Set(prev)
+          next.delete(threadId)
+          return next
+        })
+        if (threadId === activeThreadIdRef.current) {
+          setMessages(cloneMessages(msgs as OpenAiChatMessage[]))
+          refreshThreadList().catch(() => {})
+        }
+        saveThreadMessages(threadId, msgs as OpenAiChatMessage[]).catch(() => {})
+        return
+      }
+
+      const errorMsg = message as AgentErrorMessage
+      if (errorMsg.type === AGENT_ERROR_MESSAGE) {
+        const { threadId, error } = errorMsg.payload
+        delete sendInFlightMapRef.current[threadId]
+        setLoadingThreadIds((prev) => {
+          const next = new Set(prev)
+          next.delete(threadId)
+          return next
+        })
+        if (threadId === activeThreadIdRef.current) {
+          setError(error)
+        }
+      }
+    }
+
+    chrome.runtime.onMessage.addListener(handleAgentProgress)
+    return () => {
+      chrome.runtime.onMessage.removeListener(handleAgentProgress)
+    }
+  }, [refreshThreadList])
 
   const visibleMessages = messages.filter((message) => message.role !== "system")
   const isConfigured = hasCompleteLlmSettings(settings)
