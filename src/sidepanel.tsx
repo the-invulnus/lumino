@@ -801,11 +801,14 @@ function SidePanel() {
                       <span className="lumi-running-dot" />
                       <span>运行中…</span>
                       <button
-                        className="paper-secondary-button paper-secondary-button--sm"
+                        aria-label="停止生成"
+                        className="lumi-stop-btn"
                         onClick={handleStop}
-                        style={{ marginLeft: "0.75rem" }}
                         type="button">
-                        停止
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
                       </button>
                     </div>
                   )}

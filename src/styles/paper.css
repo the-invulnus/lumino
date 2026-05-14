@@ -1669,6 +1669,42 @@ textarea {
   padding: 2px 0 0;
 }
 
+/* —— 停止按钮：温柔收束 —— */
+.lumi-stop-btn {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--lumi-ring-strong);
+  border-radius: 999px;
+  color: var(--lumi-ink-faint);
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 24px;
+  justify-content: center;
+  margin-left: 3px;
+  padding: 0;
+  transition:
+    color 200ms var(--lumi-ease-spring),
+    border-color 200ms var(--lumi-ease-spring),
+    background-color 200ms var(--lumi-ease-spring);
+  width: 24px;
+}
+
+.lumi-stop-btn:hover {
+  background: var(--lumi-accent-a);
+  border-color: var(--lumi-accent-a);
+  color: #fff;
+}
+
+.lumi-stop-btn:active {
+  transform: scale(0.92);
+}
+
+.lumi-stop-btn svg {
+  width: 11px;
+  height: 11px;
+}
+
 .lumi-running-dot {
   animation: lumi-dot-blink 1.2s var(--lumi-ease-spring) infinite;
   background: var(--lumi-accent-a);
