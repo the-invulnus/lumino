@@ -20,7 +20,8 @@
   right: 24px;
   transition:
     box-shadow 520ms var(--lumi-ease-spring),
-    transform 520ms var(--lumi-ease-spring);
+    transform 520ms var(--lumi-ease-spring),
+    right 400ms var(--lumi-ease-spring);
   width: 56px;
   z-index: 2147483647;
   user-select: none;

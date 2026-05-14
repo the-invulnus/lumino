@@ -65,3 +65,11 @@ export type AgentRunningStateMessage = {
   type: typeof AGENT_RUNNING_STATE_MESSAGE
   payload: { running: boolean }
 }
+
+/** Service Worker → 内容脚本：侧边栏打开/关闭状态变更 */
+export const SIDEPANEL_STATE_MESSAGE = "lumino/sidepanel-state" as const
+
+export type SidepanelStateMessage = {
+  type: typeof SIDEPANEL_STATE_MESSAGE
+  payload: { open: boolean }
+}

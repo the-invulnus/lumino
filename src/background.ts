@@ -34,12 +34,14 @@ import {
   AGENT_COMPLETE_MESSAGE,
   AGENT_ERROR_MESSAGE,
   AGENT_RUNNING_STATE_MESSAGE,
+  SIDEPANEL_STATE_MESSAGE,
   type StartAgentMessage,
   type StopAgentMessage,
   type AgentProgressMessage,
   type AgentCompleteMessage,
   type AgentErrorMessage,
-  type AgentRunningStateMessage
+  type AgentRunningStateMessage,
+  type SidepanelStateMessage
 } from "./lib/side-panel-bridge"
 import { getLlmSettings } from "./lib/settings"
 import { runAgentLoop } from "./lib/chat/agent-loop"
@@ -68,6 +70,20 @@ function broadcastAgentRunningState() {
           type: AGENT_RUNNING_STATE_MESSAGE,
           payload: { running }
         } as AgentRunningStateMessage).catch(() => { /* tab 可能未注入 */ })
+      }
+    }
+  })
+}
+
+/** 广播侧边栏打开/关闭状态到所有 content scripts */
+function broadcastSidepanelState(open: boolean) {
+  chrome.tabs.query({}, (tabs) => {
+    for (const tab of tabs) {
+      if (tab.id != null) {
+        chrome.tabs.sendMessage(tab.id, {
+          type: SIDEPANEL_STATE_MESSAGE,
+          payload: { open }
+        } as SidepanelStateMessage).catch(() => { })
       }
     }
   })
@@ -146,16 +162,11 @@ function enableOpenPanelOnActionClick() {
 
 function setupMessageHandlers(): void {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    // ---- Side Panel 打开 ----
+    // ---- 悬浮按钮：toggle 侧边栏 ----
     if (message?.type === OPEN_SIDE_PANEL_MESSAGE) {
-      const tabId = sender.tab?.id
       const windowId = sender.tab?.windowId
-
-      if (tabId != null && chrome.sidePanel?.open) {
-        void chrome.sidePanel.open({ tabId })
-        return
-      }
       if (windowId != null && chrome.sidePanel?.open) {
+        // sidePanel.open({ windowId }) 在面板已打开时会关闭面板（Chrome 118+）
         void chrome.sidePanel.open({ windowId })
       }
       return
