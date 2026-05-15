@@ -31,7 +31,6 @@ export async function handleGetPageContent(
 ): Promise<string> {
   const mode = (args.mode as string) || "text"
   const selector = args.selector as string | undefined
-  const maxChars = (args.max_chars as number) || 8000
 
   let tabId: number
   try {
@@ -43,7 +42,7 @@ export async function handleGetPageContent(
   try {
     const [result] = await chrome.scripting.executeScript({
       target: { tabId },
-      func: (m: string, sel: string | null, max: number) => {
+      func: (m: string, sel: string | null) => {
         let text = ""
 
         if (m === "full_html") {
@@ -71,13 +70,9 @@ export async function handleGetPageContent(
           }
         }
 
-        if (text.length > max) {
-          text = text.slice(0, max) + `\n\n[截断：总长度 ${text.length} 字符，仅显示前 ${max} 字符]`
-        }
-
         return text
       },
-      args: [mode, selector ?? null, maxChars]
+      args: [mode, selector ?? null]
     })
 
     if (!result || !result.result) {

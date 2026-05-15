@@ -46,6 +46,7 @@ import {
 import { getLlmSettings } from "./lib/settings"
 import { runAgentLoop } from "./lib/chat/agent-loop"
 import { registerAllTools } from "./lib/chat/tool-registry"
+import { cleanupEvictedFiles, EVICT_CLEANUP_ALARM } from "./lib/chat/tool-eviction"
 import type { OpenAiChatMessage } from "./lib/chat/openai-messages"
 import { saveThreadMessages } from "./lib/chat/thread-idb"
 
@@ -383,6 +384,11 @@ async function boot(): Promise<void> {
   setupDownloadListeners()
   await setupDwellAlarm()
 
+  // 注册驱逐文件定时清理（每 30 分钟）
+  chrome.alarms.create(EVICT_CLEANUP_ALARM, { periodInMinutes: 30 })
+  // 启动时立即清理一次
+  cleanupEvictedFiles().catch((err) => console.warn("[Lumino] 驱逐文件清理失败:", err))
+
   console.log("[Lumino] Background SW 启动完成")
   console.log("[Lumino] 书签监听已启动, dwell 巡检 alarm 已注册")
 
@@ -407,6 +413,13 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     runDwellCheck().catch((err) => {
       console.warn("[Lumino] Dwell 巡检失败", err)
     })
+  }
+  if (alarm.name === EVICT_CLEANUP_ALARM) {
+    cleanupEvictedFiles()
+      .then((deleted) => {
+        if (deleted > 0) console.log(`[Lumino] 清理了 ${deleted} 个过期驱逐文件`)
+      })
+      .catch((err) => console.warn("[Lumino] 驱逐文件清理失败:", err))
   }
 })
 

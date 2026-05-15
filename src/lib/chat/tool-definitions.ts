@@ -275,7 +275,7 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
     function: {
       name: "get_page_content",
       description:
-        "提取当前浏览器页面的文本内容。支持多种模式：text（提取正文文本）、full_html（完整HTML）、structured（按选择器提取结构化数据）。默认以 text 模式提取 <main>/<article>/<body> 的内容。可通过 selector 参数精确提取某个元素内的文本，通过 max_chars 控制最大返回长度。",
+        "提取当前浏览器页面的文本内容。支持多种模式：text（提取正文文本）、full_html（完整HTML）、structured（按选择器提取结构化数据）。默认以 text 模式提取 <main>/<article>/<body> 的内容。可通过 selector 参数精确提取某个元素内的文本，超长内容会自动写入内部存储。",
       parameters: {
         type: "object",
         properties: {
@@ -294,7 +294,7 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
           },
           max_chars: {
             type: "number",
-            description: "最大返回字符数，默认 8000。超出部分会被截断并附加提示。"
+            description: "最大返回字符数，默认无限制。完整内容直接返回，超长内容（>80000 字符）会自动写入内部存储并在结果末尾注明文件路径。"
           }
         },
         additionalProperties: false
