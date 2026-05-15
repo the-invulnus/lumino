@@ -7,7 +7,13 @@ import {
   getCollectionConfig,
   saveCollectionConfig
 } from "./lib/memory/collection-config"
-import { getLlmSettings, saveLlmSettings } from "./lib/settings"
+import {
+  getLlmSettings,
+  saveLlmSettings,
+  type ObsidianSettings,
+  getObsidianSettings,
+  saveObsidianSettings
+} from "./lib/settings"
 import "./styles/paper.css"
 
 function SaveTrailIcon() {
@@ -37,16 +43,23 @@ function IndexOptions() {
   )
   // 独立管理忽略规则的文本编辑状态，避免每次渲染被 join 覆盖
   const [ignoredPatternsText, setIgnoredPatternsText] = useState("")
+  const [obsidianSettings, setObsidianSettings] = useState<ObsidianSettings>({
+    enabled: false,
+    apiKey: "",
+    baseUrl: "http://127.0.0.1:27123"
+  })
   const [status, setStatus] = useState("")
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     Promise.all([
       getLlmSettings().catch(() => ({ baseUrl: "", apiKey: "", model: "" })),
-      getCollectionConfig()
-    ]).then(([s, c]) => {
+      getCollectionConfig(),
+      getObsidianSettings().catch(() => ({ enabled: false, apiKey: "", baseUrl: "http://127.0.0.1:27123" }))
+    ]).then(([s, c, o]) => {
       setSettings(s)
       setCollectionConfig(c)
+      setObsidianSettings(o)
       setIgnoredPatternsText(c.ignoredUrlPatterns.join("\n"))
     })
   }, [])
@@ -81,6 +94,7 @@ function IndexOptions() {
     try {
       await saveLlmSettings(settings)
       await saveCollectionConfig(collectionConfig)
+      await saveObsidianSettings(obsidianSettings)
       setSettings(await getLlmSettings())
       const fresh = await getCollectionConfig()
       setCollectionConfig(fresh)
@@ -160,6 +174,77 @@ function IndexOptions() {
               value={settings.model}
             />
           </label>
+
+          
+          {/* === Obsidian 集成 === */}
+          <h2 className="paper-section-title">Obsidian 集成</h2>
+
+          <p className="paper-helper">
+            连接 Obsidian Local REST API 插件后，Agent 可以直接读写你的 vault。
+            需要先在 Obsidian 中安装并启用 Local REST API 插件，然后在下方填入 API Key。
+          </p>
+
+          <div className="paper-toggles">
+            <label className="paper-toggle">
+              <input
+                type="checkbox"
+                checked={obsidianSettings.enabled}
+                onChange={(e) =>
+                  setObsidianSettings((prev) => ({
+                    ...prev,
+                    enabled: e.target.checked
+                  }))
+                }
+              />
+              <span className="paper-toggle-label">
+                <strong>启用 Obsidian 集成</strong>
+                <small>开启后 Agent 可读写 Obsidian vault</small>
+              </span>
+            </label>
+          </div>
+
+          {obsidianSettings.enabled && (
+            <>
+              <label className="paper-field">
+                <span className="paper-label">API Base URL</span>
+                <input
+                  className="paper-input"
+                  onChange={(e) =>
+                    setObsidianSettings((prev) => ({
+                      ...prev,
+                      baseUrl: e.target.value
+                    }))
+                  }
+                  placeholder="http://127.0.0.1:27123"
+                  value={obsidianSettings.baseUrl}
+                />
+                <span className="paper-helper">
+                  默认使用 HTTP（端口 27123），避免自签名证书问题
+                </span>
+              </label>
+
+              <label className="paper-field">
+                <span className="paper-label">API Key</span>
+                <input
+                  className="paper-input"
+                  onChange={(e) =>
+                    setObsidianSettings((prev) => ({
+                      ...prev,
+                      apiKey: e.target.value
+                    }))
+                  }
+                  placeholder="在 Obsidian → Settings → Local REST API 中获取"
+                  type="password"
+                  value={obsidianSettings.apiKey}
+                />
+                <span className="paper-helper">
+                  在 Obsidian 设置 → Local REST API → API Key 中复制
+                </span>
+              </label>
+            </>
+          )}
+
+          {/* === 采集开关 === */}
 
           {/* === 采集开关 === */}
           <h2 className="paper-section-title">采集开关</h2>

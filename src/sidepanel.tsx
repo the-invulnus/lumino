@@ -38,7 +38,7 @@ import {
 import "./styles/paper.css"
 import blackCatGif from "data-base64:~black_cat.gif"
 
-registerAllTools()
+registerAllTools().catch(() => { })
 
 function SendArrowIcon() {
   return (
@@ -185,7 +185,7 @@ function LumiToolCall({
               <polyline points="12 6 12 12 16 14" />
             </svg>
           ) : toolError ? (
-            <svg className="lumi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color: "var(--lumi-error, #e5484d)"}}>
+            <svg className="lumi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--lumi-error, #e5484d)" }}>
               <circle cx="12" cy="12" r="10" />
               <line x1="15" x2="9" y1="9" y2="15" />
               <line x1="9" x2="15" y1="9" y2="15" />
@@ -228,28 +228,28 @@ function LumiToolCall({
                 } catch { /* ignore */ }
                 if (!filePath) return null
                 return (
-                <button
-                  type="button"
-                  className="lumi-tool-call__download"
-                  title={`下载 ${filePath}`}
-                  onClick={async (e) => {
-                    e.stopPropagation()
-                    const exported = await exportWorkspaceFile(filePath!)
-                    if (!exported) return
-                    const url = URL.createObjectURL(exported.blob)
-                    const a = document.createElement("a")
-                    a.href = url
-                    a.download = exported.filename
-                    a.click()
-                    URL.revokeObjectURL(url)
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" x2="12" y1="15" y2="3" />
-                  </svg>
-                </button>
+                  <button
+                    type="button"
+                    className="lumi-tool-call__download"
+                    title={`下载 ${filePath}`}
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      const exported = await exportWorkspaceFile(filePath!)
+                      if (!exported) return
+                      const url = URL.createObjectURL(exported.blob)
+                      const a = document.createElement("a")
+                      a.href = url
+                      a.download = exported.filename
+                      a.click()
+                      URL.revokeObjectURL(url)
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" x2="12" y1="15" y2="3" />
+                    </svg>
+                  </button>
                 )
               })()}
             </div>
@@ -662,7 +662,7 @@ function SidePanel() {
         if (threadId === activeThreadIdRef.current) {
           setMessages(cloneMessages(msgs as OpenAiChatMessage[]))
         }
-        saveThreadMessages(threadId, msgs as OpenAiChatMessage[]).catch(() => {})
+        saveThreadMessages(threadId, msgs as OpenAiChatMessage[]).catch(() => { })
         return
       }
 
@@ -677,9 +677,9 @@ function SidePanel() {
         })
         if (threadId === activeThreadIdRef.current) {
           setMessages(cloneMessages(msgs as OpenAiChatMessage[]))
-          refreshThreadList().catch(() => {})
+          refreshThreadList().catch(() => { })
         }
-        saveThreadMessages(threadId, msgs as OpenAiChatMessage[]).catch(() => {})
+        saveThreadMessages(threadId, msgs as OpenAiChatMessage[]).catch(() => { })
         return
       }
 
@@ -718,182 +718,182 @@ function SidePanel() {
       <div className="paper-bezel-outer paper-bezel-outer--side">
         <div className="paper-bezel-inner paper-bezel-inner--side">
           <div className="paper-sidepanel-layout-row">
-          <div className="paper-sidepanel-layout">
-            <header className="paper-sp-header">
-              <div className="paper-sp-brand">
-                <img
-                  aria-hidden
-                  className="paper-logo-cat"
-                  src={blackCatGif}
-                  alt="Lumi"
-                />
-                <div className="paper-sp-brand-text">
-                  <h1 className="paper-sp-title">Lumi Knows You</h1>
+            <div className="paper-sidepanel-layout">
+              <header className="paper-sp-header">
+                <div className="paper-sp-brand">
+                  <img
+                    aria-hidden
+                    className="paper-logo-cat"
+                    src={blackCatGif}
+                    alt="Lumi"
+                  />
+                  <div className="paper-sp-brand-text">
+                    <h1 className="paper-sp-title">Lumi Knows</h1>
+                  </div>
                 </div>
-              </div>
-              <div className="paper-sp-header-actions">
-                <button
-                  className="paper-icon-text-btn"
-                  onClick={openOptionsPage}
-                  type="button">
-                  设置
-                </button>
-              </div>
-            </header>
-
-                <section className="paper-session-strip" aria-label="历史会话">
-                  <div className="paper-session-chips" role="list">
-                    {isHydrating ? (
-                      <span className="paper-session-strip-hint">加载中…</span>
-                    ) : (
-                      threads.map((row) => {
-                        const selected = row.id === activeThreadId
-                        const label = threadLabel(row)
-                        const hint = `${label} · ${formatSessionTime(row.updatedAt)}`
-
-                        return (
-                          <div
-                            className={`paper-session-chip${selected ? " paper-session-chip--active" : ""}`}
-                            key={row.id}
-                            role="listitem">
-                            <button
-                              className="paper-session-chip-main"
-                              onClick={() => void selectThread(row.id)}
-                              title={hint}
-                              type="button">
-                              {label}
-                            </button>
-                            <button
-                              aria-label={`删除 ${label}`}
-                              className="paper-session-chip-del"
-                              onClick={(event) => void handleDeleteThread(row.id, event)}
-                              title="删除会话"
-                              type="button">
-                              ×
-                            </button>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
+                <div className="paper-sp-header-actions">
                   <button
-                    aria-label="新建会话"
-                    className="paper-session-add"
-                    disabled={isHydrating}
-                    onClick={() => void handleNewThread()}
-                    title="新建会话"
+                    className="paper-icon-text-btn"
+                    onClick={openOptionsPage}
                     type="button">
-                    ＋
+                    设置
                   </button>
-                </section>
+                </div>
+              </header>
 
-                <section className="paper-chat-panel" aria-busy={loadingThreadIds.has(activeThreadId)}>
-                  {isReady && !isConfigured ? (
-                    <div className="paper-note paper-note--compact">
-                      <p>请先在设置中填写 Base URL、API Key 与模型。</p>
-                      <button
-                        className="paper-secondary-button paper-secondary-button--sm"
-                        onClick={openOptionsPage}
-                        type="button">
-                        打开设置
-                      </button>
-                    </div>
-                  ) : null}
+              <section className="paper-session-strip" aria-label="历史会话">
+                <div className="paper-session-chips" role="list">
+                  {isHydrating ? (
+                    <span className="paper-session-strip-hint">加载中…</span>
+                  ) : (
+                    threads.map((row) => {
+                      const selected = row.id === activeThreadId
+                      const label = threadLabel(row)
+                      const hint = `${label} · ${formatSessionTime(row.updatedAt)}`
 
-                  <div className="paper-chat-scroll" role="log" aria-relevant="additions">
-                    {isHydrating ? (
-                      <p className="paper-chat-hint">正在加载…</p>
-                    ) : visibleMessages.length === 0 ? (
-                      <p className="paper-chat-hint">
-                        当前会话还没有消息。
-                        <br />
-                        在下方输入后发送即可。
-                      </p>
-                    ) : (
-                      visibleMessages.map((message, index) => (
-                        <ChatMessageBlock
-                          key={`${activeThreadId}-${index}-${message.role}`}
-                          message={message}
-                          allMessages={visibleMessages}
-                          index={index}
-                        />
-                      ))
-                    )}
-                    <div ref={scrollAnchorRef} />
-                  </div>
-
-                  {loadingThreadIds.has(activeThreadId) && (
-                    <div className="lumi-running-indicator">
-                      <span className="lumi-running-dot" />
-                      <span className="lumi-running-dot" />
-                      <span className="lumi-running-dot" />
-                      <span>运行中…</span>
-                      <button
-                        aria-label="停止生成"
-                        className="lumi-stop-btn"
-                        onClick={handleStop}
-                        type="button">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                      </button>
-                    </div>
+                      return (
+                        <div
+                          className={`paper-session-chip${selected ? " paper-session-chip--active" : ""}`}
+                          key={row.id}
+                          role="listitem">
+                          <button
+                            className="paper-session-chip-main"
+                            onClick={() => void selectThread(row.id)}
+                            title={hint}
+                            type="button">
+                            {label}
+                          </button>
+                          <button
+                            aria-label={`删除 ${label}`}
+                            className="paper-session-chip-del"
+                            onClick={(event) => void handleDeleteThread(row.id, event)}
+                            title="删除会话"
+                            type="button">
+                            ×
+                          </button>
+                        </div>
+                      )
+                    })
                   )}
+                </div>
+                <button
+                  aria-label="新建会话"
+                  className="paper-session-add"
+                  disabled={isHydrating}
+                  onClick={() => void handleNewThread()}
+                  title="新建会话"
+                  type="button">
+                  ＋
+                </button>
+              </section>
 
-                  <div className="paper-composer">
-                    <div className="paper-composer-row">
-                      <input
-                        aria-label="对话输入"
-                        className="paper-input paper-input--composer"
-                        disabled={loadingThreadIds.has(activeThreadId) || !isReady || isHydrating}
-                        onChange={(event) => setDraft(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" && !event.nativeEvent.isComposing) {
-                            event.preventDefault()
-                            void sendUserMessage()
-                          }
-                        }}
-                        placeholder="输入消息，Enter 发送"
-                        type="text"
-                        value={draft}
-                      />
-                      <button
-                        aria-busy={loadingThreadIds.has(activeThreadId)}
-                        aria-label={loadingThreadIds.has(activeThreadId) ? "正在发送" : "发送"}
-                        className="paper-composer-send"
-                        disabled={!isReady || loadingThreadIds.has(activeThreadId) || isHydrating}
-                        onClick={() => void sendUserMessage()}
-                        type="button">
-                        {loadingThreadIds.has(activeThreadId) ? (
-                          <span aria-hidden className="paper-spinner paper-spinner--on-accent" />
-                        ) : (
-                          <SendArrowIcon />
-                        )}
-                      </button>
-                    </div>
-
-                    {error ? (
-                      <p className="paper-error paper-error--tight" role="alert">
-                        {error}
-                      </p>
-                    ) : null}
+              <section className="paper-chat-panel" aria-busy={loadingThreadIds.has(activeThreadId)}>
+                {isReady && !isConfigured ? (
+                  <div className="paper-note paper-note--compact">
+                    <p>请先在设置中填写 Base URL、API Key 与模型。</p>
+                    <button
+                      className="paper-secondary-button paper-secondary-button--sm"
+                      onClick={openOptionsPage}
+                      type="button">
+                      打开设置
+                    </button>
                   </div>
-                </section>
-          </div>
+                ) : null}
 
-          {/* 右侧导航栏 */}
-          <nav className="paper-side-nav" aria-label="功能导航">
-            {/* Chat - 激活态 */}
-            <button className="paper-side-nav-btn paper-side-nav-btn--active" type="button" title="Chat">
-              <span className="paper-side-nav-btn-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-              </span>
-              <span className="paper-side-nav-btn-label">Chat</span>
-            </button>
-          </nav>
+                <div className="paper-chat-scroll" role="log" aria-relevant="additions">
+                  {isHydrating ? (
+                    <p className="paper-chat-hint">正在加载…</p>
+                  ) : visibleMessages.length === 0 ? (
+                    <p className="paper-chat-hint">
+                      当前会话还没有消息。
+                      <br />
+                      在下方输入后发送即可。
+                    </p>
+                  ) : (
+                    visibleMessages.map((message, index) => (
+                      <ChatMessageBlock
+                        key={`${activeThreadId}-${index}-${message.role}`}
+                        message={message}
+                        allMessages={visibleMessages}
+                        index={index}
+                      />
+                    ))
+                  )}
+                  <div ref={scrollAnchorRef} />
+                </div>
+
+                {loadingThreadIds.has(activeThreadId) && (
+                  <div className="lumi-running-indicator">
+                    <span className="lumi-running-dot" />
+                    <span className="lumi-running-dot" />
+                    <span className="lumi-running-dot" />
+                    <span>运行中…</span>
+                    <button
+                      aria-label="停止生成"
+                      className="lumi-stop-btn"
+                      onClick={handleStop}
+                      type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+
+                <div className="paper-composer">
+                  <div className="paper-composer-row">
+                    <input
+                      aria-label="对话输入"
+                      className="paper-input paper-input--composer"
+                      disabled={loadingThreadIds.has(activeThreadId) || !isReady || isHydrating}
+                      onChange={(event) => setDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                          event.preventDefault()
+                          void sendUserMessage()
+                        }
+                      }}
+                      placeholder="输入消息，Enter 发送"
+                      type="text"
+                      value={draft}
+                    />
+                    <button
+                      aria-busy={loadingThreadIds.has(activeThreadId)}
+                      aria-label={loadingThreadIds.has(activeThreadId) ? "正在发送" : "发送"}
+                      className="paper-composer-send"
+                      disabled={!isReady || loadingThreadIds.has(activeThreadId) || isHydrating}
+                      onClick={() => void sendUserMessage()}
+                      type="button">
+                      {loadingThreadIds.has(activeThreadId) ? (
+                        <span aria-hidden className="paper-spinner paper-spinner--on-accent" />
+                      ) : (
+                        <SendArrowIcon />
+                      )}
+                    </button>
+                  </div>
+
+                  {error ? (
+                    <p className="paper-error paper-error--tight" role="alert">
+                      {error}
+                    </p>
+                  ) : null}
+                </div>
+              </section>
+            </div>
+
+            {/* 右侧导航栏 */}
+            <nav className="paper-side-nav" aria-label="功能导航">
+              {/* Chat - 激活态 */}
+              <button className="paper-side-nav-btn paper-side-nav-btn--active" type="button" title="Chat">
+                <span className="paper-side-nav-btn-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </span>
+                <span className="paper-side-nav-btn-label">Chat</span>
+              </button>
+            </nav>
           </div>
         </div>
       </div>

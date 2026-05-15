@@ -42,3 +42,44 @@ export function hasCompleteLlmSettings(settings: LlmSettings) {
     settings.baseUrl.trim() && settings.apiKey.trim() && settings.model.trim()
   )
 }
+
+// ── Obsidian Local REST API 配置 ──
+
+export type ObsidianSettings = {
+  enabled: boolean
+  apiKey: string
+  /** API 基础地址，默认 http://127.0.0.1:27123（HTTP 避免自签名证书问题） */
+  baseUrl: string
+}
+
+const OBSIDIAN_SETTINGS_KEYS = ["obsidianEnabled", "obsidianApiKey", "obsidianBaseUrl"] as const
+
+export async function getObsidianSettings(
+  storageArea?: StorageArea
+): Promise<ObsidianSettings> {
+  const data = (await getStorageArea(storageArea).get(
+    OBSIDIAN_SETTINGS_KEYS as unknown as string[]
+  )) as Record<string, unknown>
+
+  return {
+    enabled: data.obsidianEnabled === true,
+    apiKey: (data.obsidianApiKey as string) ?? "",
+    baseUrl: (data.obsidianBaseUrl as string) || "http://127.0.0.1:27123"
+  }
+}
+
+export async function saveObsidianSettings(
+  settings: ObsidianSettings,
+  storageArea?: StorageArea
+): Promise<void> {
+  await getStorageArea(storageArea).set({
+    obsidianEnabled: settings.enabled,
+    obsidianApiKey: settings.apiKey.trim(),
+    obsidianBaseUrl: settings.baseUrl.trim() || "http://127.0.0.1:27123"
+  })
+}
+
+/** Obsidian 功能是否已正确配置并启用 */
+export function isObsidianConfigured(settings: ObsidianSettings): boolean {
+  return settings.enabled && settings.apiKey.trim().length > 0 && settings.baseUrl.trim().length > 0
+}

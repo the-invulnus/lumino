@@ -155,6 +155,8 @@ export async function handleFillForm(
     return JSON.stringify({ error: "no_fields", message: "请提供要填充的字段列表" })
   }
 
+  const submit = args.submit === true
+
   let tabId: number
   try {
     tabId = await resolveTabId(args)
@@ -165,7 +167,7 @@ export async function handleFillForm(
   try {
     const [result] = await chrome.scripting.executeScript({
       target: { tabId },
-      func: (f: Array<{ selector: string; value: string }>) => {
+      func: (f: Array<{ selector: string; value: string }>, doSubmit: boolean) => {
         const results: Array<Record<string, unknown>> = []
 
         for (const { selector, value } of f) {
@@ -215,9 +217,43 @@ export async function handleFillForm(
           }
         }
 
+        // 提交表单
+        if (doSubmit && f.length > 0) {
+          try {
+            const lastField = document.querySelector(f[f.length - 1].selector)
+            if (lastField) {
+              const form = lastField.closest("form")
+              if (form) {
+                // 方法 1：触发 form submit 事件
+                form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+                // 方法 2：查找 form 内的 submit 按钮并点击（兼容 React 等拦截了 submit 事件的框架）
+                const submitBtn = form.querySelector(
+                  'button[type="submit"], input[type="submit"], button:not([type])'
+                ) as HTMLElement | null
+                if (submitBtn) {
+                  submitBtn.click()
+                }
+                results.push({ submitted: true, form_action: (form as HTMLFormElement).action || null })
+              } else {
+                // 不在 form 内，尝试按回车
+                if (lastField instanceof HTMLInputElement) {
+                  lastField.dispatchEvent(new KeyboardEvent("keydown", {
+                    key: "Enter", code: "Enter", keyCode: 13, bubbles: true, cancelable: true
+                  }))
+                  results.push({ submitted: true, via: "enter_key" })
+                } else {
+                  results.push({ submitted: false, error: "no_form_found" })
+                }
+              }
+            }
+          } catch (e) {
+            results.push({ submitted: false, error: e instanceof Error ? e.message : String(e) })
+          }
+        }
+
         return JSON.stringify({ results })
       },
-      args: [fields]
+      args: [fields, submit]
     })
 
     if (!result || !result.result) {
@@ -579,6 +615,49 @@ export async function handleInspectElement(
     console.error("[lumino:tool] inspect_element error:", error)
     return JSON.stringify({
       error: "inspect_element_failed",
+      message: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+// ── navigate ──
+// 新开标签页导航到目标 URL，返回新 tab 的 tab_id
+
+export async function handleNavigate(
+  args: Record<string, unknown>
+): Promise<string> {
+  const url = args.url as string | undefined
+  if (!url) {
+    return JSON.stringify({ error: "no_url", message: "请提供要访问的 URL" })
+  }
+
+  // 补全协议头
+  let normalizedUrl = url
+  if (!/^https?:\/\//i.test(normalizedUrl)) {
+    normalizedUrl = "https://" + normalizedUrl
+  }
+
+  const existingTabId = args.tab_id as number | undefined
+
+  try {
+    let tab: chrome.tabs.Tab
+
+    if (existingTabId && existingTabId > 0) {
+      // 在已有 tab 上导航，复用不新开
+      tab = await chrome.tabs.update(existingTabId, { url: normalizedUrl, active: false })
+    } else {
+      // 新开后台标签页
+      tab = await chrome.tabs.create({ url: normalizedUrl, active: false })
+    }
+
+    return JSON.stringify({
+      tab_id: tab.id,
+      url: tab.url ?? normalizedUrl,
+      title: tab.title ?? ""
+    })
+  } catch (error) {
+    return JSON.stringify({
+      error: "navigate_failed",
       message: error instanceof Error ? error.message : String(error)
     })
   }

@@ -98,7 +98,7 @@ async function executeAgentInBackground(
   userInput: string
 ) {
   const abortController = new AbortController()
-  registerAllTools()
+  await registerAllTools()
   runningAgents.set(threadId, abortController)
   runningThreadIds.add(threadId)
   broadcastAgentRunningState()

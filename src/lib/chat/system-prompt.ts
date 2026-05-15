@@ -1,5 +1,6 @@
 import { loadUserProfile } from "../memory/user-profile"
 import { loadAllDailyMemories } from "../memory/daily-memory"
+import { isObsidianConfigured, getObsidianSettings } from "../settings"
 
 export const STATIC_SYSTEM_PROMPT = `你是 Lumino，运行在用户浏览器侧栏中的智能助手。
 
@@ -40,6 +41,12 @@ export const SEMI_STATIC_SYSTEM_PROMPT = `## 记忆管理
 - 后续所有浏览器操作必须传入相同的 tab_id，确保始终操作用户最初让你工作的页面，不受用户切换标签页影响
 - 不传 tab_id 时默认使用当前活跃标签页（可能已被用户切换）
 
+### 页面导航
+- 使用 navigate 在新标签页中打开 URL，返回新标签页的 tab_id
+  - navigate 创建后台标签页，不影响用户当前浏览
+  - 支持完整 URL（https://github.com）或省略协议的域名（github.com）
+- 打开页面后等待几秒让页面加载，再用 get_page_content/inspect_element 等工具操作
+
 ### 页面内容与交互
 - 使用 get_page_content 读取当前页面文本内容
   - mode="text"（默认）提取正文；mode="full_html" 获取完整 HTML；mode="structured" + selector 提取结构化列表
@@ -54,6 +61,7 @@ export const SEMI_STATIC_SYSTEM_PROMPT = `## 记忆管理
   - 传入 fields: [{selector, value}, ...]，selector 为 CSS 选择器
   - 首选 inspect_element 返回的 candidate_selectors 中的第一个选择器
   - 自动触发 input/change 事件，兼容 React/Vue 框架
+  - 设置 submit: true 可在填完后自动提交表单（查找 submit 按钮点击，兜底触发回车）
 - 使用 click_element 点击页面元素
   - 传入 CSS 选择器，如 ".submit-btn"、"#login-button"
   - 会先滚动到元素可见区域再点击
@@ -121,7 +129,12 @@ export async function buildAgentMessages(
 }>> {
   const dynamicBlock = await buildDynamicSystemBlock()
 
-  return [
+  const messages: Array<{
+    role: "system" | "user" | "assistant" | "tool"
+    content: string | null
+    tool_calls?: unknown[]
+    tool_call_id?: string
+  }> = [
     {
       role: "system",
       content: STATIC_SYSTEM_PROMPT
@@ -133,7 +146,27 @@ export async function buildAgentMessages(
     {
       role: "system",
       content: dynamicBlock
-    },
-    ...historyMessages
+    }
   ]
+
+  // 仅在 Obsidian 已配置时注入指引
+  const obsidianSettings = await getObsidianSettings()
+  if (isObsidianConfigured(obsidianSettings)) {
+    messages.push({
+      role: "system",
+      content: `## Obsidian 集成
+- 使用 obsidian_list 浏览 vault 目录结构
+- 使用 obsidian_read 读取笔记内容
+- 使用 obsidian_write 创建或覆写笔记。默认保存在 vault 中的 Lumino/ 目录下，如 Lumino/收集/AI工具推荐.md。用户明确指定路径时以用户为准。
+- 使用 obsidian_append 向笔记末尾追加内容
+- 使用 obsidian_patch 精确定位修改（支持 heading/frontmatter/block 的 append/prepend/replace）
+- 使用 obsidian_search 全文搜索 vault 中的笔记
+- 使用 obsidian_open 在 Obsidian UI 中打开笔记
+- 典型场景：用户说"保存到 Obsidian"→ 内容写入 Lumino/ 目录下的对应笔记
+- 所有 obsidian_* 工具均为静默操作，不会弹窗或打断用户`
+    })
+  }
+
+  messages.push(...historyMessages)
+  return messages
 }

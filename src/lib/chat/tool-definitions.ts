@@ -1,6 +1,8 @@
 import type { OpenAiToolDefinition } from "./openai-messages"
+import { isObsidianConfigured, getObsidianSettings } from "../settings"
 
-export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
+const BASE_TOOLS: OpenAiToolDefinition[] = [
+
   // ── 记忆系统工具 ──
   {
     type: "function",
@@ -269,7 +271,8 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
       }
     }
   },
-  // ── 浏览器交互工具 ──
+  // ── Obsidian 集成工具（需在设置中配置 API Key 后激活）───
+// ── 浏览器交互工具 ──
   {
     type: "function",
     function: {
@@ -354,7 +357,7 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
     function: {
       name: "fill_form",
       description:
-        "在当前浏览器页面中自动填充表单字段。传入字段列表 [{selector, value}, ...]，每个 selector 为 CSS 选择器，value 为要填充的值。会触发 input/change/focus/blur 事件以确保 React/Vue 等框架感知变化。返回每个字段的填充结果。",
+        "在当前浏览器页面中自动填充表单字段并可选提交。传入字段列表 [{selector, value}, ...]，每个 selector 为 CSS 选择器，value 为要填充的值。会触发 input/change/focus/blur 事件以确保 React/Vue 等框架感知变化。设置 submit=true 可在填完后自动提交表单（优先找 form 内的 submit 按钮点击，兜底触发 form submit 事件或回车键）。返回每个字段的填充结果及提交状态。",
       parameters: {
         type: "object",
         properties: {
@@ -380,6 +383,10 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
               required: ["selector", "value"],
               additionalProperties: false
             }
+          },
+          submit: {
+            type: "boolean",
+            description: "是否在填充完成后自动提交表单，默认 false。设为 true 时，会在最后一个字段所在的 form 中查找 submit 按钮并点击，兼容 React/Vue 等框架。"
           }
         },
         required: ["fields"],
@@ -437,4 +444,196 @@ export const LUMINO_AGENT_TOOLS: OpenAiToolDefinition[] = [
       }
     }
   },
-]
+  {
+    type: "function",
+    function: {
+      name: "navigate",
+      description:
+        "打开指定 URL。不传 tab_id 时创建新的后台标签页；传入 tab_id 时在当前标签页上导航（复用已有标签页，避免打开过多标签页）。首次调用不传 tab_id 打开新页面，后续跳转传入首次返回的 tab_id 实现标签页复用。支持自动补全 https:// 协议头。",
+      parameters: {
+        type: "object",
+        properties: {
+          tab_id: {
+            type: "number",
+            description: "可选。要复用的标签页 ID。传入时在已有标签页上导航而非新开。不传则创建新标签页。"
+          },
+          url: {
+            type: "string",
+            description: "要访问的 URL。支持完整 URL（https://github.com）或省略协议的域名（github.com），自动补全 https://。"
+          }
+        },
+        required: ["url"],
+        additionalProperties: false
+      }
+    }
+  }
+];
+
+const OBSIDIAN_TOOLS: OpenAiToolDefinition[] = [
+{
+    type: "function",
+    function: {
+      name: "obsidian_list",
+      description:
+        "列出 Obsidian vault 中的文件和子目录。不传 path 则列出根目录。",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "目录路径，相对于 vault 根目录。不传则列出根目录。"
+          }
+        },
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "obsidian_read",
+      description:
+        "读取 Obsidian vault 中笔记的完整内容。",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "笔记文件路径，相对于 vault 根目录，如 工作/项目笔记.md"
+          }
+        },
+        required: ["path"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "obsidian_write",
+      description:
+        "创建新笔记或覆写已有笔记。如果文件已存在，会覆盖全部内容。",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "笔记文件路径，如 收集/AI工具推荐.md"
+          },
+          content: {
+            type: "string",
+            description: "Markdown 格式的笔记内容"
+          }
+        },
+        required: ["path", "content"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "obsidian_append",
+      description:
+        "向笔记末尾追加内容。适合在已有笔记中补充新信息。",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "笔记文件路径"
+          },
+          content: {
+            type: "string",
+            description: "要追加的 Markdown 内容"
+          }
+        },
+        required: ["path", "content"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "obsidian_patch",
+      description:
+        "精确定位修改笔记的特定部分。支持三种目标类型：heading（在某标题下操作）、frontmatter（修改元数据字段）、block（修改块引用）。支持三种操作：append（追加）、prepend（前置插入）、replace（替换）。",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "笔记文件路径"
+          },
+          target_type: {
+            type: "string",
+            description: "目标类型：heading、frontmatter 或 block",
+            enum: ["heading", "frontmatter", "block"]
+          },
+          target: {
+            type: "string",
+            description: "目标名称，如 heading 名、frontmatter 字段名、block 引用 ID"
+          },
+          operation: {
+            type: "string",
+            description: "操作类型：append、prepend 或 replace",
+            enum: ["append", "prepend", "replace"]
+          },
+          content: {
+            type: "string",
+            description: "要写入的内容"
+          }
+        },
+        required: ["path", "target_type", "target", "operation", "content"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "obsidian_search",
+      description:
+        "在 Obsidian vault 中全文搜索笔记。返回匹配的文件名和评分上下文片段。",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "搜索关键词"
+          }
+        },
+        required: ["query"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "obsidian_open",
+      description:
+        "在 Obsidian 桌面端 UI 中打开指定笔记，方便用户查看。",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "笔记文件路径"
+          }
+        },
+        required: ["path"],
+        additionalProperties: false
+      }
+    }
+  },
+];
+
+export async function getLuminoAgentTools(): Promise<OpenAiToolDefinition[]> {
+  const settings = await getObsidianSettings()
+  if (isObsidianConfigured(settings)) {
+    return [...BASE_TOOLS, ...OBSIDIAN_TOOLS]
+  }
+  return BASE_TOOLS
+}

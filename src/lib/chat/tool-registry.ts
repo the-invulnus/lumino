@@ -12,19 +12,30 @@ import {
 } from "./tools/fs-tools"
 import { handleCurrentPage, handleTabs, handleGetActiveTabId } from "./tools/system-tools"
 import {
+  handleObsidianList,
+  handleObsidianRead,
+  handleObsidianWrite,
+  handleObsidianAppend,
+  handleObsidianPatch,
+  handleObsidianSearch,
+  handleObsidianOpen
+} from "./tools/obsidian-tools"
+import { isObsidianConfigured, getObsidianSettings } from "../settings"
+import {
   handleGetPageContent,
   handleTakeSelection,
   handleInspectElement,
   handleFillForm,
   handleClickElement,
-  handleScreenshot
+  handleScreenshot,
+  handleNavigate
 } from "./tools/browser-tools"
 
-let registered = false
+let baseRegistered = false
 
-export function registerAllTools(): void {
-  if (registered) return
-  registered = true
+function registerBaseTools(): void {
+  if (baseRegistered) return
+  baseRegistered = true
 
   // 记忆系统工具
   registerTool("memory_get", handleMemoryGet)
@@ -52,4 +63,21 @@ export function registerAllTools(): void {
   registerTool("fill_form", handleFillForm)
   registerTool("click_element", handleClickElement)
   registerTool("screenshot", handleScreenshot)
+  registerTool("navigate", handleNavigate)
+}
+
+export async function registerAllTools(): Promise<void> {
+  registerBaseTools()
+
+  // Obsidian 集成工具每次执行时都检查配置状态，避免竞态导致漏注册
+  const obsidianSettings = await getObsidianSettings()
+  if (isObsidianConfigured(obsidianSettings)) {
+    registerTool("obsidian_list", handleObsidianList)
+    registerTool("obsidian_read", handleObsidianRead)
+    registerTool("obsidian_write", handleObsidianWrite)
+    registerTool("obsidian_append", handleObsidianAppend)
+    registerTool("obsidian_patch", handleObsidianPatch)
+    registerTool("obsidian_search", handleObsidianSearch)
+    registerTool("obsidian_open", handleObsidianOpen)
+  }
 }

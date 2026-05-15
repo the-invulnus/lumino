@@ -3,7 +3,7 @@ import type { LlmSettings } from "../llm/types"
 import { requestChatCompletionTurn } from "../llm/openai"
 import { executeToolCall } from "./tool-executor"
 import { buildAgentMessages } from "./system-prompt"
-import { LUMINO_AGENT_TOOLS } from "./tool-definitions"
+import { getLuminoAgentTools } from "./tool-definitions"
 
 /** 单次 LLM 请求超时（毫秒） */
 const LLM_REQUEST_TIMEOUT_MS = 120_000
@@ -102,7 +102,7 @@ export async function runAgentLoop(
     const result = await withTimeout(
       requestChatCompletionTurn(settings, {
         messages: requestMessages,
-        tools: LUMINO_AGENT_TOOLS
+        tools: await getLuminoAgentTools()
       }, {
         signal,
         timeoutMs: LLM_REQUEST_TIMEOUT_MS
