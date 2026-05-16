@@ -641,13 +641,27 @@ function SidePanel() {
     setMessages(cloneMessages(baseMessages))
 
     // 通过 Service Worker 发起 agent 执行（不依赖 Side Panel 生命周期）
-    chrome.runtime.sendMessage({
+    const startPayload = {
       type: START_AGENT_MESSAGE,
       payload: { threadId, historyMessages: history, userInput: trimmed }
-    } as StartAgentMessage).catch((err) => {
-      console.warn("[lumino:sidepanel]", "启动 agent 失败:", err)
-      setError("启动失败，请重试。")
-    })
+    } as StartAgentMessage
+
+    // 发送消息到 Service Worker，失败时自动重试一次（SW 可能处于休眠状态）
+    async function sendStartWithRetry(): Promise<void> {
+      try {
+        await chrome.runtime.sendMessage(startPayload)
+      } catch (firstErr) {
+        // SW 可能休眠中，等待 300ms 后重试
+        await new Promise((r) => setTimeout(r, 300))
+        try {
+          await chrome.runtime.sendMessage(startPayload)
+        } catch {
+          console.warn("[lumino:sidepanel]", "启动 agent 失败:", firstErr)
+          setError("启动失败，请重试。")
+        }
+      }
+    }
+    sendStartWithRetry()
   }
 
 
@@ -686,6 +700,11 @@ function SidePanel() {
       const errorMsg = message as AgentErrorMessage
       if (errorMsg.type === AGENT_ERROR_MESSAGE) {
         const { threadId, error } = errorMsg.payload
+        // 只有当前会话正在发送中才展示错误，避免残留消息干扰
+        if (!sendInFlightMapRef.current[threadId]) {
+          console.warn("[lumino:sidepanel]", "忽略非活跃会话的错误:", threadId, error)
+          return
+        }
         delete sendInFlightMapRef.current[threadId]
         setLoadingThreadIds((prev) => {
           const next = new Set(prev)
