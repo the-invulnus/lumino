@@ -170,9 +170,24 @@ export async function handleFillForm(
       func: (f: Array<{ selector: string; value: string }>, doSubmit: boolean) => {
         const results: Array<Record<string, unknown>> = []
 
+        // 辅助函数：支持 :text("...") 选择器（jQuery/Sizzle 扩展）
+        function queryWithText(sel: string): Element | null {
+          const textMatch = sel.match(/^(.+):text\(["']([^"\']*)["']\)$/);
+          if (textMatch) {
+            const candidates = document.querySelectorAll(textMatch[1])
+            for (const c of candidates) {
+              if (c.textContent?.trim() === textMatch[2]) {
+                return c
+              }
+            }
+            return null
+          }
+          return document.querySelector(sel)
+        }
+
         for (const { selector, value } of f) {
           try {
-            const el = document.querySelector(selector)
+            const el = queryWithText(selector)
             if (!el) {
               results.push({ selector, success: false, error: "element_not_found" })
               continue
@@ -291,7 +306,32 @@ export async function handleClickElement(
     const [result] = await chrome.scripting.executeScript({
       target: { tabId },
       func: (sel: string) => {
-        const el = document.querySelector(sel)
+        // 将 jQuery/Sizzle :text("...") 选择器转换为原生可用的形式
+        let effectiveSel = sel
+        let textFilter: string | null = null
+        const textMatch = sel.match(/^(.+):text\(["']([^"']*)["']\)$/);
+        if (textMatch) {
+          effectiveSel = textMatch[1]
+          textFilter = textMatch[2]
+        }
+
+        let el: Element | null = null
+        try {
+          if (textFilter) {
+            const candidates = document.querySelectorAll(effectiveSel)
+            for (const c of candidates) {
+              if (c.textContent?.trim() === textFilter) {
+                el = c
+                break
+              }
+            }
+          } else {
+            el = document.querySelector(effectiveSel)
+          }
+        } catch (e) {
+          return JSON.stringify({ error: "invalid_selector", selector: sel, message: `CSS selector syntax error: ${e instanceof Error ? e.message : String(e)}` })
+        }
+
         if (!el) {
           return JSON.stringify({ error: "element_not_found", selector: sel })
         }
@@ -561,11 +601,26 @@ export async function handleInspectElement(
             return children
           }
 
+          // 辅助函数：支持 :text("...") 选择器（jQuery/Sizzle 扩展）
+          function queryWithText(sel2: string): Element | null {
+            const tm = sel2.match(/^(.+):text\(["']([^"\']*)["']\)$/);
+            if (tm) {
+              const candidates = document.querySelectorAll(tm[1])
+              for (const c of candidates) {
+                if (c.textContent?.trim() === tm[2]) {
+                  return c
+                }
+              }
+              return null
+            }
+            return document.querySelector(sel2)
+          }
+
           // Main logic
           let target: Element | null
 
           if (sel) {
-            target = document.querySelector(sel)
+            target = queryWithText(sel)
           } else {
             target = document.querySelector("form, [role=form]") ||
                      document.querySelector("[role=dialog], [role=menu], [role=toolbar]") ||

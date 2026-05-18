@@ -238,10 +238,11 @@
 .lm-input--composer {
   border-radius: var(--lumi-radius-btn-sm);
   font-size: var(--lumi-text-md);
-  height: 36px;
   line-height: var(--lumi-leading-snug);
   min-height: 36px;
-  padding: 0 14px;
+  overflow-y: auto;
+  padding: 8px 14px;
+  resize: none;
 }
 
 .lm-composer-send {

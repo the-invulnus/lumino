@@ -135,7 +135,11 @@ async function executeAgentInBackground(
     return result
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
-      // 用户主动中止，不报错
+      // 用户主动中止，通知 Side Panel 清除加载状态
+      chrome.runtime.sendMessage({
+        type: AGENT_COMPLETE_MESSAGE,
+        payload: { threadId, messages: historyMessages }
+      } as AgentCompleteMessage).catch(() => { /* Side Panel 可能已关闭 */ })
       return
     }
 
@@ -179,10 +183,15 @@ function setupMessageHandlers(): void {
     if (message?.type === START_AGENT_MESSAGE) {
       const { threadId, historyMessages, userInput } = (message as StartAgentMessage).payload
 
-      // 如果同一个 thread 已在运行，忽略
-      if (runningAgents.has(threadId)) return
+      // 如果同一个 thread 已在运行，忽略重复请求并确认收到
+      if (runningAgents.has(threadId)) {
+        sendResponse({ received: true, duplicate: true })
+        return
+      }
 
       console.log("[lumino:bg]", "启动 agent, threadId:", threadId)
+      // 立即确认消息已收到，避免 SW 休眠后 sendMessage 的 Promise 被 reject
+      sendResponse({ received: true })
       void executeAgentInBackground(
         threadId,
         historyMessages as OpenAiChatMessage[],
@@ -202,6 +211,7 @@ function setupMessageHandlers(): void {
         runningThreadIds.delete(threadId)
         broadcastAgentRunningState()
       }
+      sendResponse({ received: true })
       return
     }
 

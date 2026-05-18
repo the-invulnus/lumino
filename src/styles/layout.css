@@ -226,7 +226,7 @@ textarea {
 
 /* — Session strip — */
 .lm-session-strip {
-  align-items: center;
+  align-items: flex-start;
   display: flex;
   flex-shrink: 0;
   gap: 8px;
@@ -345,11 +345,11 @@ textarea {
   display: flex;
   flex-shrink: 0;
   font-weight: 400;
-  height: 28px;
+  height: 24px;
   justify-content: center;
   line-height: 1;
   transition: color 180ms var(--lumi-ease-spring), background-color 180ms var(--lumi-ease-spring);
-  width: 28px;
+  width: 24px;
 }
 
 .lm-session-add:disabled {
@@ -368,7 +368,7 @@ textarea {
 
 .lm-chat-panel .lm-chat-scroll {
   flex: 1 1 auto;
-  gap: 14px;
+  gap: 0;
   max-height: none;
   min-height: 120px;
   padding: 10px 8px;
@@ -378,12 +378,20 @@ textarea {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
   max-height: min(52vh, 420px);
   min-height: 160px;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 10px 8px;
+}
+
+.lm-chat-scroll .lm-chat-row--user {
+  margin-bottom: 12px;
+}
+
+.lm-chat-scroll .lm-chat-row--assistant + .lm-chat-row--assistant {
+  margin-top: 0;
 }
 
 .lm-chat-hint {
@@ -503,7 +511,7 @@ textarea {
 }
 
 .lm-composer-row {
-  align-items: center;
+  align-items: flex-end;
   display: flex;
   flex-shrink: 0;
   gap: 8px;
@@ -791,7 +799,7 @@ textarea {
 .lumi-sequence-stack {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   width: 100%;
 }
 

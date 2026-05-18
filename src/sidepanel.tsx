@@ -403,6 +403,13 @@ function SidePanel() {
 
   useEffect(() => {
     draftRef.current = draft
+    // 当 draft 被清空（发送后），重置 textarea 高度
+    if (!draft) {
+      const ta = document.querySelector('.lm-input--composer') as HTMLTextAreaElement | null
+      if (ta) {
+        ta.style.height = ''
+      }
+    }
   }, [draft])
 
   const refreshThreadList = useCallback(async () => {
@@ -658,11 +665,12 @@ function SidePanel() {
       try {
         await chrome.runtime.sendMessage(startPayload)
       } catch (firstErr) {
-        // SW 可能休眠中，等待 300ms 后重试
-        await new Promise((r) => setTimeout(r, 300))
+        // SW 可能休眠中，等待 500ms 后重试
+        await new Promise((r) => setTimeout(r, 500))
         try {
           await chrome.runtime.sendMessage(startPayload)
         } catch {
+          // 两次都失败才报错；SW 可能已收到第一次消息但通道提前关闭
           console.warn("[lumino:sidepanel]", "启动 agent 失败:", firstErr)
           setError("启动失败，请重试。")
         }
@@ -861,19 +869,25 @@ function SidePanel() {
 
                 <div className="lm-composer">
                   <div className="lm-composer-row">
-                    <input
+                    <textarea
                       aria-label="对话输入"
                       className="lm-input lm-input--composer"
                       disabled={loadingThreadIds.has(activeThreadId) || !isReady || isHydrating}
-                      onChange={(event) => setDraft(event.target.value)}
+                      onChange={(event) => {
+                        setDraft(event.target.value)
+                        // 自动调整高度
+                        const el = event.target
+                        el.style.height = "auto"
+                        el.style.height = el.scrollHeight + "px"
+                      }}
                       onKeyDown={(event) => {
-                        if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                        if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
                           event.preventDefault()
                           void sendUserMessage()
                         }
                       }}
-                      placeholder="输入消息，Enter 发送"
-                      type="text"
+                      placeholder="输入消息，Enter 发送，Shift+Enter 换行"
+                      rows={1}
                       value={draft}
                     />
                     <button
