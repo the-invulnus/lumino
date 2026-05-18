@@ -1,0 +1,387 @@
+/* ═══════════════════════════════════════════════
+   Lumino Design Tokens — Multi-theme
+
+   Three themes: paper (warm editorial), oryzo (dark cinematic), fictional (whimsical sticker)
+   Applied via [data-theme="..."] on <html>
+   ═══════════════════════════════════════════════ */
+
+/* ===== PAPER: 暖调编辑风 (default) ===== */
+:root,
+:root[data-theme="paper"] {
+  color-scheme: light;
+
+  /* — Colors — */
+  --lumi-bg: #fdfbf7;
+  --lumi-bg-deep: #f6f2eb;
+  --lumi-surface: rgba(255, 253, 249, 0.94);
+  --lumi-surface-raised: #fffaf5;
+  --lumi-surface-solid: #fffaf5;
+  --lumi-text: #2d2622;
+  --lumi-text-soft: rgba(45, 38, 34, 0.58);
+  --lumi-text-faint: rgba(45, 38, 34, 0.35);
+  --lumi-border: rgba(45, 38, 34, 0.06);
+  --lumi-border-strong: rgba(45, 38, 34, 0.1);
+  --lumi-accent-a: #c97d6d;
+  --lumi-accent-b: #a78bfa;
+  --lumi-accent-mist: #9ec9e0;
+  --lumi-blob-a: #e5988e;
+  --lumi-blob-b: #c4b0f5;
+  --lumi-blob-c: #9ec9e0;
+  --lumi-warn-bg: rgba(200, 137, 12, 0.06);
+  --lumi-warn-border: rgba(200, 137, 12, 0.18);
+  --lumi-warn-text: #8c5f08;
+  --lumi-danger-bg: rgba(196, 85, 77, 0.06);
+  --lumi-danger-border: rgba(196, 85, 77, 0.18);
+  --lumi-danger-text: #9f2a2a;
+  --lumi-success: #5b8c5a;
+
+  /* — Gradients — */
+  --lumi-gradient-accent: linear-gradient(118deg, #e5988e 0%, #c4b0f5 48%, #a8d4ea 100%);
+  --lumi-gradient-accent-subtle: linear-gradient(135deg, rgba(229, 152, 142, 0.22), rgba(196, 176, 245, 0.2));
+  --lumi-gradient-note: linear-gradient(135deg, rgba(255, 248, 235, 0.9), rgba(255, 240, 246, 0.82));
+  --lumi-gradient-bezel: linear-gradient(165deg, rgba(255, 255, 255, 0.5), rgba(255, 250, 244, 0.3));
+
+  /* — Typography: font stacks — */
+  --lumi-font: "Plus Jakarta Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --lumi-mono: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+  /* — Typography: sizes — */
+  --lumi-text-2xs: 9px;
+  --lumi-text-xs: 10px;
+  --lumi-text-sm: 11px;
+  --lumi-text-base: 13px;
+  --lumi-text-md: 15px;
+  --lumi-text-lg: 20px;
+  --lumi-text-xl: 24px;
+
+  /* — Typography: line heights — */
+  --lumi-leading-tight: 1.1;
+  --lumi-leading-snug: 1.35;
+  --lumi-leading-normal: 1.5;
+  --lumi-leading-relaxed: 1.55;
+  --lumi-leading-loose: 1.65;
+
+  /* — Typography: weights — */
+  --lumi-weight-normal: 400;
+  --lumi-weight-medium: 500;
+  --lumi-weight-semibold: 600;
+  --lumi-weight-bold: 700;
+
+  /* — Typography: letter spacing — */
+  --lumi-tracking-tighter: -0.04em;
+  --lumi-tracking-tight: -0.03em;
+  --lumi-tracking-snug: -0.01em;
+  --lumi-tracking-normal: normal;
+  --lumi-tracking-wide: 0.02em;
+  --lumi-tracking-wider: 0.06em;
+  --lumi-tracking-widest: 0.14em;
+
+  /* — Spacing scale — */
+  --lumi-space-1: 2px;
+  --lumi-space-2: 4px;
+  --lumi-space-3: 6px;
+  --lumi-space-4: 8px;
+  --lumi-space-5: 10px;
+  --lumi-space-6: 12px;
+  --lumi-space-7: 16px;
+  --lumi-space-8: 20px;
+  --lumi-space-9: 24px;
+  --lumi-space-10: 28px;
+
+  /* — Component shape tokens: radii — */
+  --lumi-radius-btn: 9999px;
+  --lumi-radius-btn-sm: 999px;
+  --lumi-radius-send-btn: 50%;
+  --lumi-radius-bubble: 16px;
+  --lumi-radius-input: 14px;
+  --lumi-radius-chip: 8px;
+  --lumi-radius-tag: 8px;
+  --lumi-radius-badge: 999px;
+  --lumi-radius-logo: 20px;
+  --lumi-radius-tab: 14px;
+  --lumi-radius-code: 10px;
+  --lumi-radius-code-sm: 4px;
+
+  /* — Component shape tokens: shadows — */
+  --lumi-shadow-card: 0 1px 3px rgba(45, 38, 34, 0.04), 0 8px 24px -12px rgba(45, 38, 34, 0.08);
+  --lumi-shadow-soft: 0 14px 32px -20px rgba(45, 38, 34, 0.06);
+  --lumi-shadow-bubble: 0 10px 24px -16px rgba(45, 38, 34, 0.08);
+
+  /* — Component colors — */
+  --lumi-btn-primary-bg: var(--lumi-gradient-accent);
+  --lumi-btn-primary-color: #fffefa;
+  --lumi-btn-primary-shadow: 0 12px 28px -10px rgba(160, 110, 180, 0.32);
+  --lumi-btn-primary-shadow-hover: 0 16px 36px -10px rgba(160, 110, 180, 0.4);
+  --lumi-send-btn-bg: var(--lumi-gradient-accent);
+  --lumi-send-btn-color: #fffefa;
+  --lumi-send-btn-shadow: 0 10px 22px -10px rgba(180, 120, 140, 0.45);
+  --lumi-send-btn-shadow-hover: 0 12px 26px -10px rgba(160, 110, 200, 0.42);
+  --lumi-btn-trail-bg: rgba(255, 255, 255, 0.25);
+  --lumi-chip-active-bar: linear-gradient(90deg, #e5988e, #c4b0f5);
+  --lumi-chat-meta-size: 9px;
+
+  /* — Easing — */
+  --lumi-ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Paper theme: dark mode */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="paper"] {
+    color-scheme: dark;
+    --lumi-bg: #1a1614;
+    --lumi-bg-deep: #12100e;
+    --lumi-surface: rgba(34, 30, 28, 0.92);
+    --lumi-surface-raised: #221e1c;
+    --lumi-surface-solid: #221e1c;
+    --lumi-text: #faf6f1;
+    --lumi-text-soft: rgba(250, 246, 241, 0.68);
+    --lumi-text-faint: rgba(250, 246, 241, 0.4);
+    --lumi-border: rgba(255, 245, 235, 0.08);
+    --lumi-border-strong: rgba(255, 245, 235, 0.14);
+    --lumi-accent-a: #e8a090;
+    --lumi-accent-b: #c4b5fd;
+    --lumi-accent-mist: rgba(158, 201, 224, 0.35);
+    --lumi-blob-a: #e5988e;
+    --lumi-blob-b: #c4b0f5;
+    --lumi-blob-c: #9ec9e0;
+    --lumi-warn-bg: rgba(66, 48, 12, 0.45);
+    --lumi-warn-border: rgba(250, 204, 21, 0.2);
+    --lumi-warn-text: #fde68a;
+    --lumi-danger-bg: rgba(88, 28, 28, 0.35);
+    --lumi-danger-border: rgba(252, 165, 165, 0.2);
+    --lumi-danger-text: #fecaca;
+    --lumi-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.14), 0 8px 28px -12px rgba(0, 0, 0, 0.28);
+    --lumi-shadow-soft: 0 16px 40px -20px rgba(0, 0, 0, 0.3);
+    --lumi-gradient-bezel: linear-gradient(165deg, rgba(48, 42, 38, 0.55), rgba(26, 22, 20, 0.35));
+  }
+}
+
+/* ===== ORYZO: 暗黑电影感 — 克制、建筑感、无阴影 ===== */
+:root[data-theme="oryzo"] {
+  color-scheme: dark;
+
+  --lumi-bg: #100904;
+  --lumi-bg-deep: #0a0604;
+  --lumi-surface: rgba(16, 9, 4, 0.92);
+  --lumi-surface-raised: #1a1008;
+  --lumi-surface-solid: #1a1008;
+  --lumi-text: #ffedd7;
+  --lumi-text-soft: #6c5f51;
+  --lumi-text-faint: rgba(108, 95, 81, 0.5);
+  --lumi-border: #40372e;
+  --lumi-border-strong: #40372e;
+  --lumi-accent-a: #dc5000;
+  --lumi-accent-b: #6c5f51;
+  --lumi-accent-mist: #40372e;
+  --lumi-blob-a: #dc5000;
+  --lumi-blob-b: #6c5f51;
+  --lumi-blob-c: #40372e;
+  --lumi-warn-bg: rgba(200, 137, 12, 0.06);
+  --lumi-warn-border: rgba(200, 137, 12, 0.18);
+  --lumi-warn-text: #fde68a;
+  --lumi-danger-bg: rgba(88, 28, 28, 0.35);
+  --lumi-danger-border: rgba(252, 165, 165, 0.2);
+  --lumi-danger-text: #fecaca;
+  --lumi-success: #5b8c5a;
+
+  --lumi-gradient-accent: none;
+  --lumi-gradient-accent-subtle: transparent;
+  --lumi-gradient-note: transparent;
+  --lumi-gradient-bezel: none;
+
+  /* 字体：几何无衬线，比 Paper 更锐利 */
+  --lumi-font: "Plus Jakarta Sans", "Figtree", "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --lumi-mono: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+  /* 字号：与 Paper 同基值，靠行高和字距营造紧凑感 */
+  --lumi-text-2xs: 10px;
+  --lumi-text-xs: 10px;
+  --lumi-text-sm: 11.5px;
+  --lumi-text-base: 13px;
+  --lumi-text-md: 16px;
+  --lumi-text-lg: 20px;
+  --lumi-text-xl: 24px;
+
+  /* 行高：整体偏紧 → 电影感密度 */
+  --lumi-leading-tight: 1.05;
+  --lumi-leading-snug: 1.2;
+  --lumi-leading-normal: 1.35;
+  --lumi-leading-relaxed: 1.4;
+  --lumi-leading-loose: 1.5;
+
+  /* 字重：只用 400/500，不用粗体，保持克制 */
+  --lumi-weight-normal: 400;
+  --lumi-weight-medium: 400;
+  --lumi-weight-semibold: 500;
+  --lumi-weight-bold: 500;
+
+  /* 字距：全 normal → 不额外松紧，靠字体本身 */
+  --lumi-tracking-tighter: normal;
+  --lumi-tracking-tight: normal;
+  --lumi-tracking-snug: normal;
+  --lumi-tracking-normal: normal;
+  --lumi-tracking-wide: 0.01em;
+  --lumi-tracking-wider: 0.02em;
+  --lumi-tracking-widest: 0.04em;
+
+  /* 间距：在 Paper 基础上略紧凑 */
+  --lumi-space-1: 2px;
+  --lumi-space-2: 4px;
+  --lumi-space-3: 6px;
+  --lumi-space-4: 8px;
+  --lumi-space-5: 10px;
+  --lumi-space-6: 12px;
+  --lumi-space-7: 14px;
+  --lumi-space-8: 18px;
+  --lumi-space-9: 22px;
+  --lumi-space-10: 28px;
+
+  /* 圆角：中等胶囊 → 识别度最高的差异项 */
+  --lumi-radius-btn: 36px;
+  --lumi-radius-btn-sm: 22.5px;
+  --lumi-radius-send-btn: 36px;
+  --lumi-radius-bubble: 22.5px;
+  --lumi-radius-input: 0px;
+  --lumi-radius-chip: 22.5px;
+  --lumi-radius-tag: 22.5px;
+  --lumi-radius-badge: 22.5px;
+  --lumi-radius-logo: 12px;
+  --lumi-radius-tab: 22.5px;
+  --lumi-radius-code: 0px;
+  --lumi-radius-code-sm: 0px;
+
+  /* 阴影：零阴影 — 通过颜色和边框区分层次 */
+  --lumi-shadow-card: none;
+  --lumi-shadow-soft: none;
+  --lumi-shadow-bubble: none;
+
+  /* 按钮：暖棕填充 pill */
+  --lumi-btn-primary-bg: #382416;
+  --lumi-btn-primary-color: #ffedd7;
+  --lumi-btn-primary-shadow: none;
+  --lumi-btn-primary-shadow-hover: none;
+  --lumi-send-btn-bg: #382416;
+  --lumi-send-btn-color: #ffedd7;
+  --lumi-send-btn-shadow: none;
+  --lumi-send-btn-shadow-hover: none;
+  --lumi-btn-trail-bg: rgba(255, 237, 215, 0.15);
+  --lumi-chip-active-bar: var(--lumi-accent-a);
+  --lumi-chat-meta-size: 10px;
+
+  --lumi-ease-spring: ease;
+}
+
+/* ===== FICTIONAL: 俏皮贴纸风 — 圆润、多彩、硬边投影 ===== */
+:root[data-theme="fictional"] {
+  color-scheme: light;
+
+  --lumi-bg: #ffe9ce;
+  --lumi-bg-deep: #f5dbb0;
+  --lumi-surface: #ffffff;
+  --lumi-surface-raised: #ffffff;
+  --lumi-surface-solid: #ffffff;
+  --lumi-text: #000000;
+  --lumi-text-soft: #666666;
+  --lumi-text-faint: #888888;
+  --lumi-border: #dddddd;
+  --lumi-border-strong: #000000;
+  --lumi-accent-a: #fd4b38;
+  --lumi-accent-b: #8a53ff;
+  --lumi-accent-mist: #3ccb09;
+  --lumi-blob-a: #8a53ff;
+  --lumi-blob-b: #ffd80c;
+  --lumi-blob-c: #fd4b38;
+  --lumi-warn-bg: rgba(255, 216, 12, 0.15);
+  --lumi-warn-border: #ffd80c;
+  --lumi-warn-text: #000000;
+  --lumi-danger-bg: rgba(253, 75, 56, 0.1);
+  --lumi-danger-border: #fd4b38;
+  --lumi-danger-text: #fd4b38;
+  --lumi-success: #3ccb09;
+
+  --lumi-gradient-accent: none;
+  --lumi-gradient-accent-subtle: linear-gradient(135deg, rgba(255, 216, 12, 0.4), rgba(138, 83, 255, 0.15));
+  --lumi-gradient-note: linear-gradient(135deg, rgba(255, 216, 12, 0.5), rgba(60, 203, 9, 0.2));
+  --lumi-gradient-bezel: none;
+
+  /* 字体：圆体 → 俏皮感最关键的身份标识 */
+  --lumi-font: "Comic Sans MS", "Chalkboard SE", ui-rounded, "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+  --lumi-mono: "Comic Sans MS", "Chalkboard SE", "SF Mono", ui-monospace, Menlo, monospace;
+
+  /* 字号：比 Paper 略大一点（+1~2px），保持可读但不拥挤 */
+  --lumi-text-2xs: 11px;
+  --lumi-text-xs: 11px;
+  --lumi-text-sm: 12px;
+  --lumi-text-base: 14px;
+  --lumi-text-md: 17px;
+  --lumi-text-lg: 22px;
+  --lumi-text-xl: 28px;
+
+  /* 行高：略松，配合圆体 */
+  --lumi-leading-tight: 1.15;
+  --lumi-leading-snug: 1.25;
+  --lumi-leading-normal: 1.5;
+  --lumi-leading-relaxed: 1.55;
+  --lumi-leading-loose: 1.7;
+
+  /* 字重：全 400 — 俏皮不靠粗细对比，靠形状 */
+  --lumi-weight-normal: 400;
+  --lumi-weight-medium: 400;
+  --lumi-weight-semibold: 400;
+  --lumi-weight-bold: 400;
+
+  /* 字距：统一微松 → 圆体需要呼吸 */
+  --lumi-tracking-tighter: -0.01em;
+  --lumi-tracking-tight: -0.005em;
+  --lumi-tracking-snug: 0em;
+  --lumi-tracking-normal: 0.005em;
+  --lumi-tracking-wide: 0.01em;
+  --lumi-tracking-wider: 0.015em;
+  --lumi-tracking-widest: 0.04em;
+
+  /* 间距：在 Paper 基础上稍松 */
+  --lumi-space-1: 3px;
+  --lumi-space-2: 5px;
+  --lumi-space-3: 7px;
+  --lumi-space-4: 10px;
+  --lumi-space-5: 12px;
+  --lumi-space-6: 14px;
+  --lumi-space-7: 18px;
+  --lumi-space-8: 22px;
+  --lumi-space-9: 28px;
+  --lumi-space-10: 34px;
+
+  /* 圆角：大圆角气泡 + 直角按钮 → 形状差异构成辨识度 */
+  --lumi-radius-btn: 5px;
+  --lumi-radius-btn-sm: 5px;
+  --lumi-radius-send-btn: 5px;
+  --lumi-radius-bubble: 20px;
+  --lumi-radius-input: 5px;
+  --lumi-radius-chip: 15px;
+  --lumi-radius-tag: 15px;
+  --lumi-radius-badge: 5px;
+  --lumi-radius-logo: 15px;
+  --lumi-radius-tab: 5px;
+  --lumi-radius-code: 5px;
+  --lumi-radius-code-sm: 5px;
+
+  /* 阴影：硬边平投影 → sticker 感 */
+  --lumi-shadow-card: 0 2px 0 #000000;
+  --lumi-shadow-soft: 0 2px 0 #000000;
+  --lumi-shadow-bubble: 0 2px 0 #000000;
+
+  /* 按钮：红底黑字 + 硬投影 → Fictional 的 CTA 语言 */
+  --lumi-btn-primary-bg: #fd4b38;
+  --lumi-btn-primary-color: #ffffff;
+  --lumi-btn-primary-shadow: 0 3px 0 #cc0000;
+  --lumi-btn-primary-shadow-hover: 0 4px 0 #cc0000;
+  --lumi-send-btn-bg: #fd4b38;
+  --lumi-send-btn-color: #ffffff;
+  --lumi-send-btn-shadow: 0 3px 0 #cc0000;
+  --lumi-send-btn-shadow-hover: 0 4px 0 #cc0000;
+  --lumi-btn-trail-bg: rgba(255, 255, 255, 0.3);
+  --lumi-chip-active-bar: #000000;
+  --lumi-chat-meta-size: 12px;
+
+  --lumi-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}

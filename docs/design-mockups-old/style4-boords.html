@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Style 4 — Boords / Lumino</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap');
+
+:root {
+  --carbon: #000000;
+  --charcoal: #121212;
+  --alabaster: #fafaf5;
+  --white: #ffffff;
+  --parchment: #e9e9e7;
+  --slate: #4d4d4d;
+  --ash: #cecdca;
+  --dusk-grey: #7d7d7d;
+  --faded-stone: #898989;
+  --peach: #eb6c00;
+  --butterscotch: #e8aa42;
+  --sky-mist: #daeef8;
+  --deep-ocean: #214c70;
+  --radius-tag: 9999px;
+  --radius-card: 12px;
+  --radius-input: 6px;
+  --radius-btn: 9999px;
+  --spacing-unit: 4px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  background: var(--alabaster);
+  color: var(--charcoal);
+  height: 100vh; overflow: hidden;
+  font-size: 14px; line-height: 1.7;
+  letter-spacing: 0.35px;
+}
+
+/* ─── Top bar ─── */
+.top-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  height: 56px; background: var(--white); border-bottom: 1px solid var(--ash);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+}
+.top-bar .brand {
+  display: flex; align-items: center; gap: 12px;
+}
+.top-bar .brand .logo {
+  width: 32px; height: 32px; border-radius: var(--radius-card);
+  background: var(--charcoal); color: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+}
+.top-bar .brand span { font-weight: 600; font-size: 14px; color: var(--charcoal); }
+
+.tab-nav { display: flex; gap: 4px; }
+.tab-nav button {
+  font-family: inherit; font-size: 12px; font-weight: 500;
+  padding: 6px 16px; border-radius: var(--radius-tag);
+  border: 1px solid var(--parchment); background: transparent;
+  color: var(--slate); cursor: pointer; transition: all 0.15s ease;
+  letter-spacing: 0.25px;
+}
+.tab-nav button.active {
+  background: var(--charcoal); color: var(--white); border-color: var(--charcoal);
+}
+.tab-nav button:hover:not(.active) { border-color: var(--ash); }
+
+/* ─── Views ─── */
+.view { display: none; height: 100vh; padding-top: 56px; overflow-y: auto; }
+.view.active { display: flex; }
+
+/* ═══════════ CHAT VIEW ═══════════ */
+.chat-view { flex-direction: row; }
+
+.chat-sidebar {
+  width: 240px; background: var(--white); border-right: 1px solid var(--ash);
+  padding: 24px 16px; display: flex; flex-direction: column; gap: 12px;
+}
+.chat-sidebar h2 {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--dusk-grey); padding: 0 8px; margin-bottom: 4px;
+}
+
+.new-chat-btn {
+  padding: 8px 0; border-radius: var(--radius-btn);
+  border: 1px solid var(--butterscotch); background: transparent;
+  color: var(--butterscotch); font-family: inherit; font-size: 12px;
+  font-weight: 600; cursor: pointer; transition: all 0.15s ease;
+  letter-spacing: 0.25px;
+}
+.new-chat-btn:hover { background: var(--butterscotch); color: var(--white); }
+
+.session-item {
+  padding: 8px 12px; border-radius: var(--radius-card);
+  cursor: pointer; font-size: 14px; color: var(--slate);
+  transition: all 0.15s ease; font-weight: 400;
+}
+.session-item:hover { background: var(--parchment); }
+.session-item.active { background: var(--sky-mist); color: var(--deep-ocean); font-weight: 500; }
+
+.chat-main {
+  flex: 1; display: flex; flex-direction: column;
+  max-width: 800px; margin: 0 auto; width: 100%;
+}
+
+/* Chat messages */
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 32px 24px 16px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+.chat-msg { display: flex; gap: 12px; align-items: flex-start; max-width: 680px; }
+.chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+.msg-avatar {
+  width: 28px; height: 28px; border-radius: var(--radius-card); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600;
+}
+.msg-avatar.user-av { background: var(--deep-ocean); color: var(--white); }
+.msg-avatar.assistant-av { background: var(--parchment); color: var(--charcoal); }
+
+.msg-bubble {
+  padding: 12px 16px; border-radius: var(--radius-card); font-size: 14px;
+  line-height: 1.7; letter-spacing: 0.35px;
+}
+.msg-bubble.user-bub { background: var(--charcoal); color: var(--white); }
+.msg-bubble.assistant-bub { background: var(--parchment); color: var(--charcoal); border: 1px solid var(--ash); }
+
+/* Chat input */
+.chat-input-container {
+  padding: 16px 24px 24px; border-top: 1px solid var(--ash);
+  background: var(--white);
+}
+.chat-input-row {
+  display: flex; gap: 8px; align-items: center;
+  border: 1px solid var(--ash); border-radius: var(--radius-btn);
+  padding: 6px 6px 6px 20px; background: var(--alabaster);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.chat-input-row:focus-within {
+  border-color: var(--butterscotch);
+  box-shadow: rgba(232, 170, 66, 0.15) 0px 0px 0px 3px;
+}
+.chat-input-row input {
+  flex: 1; background: none; border: none; outline: none;
+  font-family: inherit; font-size: 14px; color: var(--charcoal);
+  letter-spacing: 0.35px;
+}
+.chat-input-row input::placeholder { color: var(--dusk-grey); }
+.send-btn {
+  width: 36px; height: 36px; border-radius: 50%; border: none;
+  background: var(--butterscotch); color: var(--white);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; transition: background 0.15s ease;
+}
+.send-btn:hover { background: var(--charcoal); }
+
+/* Badges / tags in messages */
+.tag-inline {
+  display: inline-block; padding: 2px 10px; border-radius: var(--radius-tag);
+  font-size: 11px; font-weight: 600; background: var(--sky-mist);
+  color: var(--deep-ocean); margin: 0 4px;
+}
+
+/* ═══════════ CONFIG VIEW ═══════════ */
+.config-view {
+  justify-content: center; padding: 40px 24px;
+}
+
+.config-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 24px; max-width: 900px; width: 100%; margin: 0 auto;
+}
+
+.config-card {
+  background: var(--white); border-radius: var(--radius-card);
+  padding: 28px 32px; border: 1px solid var(--ash);
+}
+
+.config-card h2 {
+  font-size: 19px; font-weight: 600; letter-spacing: 0.475px;
+  color: var(--charcoal); margin-bottom: 4px; line-height: 1.25;
+}
+.config-card h2 + p {
+  font-size: 12px; color: var(--faded-stone); margin-bottom: 24px;
+}
+
+.config-field { margin-bottom: 16px; }
+.config-field label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--dusk-grey); display: block; margin-bottom: 4px;
+}
+.config-field input {
+  width: 100%; padding: 10px 14px; border: 1px solid var(--ash);
+  border-radius: var(--radius-input); background: var(--alabaster);
+  font-family: inherit; font-size: 14px; color: var(--charcoal);
+  outline: none; letter-spacing: 0.35px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.config-field input:focus {
+  border-color: var(--butterscotch);
+  box-shadow: rgba(232, 170, 66, 0.12) 0px 0px 0px 3px;
+}
+.config-field input::placeholder { color: var(--dusk-grey); }
+
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid var(--parchment);
+}
+.toggle-row span { font-size: 14px; color: var(--slate); font-weight: 400; }
+.toggle {
+  width: 40px; height: 22px; border-radius: var(--radius-tag);
+  background: var(--ash); cursor: pointer; position: relative;
+  transition: background 0.15s ease;
+}
+.toggle.on { background: var(--deep-ocean); }
+.toggle::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--white); transition: transform 0.15s ease;
+  box-shadow: rgba(0,0,0,0.1) 0px 1px 3px;
+}
+.toggle.on::after { transform: translateX(18px); }
+
+.save-btn {
+  margin-top: 20px; padding: 8px 24px; border-radius: var(--radius-btn);
+  border: 1px solid var(--butterscotch); background: var(--butterscotch);
+  color: var(--white); font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer; letter-spacing: 0.25px;
+  transition: all 0.15s ease;
+}
+.save-btn:hover { background: var(--charcoal); border-color: var(--charcoal); }
+
+.save-status {
+  display: inline-block; margin-left: 12px; font-size: 12px;
+  color: var(--faded-stone); font-weight: 400;
+}
+
+@media (max-width: 768px) {
+  .chat-sidebar { display: none; }
+  .config-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="brand">
+    <div class="logo">L</div>
+    <span>Lumino</span>
+  </div>
+  <div class="tab-nav">
+    <button class="active" onclick="switchView('chat')">对话</button>
+    <button onclick="switchView('config')">配置</button>
+  </div>
+</div>
+
+<!-- ─── Chat View ─── -->
+<div id="chat-view" class="view chat-view active">
+  <aside class="chat-sidebar">
+    <h2>Sessions</h2>
+    <button class="new-chat-btn">+ New Chat</button>
+    <div class="session-item active">今日阅读总结</div>
+    <div class="session-item">产品原型评审</div>
+    <div class="session-item">API 集成探讨</div>
+    <div class="session-item">Obsidian 笔记整理</div>
+  </aside>
+
+  <div class="chat-main">
+    <div class="chat-messages">
+      <div class="chat-msg assistant">
+        <div class="msg-avatar assistant-av">L</div>
+        <div class="msg-bubble assistant-bub">
+          Hi，我是 Lumino — 你的浏览器 AI 助手。<br>
+          可以读页面内容、管理文件、搜索记忆。需要我帮忙吗？
+        </div>
+      </div>
+      <div class="chat-msg user">
+        <div class="msg-bubble user-bub">总结今天的浏览记录</div>
+        <div class="msg-avatar user-av">U</div>
+      </div>
+      <div class="chat-msg assistant">
+        <div class="msg-avatar assistant-av">L</div>
+        <div class="msg-bubble assistant-bub">
+          今天的浏览记录（3 篇文章）：<br><br>
+          <span class="tag-inline">ADC</span> 架构决策记录 — 微服务拆分边界与权衡<br>
+          <span class="tag-inline">Tailwind</span> v4 迁移指南 — utility-first 新语法特性<br>
+          <span class="tag-inline">OPFS</span> 性能基准测试 — 浏览器本地文件系统<br><br>
+          需要深入哪一篇？
+        </div>
+      </div>
+    </div>
+    <div class="chat-input-container">
+      <div class="chat-input-row">
+        <input type="text" placeholder="Type a message…">
+        <button class="send-btn">↑</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Config View ─── -->
+<div id="config-view" class="view config-view">
+  <div class="config-grid">
+    <div class="config-card">
+      <h2>LLM Settings</h2>
+      <p>Connect your OpenAI-compatible API endpoint.</p>
+
+      <div class="config-field">
+        <label>Base URL</label>
+        <input type="text" value="https://api.openai.com/v1">
+      </div>
+      <div class="config-field">
+        <label>API Key</label>
+        <input type="password" value="sk-••••••••••••••••••••">
+      </div>
+      <div class="config-field">
+        <label>Model</label>
+        <input type="text" value="gpt-4o-mini">
+      </div>
+    </div>
+
+    <div class="config-card">
+      <h2>Data Collection</h2>
+      <p>Control what Lumino captures for your memory.</p>
+
+      <div class="toggle-row">
+        <span>Page content capture</span>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <span>Input event logging</span>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <span>Clipboard monitoring</span>
+        <div class="toggle" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <span>Obsidian integration</span>
+        <div class="toggle" onclick="this.classList.toggle('on')"></div>
+      </div>
+
+      <button class="save-btn" onclick="showSaved()">Save Settings</button>
+      <span class="save-status" id="boords-status"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(name + '-view').classList.add('active');
+  document.querySelectorAll('.tab-nav button').forEach((b, i) => {
+    b.classList.toggle('active', (name === 'chat' && i === 0) || (name === 'config' && i === 1));
+  });
+}
+function showSaved() {
+  const s = document.getElementById('boords-status');
+  s.textContent = 'Settings saved.';
+  setTimeout(() => s.textContent = '', 2000);
+}
+</script>
+</body>
+</html>

@@ -35,7 +35,8 @@ import {
   type AgentCompleteMessage,
   type AgentErrorMessage
 } from "./lib/side-panel-bridge"
-import "./styles/paper.css"
+import "./styles/components.css"
+import { applyTheme, getTheme, type ThemeName } from "./lib/theme"
 import blackCatGif from "data-base64:~black_cat.gif"
 
 registerAllTools().catch(() => { })
@@ -44,7 +45,7 @@ function SendArrowIcon() {
   return (
     <svg
       aria-hidden
-      className="paper-primary-icon"
+      className="lm-primary-icon"
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"
@@ -276,8 +277,8 @@ function ChatMessageBlock({
 }) {
   if (message.role === "user") {
     return (
-      <div className="paper-chat-row paper-chat-row--user">
-        <div className="paper-chat-bubble paper-chat-bubble--user">
+      <div className="lm-chat-row lm-chat-row--user">
+        <div className="lm-chat-bubble lm-chat-bubble--user">
           {formatMessagePreview(message)}
         </div>
       </div>
@@ -306,14 +307,14 @@ function ChatMessageBlock({
       : []
 
     return (
-      <div className="paper-chat-row paper-chat-row--assistant">
-        <div className="paper-chat-bubble paper-chat-bubble--assistant">
+      <div className="lm-chat-row lm-chat-row--assistant">
+        <div className="lm-chat-bubble lm-chat-bubble--assistant">
           {hasTools ? (
             <div className="lumi-sequence-stack">
               {toolCalls!.map((call, i) => (
                 <Fragment key={call.id}>
                   {i < paragraphs.length ? (
-                    <div className="paper-chat-md">{paragraphs[i]}</div>
+                    <div className="lm-chat-md">{paragraphs[i]}</div>
                   ) : null}
                   <LumiToolCall
                     call={call}
@@ -322,11 +323,11 @@ function ChatMessageBlock({
                 </Fragment>
               ))}
               {paragraphs.slice(toolCalls!.length).map((part, i) => (
-                <div className="paper-chat-md" key={`md-${i}`}>{part}</div>
+                <div className="lm-chat-md" key={`md-${i}`}>{part}</div>
               ))}
             </div>
           ) : (
-            <div className="paper-chat-md">{text}</div>
+            <div className="lm-chat-md">{text}</div>
           )}
         </div>
       </div>
@@ -360,11 +361,11 @@ function ChatMessageBlock({
     }
 
     return (
-      <div className="paper-chat-row paper-chat-row--tool">
-        <div className="paper-chat-meta">
+      <div className="lm-chat-row lm-chat-row--tool">
+        <div className="lm-chat-meta">
           结果 · {toolName || id.slice(0, 8)}
         </div>
-        <pre className="paper-chat-tool-body">{message.content ?? ""}</pre>
+        <pre className="lm-chat-tool-body">{message.content ?? ""}</pre>
       </div>
     )
   }
@@ -411,9 +412,10 @@ function SidePanel() {
   }, [])
 
   useEffect(() => {
-    getLlmSettings()
-      .then((nextSettings) => {
+    Promise.all([getLlmSettings(), getTheme()])
+      .then(([nextSettings, theme]) => {
         setSettings(nextSettings)
+        applyTheme(theme)
         setIsReady(true)
       })
       .catch(() => {
@@ -431,6 +433,11 @@ function SidePanel() {
       areaName: string
     ) {
       if (areaName !== "sync") return
+
+      if ("theme" in changes) {
+        const newTheme = (changes.theme.newValue as ThemeName) || "paper"
+        applyTheme(newTheme)
+      }
 
       const hasSettingsChange = SETTINGS_KEYS.some((key) => key in changes)
       if (!hasSettingsChange) return
@@ -727,43 +734,35 @@ function SidePanel() {
   const isConfigured = hasCompleteLlmSettings(settings)
 
   return (
-    <main className="paper-shell paper-sidepanel">
-      <div aria-hidden className="paper-ambient">
-        <div className="paper-blob paper-blob--a" />
-        <div className="paper-blob paper-blob--b" />
-        <div className="paper-blob paper-blob--c" />
+    <main className="lm-shell lm-sidepanel">
+      <div aria-hidden className="lm-ambient">
+        <div className="lm-blob lm-blob--a" />
+        <div className="lm-blob lm-blob--b" />
+        <div className="lm-blob lm-blob--c" />
       </div>
 
-      <div className="paper-bezel-outer paper-bezel-outer--side">
-        <div className="paper-bezel-inner paper-bezel-inner--side">
-          <div className="paper-sidepanel-layout-row">
-            <div className="paper-sidepanel-layout">
-              <header className="paper-sp-header">
-                <div className="paper-sp-brand">
+      <div className="lm-bezel-outer lm-bezel-outer--side">
+        <div className="lm-bezel-inner lm-bezel-inner--side">
+          <div className="lm-sidepanel-layout-row">
+            <div className="lm-sidepanel-layout">
+              <header className="lm-sp-header">
+                <div className="lm-sp-brand">
                   <img
                     aria-hidden
-                    className="paper-logo-cat"
+                    className="lm-logo-cat"
                     src={blackCatGif}
                     alt="Lumi"
                   />
-                  <div className="paper-sp-brand-text">
-                    <h1 className="paper-sp-title">Lumi Knows</h1>
+                  <div className="lm-sp-brand-text">
+                    <h1 className="lm-sp-title">Lumi Knows</h1>
                   </div>
-                </div>
-                <div className="paper-sp-header-actions">
-                  <button
-                    className="paper-icon-text-btn"
-                    onClick={openOptionsPage}
-                    type="button">
-                    设置
-                  </button>
                 </div>
               </header>
 
-              <section className="paper-session-strip" aria-label="历史会话">
-                <div className="paper-session-chips" role="list">
+              <section className="lm-session-strip" aria-label="历史会话">
+                <div className="lm-session-chips" role="list">
                   {isHydrating ? (
-                    <span className="paper-session-strip-hint">加载中…</span>
+                    <span className="lm-session-strip-hint">加载中…</span>
                   ) : (
                     threads.map((row) => {
                       const selected = row.id === activeThreadId
@@ -772,11 +771,11 @@ function SidePanel() {
 
                       return (
                         <div
-                          className={`paper-session-chip${selected ? " paper-session-chip--active" : ""}`}
+                          className={`lm-session-chip${selected ? " lm-session-chip--active" : ""}`}
                           key={row.id}
                           role="listitem">
                           <button
-                            className="paper-session-chip-main"
+                            className="lm-session-chip-main"
                             onClick={() => void selectThread(row.id)}
                             title={hint}
                             type="button">
@@ -784,7 +783,7 @@ function SidePanel() {
                           </button>
                           <button
                             aria-label={`删除 ${label}`}
-                            className="paper-session-chip-del"
+                            className="lm-session-chip-del"
                             onClick={(event) => void handleDeleteThread(row.id, event)}
                             title="删除会话"
                             type="button">
@@ -797,7 +796,7 @@ function SidePanel() {
                 </div>
                 <button
                   aria-label="新建会话"
-                  className="paper-session-add"
+                  className="lm-session-add"
                   disabled={isHydrating}
                   onClick={() => void handleNewThread()}
                   title="新建会话"
@@ -806,12 +805,12 @@ function SidePanel() {
                 </button>
               </section>
 
-              <section className="paper-chat-panel" aria-busy={loadingThreadIds.has(activeThreadId)}>
+              <section className="lm-chat-panel" aria-busy={loadingThreadIds.has(activeThreadId)}>
                 {isReady && !isConfigured ? (
-                  <div className="paper-note paper-note--compact">
+                  <div className="lm-note lm-note--compact">
                     <p>请先在设置中填写 Base URL、API Key 与模型。</p>
                     <button
-                      className="paper-secondary-button paper-secondary-button--sm"
+                      className="lm-secondary-button lm-secondary-button--sm"
                       onClick={openOptionsPage}
                       type="button">
                       打开设置
@@ -819,11 +818,11 @@ function SidePanel() {
                   </div>
                 ) : null}
 
-                <div className="paper-chat-scroll" role="log" aria-relevant="additions">
+                <div className="lm-chat-scroll" role="log" aria-relevant="additions">
                   {isHydrating ? (
-                    <p className="paper-chat-hint">正在加载…</p>
+                    <p className="lm-chat-hint">正在加载…</p>
                   ) : visibleMessages.length === 0 ? (
-                    <p className="paper-chat-hint">
+                    <p className="lm-chat-hint">
                       当前会话还没有消息。
                       <br />
                       在下方输入后发送即可。
@@ -860,11 +859,11 @@ function SidePanel() {
                   </div>
                 )}
 
-                <div className="paper-composer">
-                  <div className="paper-composer-row">
+                <div className="lm-composer">
+                  <div className="lm-composer-row">
                     <input
                       aria-label="对话输入"
-                      className="paper-input paper-input--composer"
+                      className="lm-input lm-input--composer"
                       disabled={loadingThreadIds.has(activeThreadId) || !isReady || isHydrating}
                       onChange={(event) => setDraft(event.target.value)}
                       onKeyDown={(event) => {
@@ -880,12 +879,12 @@ function SidePanel() {
                     <button
                       aria-busy={loadingThreadIds.has(activeThreadId)}
                       aria-label={loadingThreadIds.has(activeThreadId) ? "正在发送" : "发送"}
-                      className="paper-composer-send"
+                      className="lm-composer-send"
                       disabled={!isReady || loadingThreadIds.has(activeThreadId) || isHydrating}
                       onClick={() => void sendUserMessage()}
                       type="button">
                       {loadingThreadIds.has(activeThreadId) ? (
-                        <span aria-hidden className="paper-spinner paper-spinner--on-accent" />
+                        <span aria-hidden className="lm-spinner lm-spinner--on-accent" />
                       ) : (
                         <SendArrowIcon />
                       )}
@@ -893,7 +892,7 @@ function SidePanel() {
                   </div>
 
                   {error ? (
-                    <p className="paper-error paper-error--tight" role="alert">
+                    <p className="lm-error lm-error--tight" role="alert">
                       {error}
                     </p>
                   ) : null}
@@ -902,15 +901,15 @@ function SidePanel() {
             </div>
 
             {/* 右侧导航栏 */}
-            <nav className="paper-side-nav" aria-label="功能导航">
+            <nav className="lm-side-nav" aria-label="功能导航">
               {/* Chat - 激活态 */}
-              <button className="paper-side-nav-btn paper-side-nav-btn--active" type="button" title="Chat">
-                <span className="paper-side-nav-btn-icon">
+              <button className="lm-side-nav-btn lm-side-nav-btn--active" type="button" title="Chat">
+                <span className="lm-side-nav-btn-icon">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
                 </span>
-                <span className="paper-side-nav-btn-label">Chat</span>
+                <span className="lm-side-nav-btn-label">Chat</span>
               </button>
             </nav>
           </div>

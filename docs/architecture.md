@@ -10,7 +10,7 @@ Lumino 是一款基于 Plasmo 框架构建的 Chrome 浏览器扩展，定位为
 |---|---|
 | 框架 | [Plasmo](https://docs.plasmo.com/) 0.90.5 |
 | UI | React 18 + TypeScript 5.3 |
-| 样式 | 纯 CSS（`lumino-vars.css` + `paper.css` 软质 UI） |
+| 样式 | 纯 CSS 三层架构 + 多主题切换（tokens / layout / components） |
 | 包管理 | pnpm |
 | 测试 | Vitest + jsdom |
 | 存储 | Chrome Storage API + IndexedDB + OPFS |
@@ -85,12 +85,14 @@ lumino/
 │   │   │   └── opfs.ts                    # OPFS 底层封装
 │   │   ├── settings.ts                    # LLM + Obsidian 配置读写
 │   │   ├── settings.test.ts
+│   │   ├── theme.ts                        # 主题管理（get/save/apply）
 │   │   ├── side-panel-bridge.ts           # Background ↔ Side Panel 消息协议
 │   │   └── db.ts                          # IndexedDB 统一连接
 │   └── styles/
-│       ├── lumino-vars.css                # 设计令牌（亮/暗双主题）
-│       ├── paper.css                      # 软质 UI 组件
-│       └── content-inject.css             # 悬浮按钮样式
+│       ├── tokens.css                      # 主题 Token 定义（按 data-theme 分组）
+│       ├── layout.css                      # 纯结构样式（display/flex/position）
+│       ├── components.css                  # 组件视觉样式（全部引用 Token）
+│       └── content-inject.css             # 悬浮按钮样式（Token 作用域在按钮上）
 ├── docs/
 │   └── architecture.md                    # 本文档
 └── assets/                                # 静态资源
@@ -265,11 +267,81 @@ Agent 在 Service Worker 中执行，不依赖 Side Panel 生命周期。Side Pa
   - `src/content/floating-button.test.ts` — 浮动按钮创建/去重
   - `src/lib/chat/tools/browser-tools.test.ts` — DOM 探查注入函数
 
-## 样式系统
+## 样式系统 — 三层多主题架构
 
-- 设计令牌：`lumino-vars.css`（亮/暗双主题 CSS 变量，`prefers-color-scheme` 自动切换）
-- UI 组件：`paper.css`（软质陪伴感 — 米白底色、柔光渐变、模糊光斑动画）
-- 注入样式：`content-inject.css`（悬浮按钮自适应定位，不污染宿主页面）
+样式按职责拆为三层，通过 `data-theme` 属性切换整套视觉系统。
+
+### 架构层次
+
+```
+components.css  ─── import ──→  layout.css  ─── import ──→  tokens.css
+                                                                 │
+所有按钮/气泡/表单/聊天的                纯结构（flex/position/     三组 [data-theme="paper|oryzo|fictional"]
+颜色/圆角/阴影/字号全部引用 Token        overflow/animation）      各自的全部 Token 值
+                                                                 │
+                                            data-theme 属性 ──────┘
+                                            (由 theme.ts 设置在 <html> 上)
+```
+
+| 层 | 文件 | 职责 | 随主题变化？ |
+|---|---|---|---|
+| **Token 层** | `styles/tokens.css` | CSS 自定义属性，按 `:root[data-theme="paper|oryzo|fictional"]` 分组定义 | 是 — 整个文件全是差异值 |
+| **布局层** | `styles/layout.css` | display / flex / position / overflow / z-index 等纯结构属性，外加 keyframe 动画 | 否 — 一切主题下语义不变 |
+| **组件层** | `styles/components.css` | 所有视觉属性（颜色/圆角/阴影/字号/字重/行高/字距/间距/渐变/字体），全部引用 `--lumi-*` Token | 间接受主题控制 — CSS 不变，Token 值变 |
+
+### 主题切换机制
+
+1. **存储**：`chrome.storage.sync` key `"theme"`，值 `"paper" | "oryzo" | "fictional"`
+2. **应用**：`src/lib/theme.ts` 中 `applyTheme(theme)` 设置 `<html data-theme="...">` 
+3. **响应**：`sidepanel.tsx` 通过 `chrome.storage.onChanged` 监听 `"theme"` key 变化，实时调用 `applyTheme()`
+4. **配置 UI**：`options.tsx` 提供 Radio 组选择主题（暖调编辑 / 暗黑电影 / 俏皮贴纸），onChange 时保存并应用
+
+### 三种内置主题
+
+| 主题 | `data-theme` | 调性 | 关键视觉特征 |
+|------|-------------|------|------------|
+| Paper | `paper` | 暖调编辑风 | 米白底、粉紫渐变按钮、柔投影光斑、Plus Jakarta Sans、9999px 全圆胶囊 |
+| ORYZO | `oryzo` | 暗黑电影感 | `#100904` 暖黑底、`#ffedd7` 奶油字、零阴影、36px 中等胶囊、紧凑行高 |
+| Fictional | `fictional` | 俏皮贴纸风 | `#ffe9ce` 杏底、Comic Sans 圆体、硬边投影 `0 2px 0 #000`、红底直角按钮、多彩点缀 |
+
+### Token 命名分类
+
+所有 Token 使用 `--lumi-` 前缀，按语义分类：
+
+| 类别 | 前缀 | 示例 | 说明 |
+|------|------|------|------|
+| 颜色 | `--lumi-bg`, `--lumi-text`, `--lumi-accent-*`, `--lumi-border` | `--lumi-text-soft` | 全局色板 |
+| 渐变 | `--lumi-gradient-*` | `--lumi-gradient-accent` | 按钮/气泡/note 背景渐变 |
+| 字体 | `--lumi-font`, `--lumi-mono` | `--lumi-font` | 字体栈 |
+| 字号 | `--lumi-text-2xs` ~ `--lumi-text-xl` | `--lumi-text-base` | 7 级字号刻度 |
+| 行高 | `--lumi-leading-tight` ~ `--lumi-leading-loose` | `--lumi-leading-normal` | 5 级行高 |
+| 字重 | `--lumi-weight-*` | `--lumi-weight-semibold` | normal/medium/semibold/bold |
+| 字距 | `--lumi-tracking-*` | `--lumi-tracking-wide` | tighter ~ widest |
+| 间距 | `--lumi-space-1` ~ `--lumi-space-10` | `--lumi-space-6` | 10 级间距刻度 |
+| 圆角 | `--lumi-radius-btn`, `--lumi-radius-bubble`, `--lumi-radius-input` 等 | `--lumi-radius-btn` | 按组件角色命名 |
+| 阴影 | `--lumi-shadow-card`, `--lumi-shadow-soft`, `--lumi-shadow-bubble` | `--lumi-shadow-card` | 三级阴影 |
+| 按钮 | `--lumi-btn-primary-bg`, `--lumi-send-btn-shadow` 等 | `--lumi-send-btn-color` | 按钮独立色/影控制 |
+| 缓动 | `--lumi-ease-spring` | `--lumi-ease-spring` | 全局过渡曲线 |
+
+### 类名规范
+
+| 前缀 | 含义 | 示例 |
+|------|------|------|
+| `lm-*` | 主题无关的通用 UI 组件 | `.lm-shell`, `.lm-chat-bubble`, `.lm-primary-button` |
+| `lumi-*` | AI 交互特有内部组件 | `.lumi-tool-call`, `.lumi-running-indicator`, `.lumi-sequence-stack` |
+
+### 新增主题指南
+
+详见 `THEME.md`。摘要：
+
+1. 在 `tokens.css` 中新增 `:root[data-theme="new"] { }` 块，填满所有 `--lumi-*` Token
+2. 在 `src/lib/theme.ts` 中扩展 `ThemeName` 联合类型，在 `getTheme()` 中添加验证
+3. 在 `options.tsx` 的 `themeLabels` 中增加选项
+4. 可选：在 `content-inject.css` 中追加对应主题的悬浮按钮 Token
+
+### Content Script 主题隔离
+
+`content-inject.css` 不设置宿主页面的 `data-theme`。Token 作用域限定在 `#lumino-floating-button[data-theme="xxx"]` 选择器上，`lumino-floating-button.ts` 在 mount 时从 `chrome.storage.sync` 读取主题并设置按钮元素的 `data-theme` 属性，通过 `chrome.storage.onChanged` 监听实时切换。
 
 ## 现状盘点
 
@@ -281,11 +353,12 @@ Agent 在 Service Worker 中执行，不依赖 Side Panel 生命周期。Side Pa
 - 大结果驱逐 + 定时清理
 - Obsidian Local REST API 集成（条件激活，静默读写 vault）
 - 悬浮按钮注入 `<all_urls>`
-- 亮/暗双主题自动切换
+- 三主题切换系统（Paper/ORYZO/Fictional）— 三层 CSS 架构 + `data-theme` 实时切换 + 配置页主题选择
 - 三层记忆系统（事件采集运行中，主动 AI 已禁用）
 - Dwell 巡检 + 驱逐清理定时任务
 - 用户画像自动推断
 - Agent 在 Service Worker 执行，不受侧栏生命周期影响
+- 主题系统文档 `THEME.md`（Token 清单 + 新增主题步骤）
 
 ### 待扩展
 - LLM 流式响应（当前为一次性 fetch）

@@ -14,13 +14,14 @@ import {
   getObsidianSettings,
   saveObsidianSettings
 } from "./lib/settings"
-import "./styles/paper.css"
+import "./styles/components.css"
+import { applyTheme, getTheme, saveTheme, type ThemeName } from "./lib/theme"
 
 function SaveTrailIcon() {
   return (
     <svg
       aria-hidden
-      className="paper-primary-icon"
+      className="lm-primary-icon"
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"
@@ -41,7 +42,6 @@ function IndexOptions() {
   const [collectionConfig, setCollectionConfig] = useState<CollectionConfig>(
     DEFAULT_COLLECTION_CONFIG
   )
-  // 独立管理忽略规则的文本编辑状态，避免每次渲染被 join 覆盖
   const [ignoredPatternsText, setIgnoredPatternsText] = useState("")
   const [obsidianSettings, setObsidianSettings] = useState<ObsidianSettings>({
     enabled: false,
@@ -50,16 +50,20 @@ function IndexOptions() {
   })
   const [status, setStatus] = useState("")
   const [isSaving, setIsSaving] = useState(false)
+  const [theme, setTheme] = useState<ThemeName>("paper")
 
   useEffect(() => {
     Promise.all([
       getLlmSettings().catch(() => ({ baseUrl: "", apiKey: "", model: "" })),
       getCollectionConfig(),
-      getObsidianSettings().catch(() => ({ enabled: false, apiKey: "", baseUrl: "http://127.0.0.1:27123" }))
-    ]).then(([s, c, o]) => {
+      getObsidianSettings().catch(() => ({ enabled: false, apiKey: "", baseUrl: "http://127.0.0.1:27123" })),
+      getTheme()
+    ]).then(([s, c, o, t]) => {
       setSettings(s)
       setCollectionConfig(c)
       setObsidianSettings(o)
+      setTheme(t)
+      applyTheme(t)
       setIgnoredPatternsText(c.ignoredUrlPatterns.join("\n"))
     })
   }, [])
@@ -77,7 +81,6 @@ function IndexOptions() {
 
   function handlePatternsChange(text: string) {
     setIgnoredPatternsText(text)
-    // 实时同步到 collectionConfig
     setCollectionConfig((prev) => ({
       ...prev,
       ignoredUrlPatterns: text
@@ -85,6 +88,12 @@ function IndexOptions() {
         .map((s) => s.trim())
         .filter(Boolean)
     }))
+  }
+
+  function handleThemeChange(nextTheme: ThemeName) {
+    setTheme(nextTheme)
+    applyTheme(nextTheme)
+    saveTheme(nextTheme)
   }
 
   async function saveSettings() {
@@ -108,56 +117,83 @@ function IndexOptions() {
     }
   }
 
+  const themeLabels: Record<ThemeName, { name: string; desc: string }> = {
+    paper: { name: "暖调编辑", desc: "温暖奶油底色，柔和渐变，适合日常使用" },
+    oryzo: { name: "暗黑电影", desc: "暗黑电影感画布，奶油色文字，极简线条" },
+    fictional: { name: "俏皮贴纸", desc: "杏色活力背景，多彩卡片，俏皮趣味" }
+  }
+
   return (
-    <main className="paper-shell paper-options">
-      <div aria-hidden className="paper-ambient">
-        <div className="paper-blob paper-blob--a" />
-        <div className="paper-blob paper-blob--b" />
-        <div className="paper-blob paper-blob--c" />
+    <main className="lm-shell lm-options">
+      <div aria-hidden className="lm-ambient">
+        <div className="lm-blob lm-blob--a" />
+        <div className="lm-blob lm-blob--b" />
+        <div className="lm-blob lm-blob--c" />
       </div>
 
-      <div className="paper-bezel-outer">
-        <section className="paper-bezel-inner">
-          <p className="paper-eyebrow">Lumino · gentle setup</p>
+      <div className="lm-bezel-outer">
+        <section className="lm-bezel-inner">
+          <p className="lm-eyebrow">Lumino · gentle setup</p>
 
-          <header className="paper-header">
-            <div className="paper-brand">
-              <div aria-hidden className="paper-logo">
+          <header className="lm-header">
+            <div className="lm-brand">
+              <div aria-hidden className="lm-logo">
                 L
               </div>
               <div>
-                <h1 className="paper-title">把门轻轻推开</h1>
-                <p className="paper-subtitle">
+                <h1 className="lm-title">把门轻轻推开</h1>
+                <p className="lm-subtitle">
                   这里是 Lumino
                   的小书房：连上你喜欢的模型，控制采集开关，其余的情绪与节奏，交给我们。
                 </p>
               </div>
             </div>
-            <span className="paper-badge">openai-compat</span>
+            <span className="lm-badge">openai-compat</span>
           </header>
 
-          {/* === LLM 配置 === */}
-          <h2 className="paper-section-title">模型连接</h2>
+          {/* === 主题选择 === */}
+          <h2 className="lm-section-title">界面主题</h2>
+          <p className="lm-helper">选择你喜欢的视觉风格，切换即时生效。</p>
+          <div className="lm-toggle-group">
+            {(Object.keys(themeLabels) as ThemeName[]).map((t) => (
+              <label key={t} className="lm-toggle">
+                <input
+                  type="radio"
+                  name="theme"
+                  value={t}
+                  checked={theme === t}
+                  onChange={() => handleThemeChange(t)}
+                />
+                <span className="lm-toggle-label">
+                  <strong>{themeLabels[t].name}</strong>
+                  <small>{themeLabels[t].desc}</small>
+                </span>
+              </label>
+            ))}
+          </div>
 
-          <p className="paper-helper">
+          {/* === LLM 配置 === */}
+          <h2 className="lm-section-title">模型连接</h2>
+
+          <p className="lm-helper">
             Base URL 示例：https://api.openai.com/v1
             ——填好后，弹窗里的陪伴就会一直跟着你。
           </p>
 
-          <label className="paper-field">
-            <span className="paper-label">Base URL</span>
+          <label className="lm-field">
+            <span className="lm-label">Base URL</span>
             <input
-              className="paper-input"
+              className="lm-input"
               onChange={(e) => updateSetting("baseUrl", e.target.value)}
               placeholder="https://api.openai.com/v1"
               value={settings.baseUrl}
             />
           </label>
 
-          <label className="paper-field">
-            <span className="paper-label">API Key</span>
+          <label className="lm-field">
+            <span className="lm-label">API Key</span>
             <input
-              className="paper-input"
+              className="lm-input"
               onChange={(e) => updateSetting("apiKey", e.target.value)}
               placeholder="sk-..."
               type="password"
@@ -165,27 +201,26 @@ function IndexOptions() {
             />
           </label>
 
-          <label className="paper-field">
-            <span className="paper-label">Model</span>
+          <label className="lm-field">
+            <span className="lm-label">Model</span>
             <input
-              className="paper-input"
+              className="lm-input"
               onChange={(e) => updateSetting("model", e.target.value)}
               placeholder="gpt-4o-mini"
               value={settings.model}
             />
           </label>
 
-          
           {/* === Obsidian 集成 === */}
-          <h2 className="paper-section-title">Obsidian 集成</h2>
+          <h2 className="lm-section-title">Obsidian 集成</h2>
 
-          <p className="paper-helper">
+          <p className="lm-helper">
             连接 Obsidian Local REST API 插件后，Agent 可以直接读写你的 vault。
             需要先在 Obsidian 中安装并启用 Local REST API 插件，然后在下方填入 API Key。
           </p>
 
-          <div className="paper-toggles">
-            <label className="paper-toggle">
+          <div className="lm-toggles">
+            <label className="lm-toggle">
               <input
                 type="checkbox"
                 checked={obsidianSettings.enabled}
@@ -196,7 +231,7 @@ function IndexOptions() {
                   }))
                 }
               />
-              <span className="paper-toggle-label">
+              <span className="lm-toggle-label">
                 <strong>启用 Obsidian 集成</strong>
                 <small>开启后 Agent 可读写 Obsidian vault</small>
               </span>
@@ -205,10 +240,10 @@ function IndexOptions() {
 
           {obsidianSettings.enabled && (
             <>
-              <label className="paper-field">
-                <span className="paper-label">API Base URL</span>
+              <label className="lm-field">
+                <span className="lm-label">API Base URL</span>
                 <input
-                  className="paper-input"
+                  className="lm-input"
                   onChange={(e) =>
                     setObsidianSettings((prev) => ({
                       ...prev,
@@ -218,15 +253,15 @@ function IndexOptions() {
                   placeholder="http://127.0.0.1:27123"
                   value={obsidianSettings.baseUrl}
                 />
-                <span className="paper-helper">
+                <span className="lm-helper">
                   默认使用 HTTP（端口 27123），避免自签名证书问题
                 </span>
               </label>
 
-              <label className="paper-field">
-                <span className="paper-label">API Key</span>
+              <label className="lm-field">
+                <span className="lm-label">API Key</span>
                 <input
-                  className="paper-input"
+                  className="lm-input"
                   onChange={(e) =>
                     setObsidianSettings((prev) => ({
                       ...prev,
@@ -237,7 +272,7 @@ function IndexOptions() {
                   type="password"
                   value={obsidianSettings.apiKey}
                 />
-                <span className="paper-helper">
+                <span className="lm-helper">
                   在 Obsidian 设置 → Local REST API → API Key 中复制
                 </span>
               </label>
@@ -245,16 +280,14 @@ function IndexOptions() {
           )}
 
           {/* === 采集开关 === */}
+          <h2 className="lm-section-title">采集开关</h2>
 
-          {/* === 采集开关 === */}
-          <h2 className="paper-section-title">采集开关</h2>
-
-          <p className="paper-helper">
+          <p className="lm-helper">
             控制 Lumino 采集哪些浏览行为数据。关闭项会立即停止采集，已采集数据不受影响。
           </p>
 
-          <div className="paper-toggle-group">
-            <label className="paper-toggle">
+          <div className="lm-toggle-group">
+            <label className="lm-toggle">
               <input
                 type="checkbox"
                 checked={collectionConfig.enablePageVisits}
@@ -262,13 +295,13 @@ function IndexOptions() {
                   updateCollectionConfig("enablePageVisits", e.target.checked)
                 }
               />
-              <span className="paper-toggle-label">
+              <span className="lm-toggle-label">
                 <strong>页面浏览</strong>
                 <small>长时间浏览的页面内容（保存 90 天）</small>
               </span>
             </label>
 
-            <label className="paper-toggle">
+            <label className="lm-toggle">
               <input
                 type="checkbox"
                 checked={collectionConfig.enableInputEvents}
@@ -276,13 +309,13 @@ function IndexOptions() {
                   updateCollectionConfig("enableInputEvents", e.target.checked)
                 }
               />
-              <span className="paper-toggle-label">
+              <span className="lm-toggle-label">
                 <strong>输入框交互</strong>
                 <small>输入框内的文本输入与粘贴（保存 7 天）</small>
               </span>
             </label>
 
-            <label className="paper-toggle">
+            <label className="lm-toggle">
               <input
                 type="checkbox"
                 checked={collectionConfig.enableCopyRecords}
@@ -290,13 +323,13 @@ function IndexOptions() {
                   updateCollectionConfig("enableCopyRecords", e.target.checked)
                 }
               />
-              <span className="paper-toggle-label">
+              <span className="lm-toggle-label">
                 <strong>复制内容</strong>
                 <small>复制到剪贴板的文本内容（保存 7 天）</small>
               </span>
             </label>
 
-            <label className="paper-toggle">
+            <label className="lm-toggle">
               <input
                 type="checkbox"
                 checked={collectionConfig.enableBookmarkChanges}
@@ -307,13 +340,13 @@ function IndexOptions() {
                   )
                 }
               />
-              <span className="paper-toggle-label">
+              <span className="lm-toggle-label">
                 <strong>书签变更</strong>
                 <small>新增、删除、修改书签操作（保存 90 天）</small>
               </span>
             </label>
 
-            <label className="paper-toggle">
+            <label className="lm-toggle">
               <input
                 type="checkbox"
                 checked={collectionConfig.enableDownloadRecords}
@@ -324,7 +357,7 @@ function IndexOptions() {
                   )
                 }
               />
-              <span className="paper-toggle-label">
+              <span className="lm-toggle-label">
                 <strong>下载记录</strong>
                 <small>文件下载记录（保存 90 天）</small>
               </span>
@@ -332,12 +365,12 @@ function IndexOptions() {
           </div>
 
           {/* === 采集参数 === */}
-          <h2 className="paper-section-title">采集参数</h2>
+          <h2 className="lm-section-title">采集参数</h2>
 
-          <label className="paper-field">
-            <span className="paper-label">最小停留时长（秒）</span>
+          <label className="lm-field">
+            <span className="lm-label">最小停留时长（秒）</span>
             <input
-              className="paper-input"
+              className="lm-input"
               type="number"
               min={1}
               max={600}
@@ -349,15 +382,15 @@ function IndexOptions() {
                 )
               }
             />
-            <span className="paper-helper">
+            <span className="lm-helper">
               页面停留超过此时间才会采集内容，默认 5 秒
             </span>
           </label>
 
-          <label className="paper-field">
-            <span className="paper-label">巡检间隔（分钟）</span>
+          <label className="lm-field">
+            <span className="lm-label">巡检间隔（分钟）</span>
             <input
-              className="paper-input"
+              className="lm-input"
               type="number"
               min={0.1}
               max={60}
@@ -370,45 +403,45 @@ function IndexOptions() {
                 )
               }
             />
-            <span className="paper-helper">
+            <span className="lm-helper">
               页面停留达标的检查频率，默认 1 分钟
             </span>
           </label>
 
-          <label className="paper-field">
-            <span className="paper-label">忽略 URL 正则（每行一个，可删改）</span>
+          <label className="lm-field">
+            <span className="lm-label">忽略 URL 正则（每行一个，可删改）</span>
             <textarea
-              className="paper-input"
+              className="lm-input"
               rows={12}
               spellCheck={false}
               value={ignoredPatternsText}
               onChange={(e) => handlePatternsChange(e.target.value)}
             />
-            <span className="paper-helper">
+            <span className="lm-helper">
               匹配这些正则的页面不会采集（含页面内容/输入框/复制）。内置了
               chrome://、localhost、内网 IP、银行、政府、医疗、成人等站点规则，
               可自由删改。
             </span>
           </label>
 
-          <div className="paper-actions">
+          <div className="lm-actions">
             <button
-              className="paper-primary-button"
+              className="lm-primary-button"
               disabled={isSaving}
               onClick={saveSettings}
               type="button">
-              <span className="paper-primary-label">
+              <span className="lm-primary-label">
                 {isSaving ? "正在收好…" : "保存这份默契"}
               </span>
-              <span className="paper-primary-trail">
+              <span className="lm-primary-trail">
                 {isSaving ? (
-                  <span aria-hidden className="paper-spinner" />
+                  <span aria-hidden className="lm-spinner" />
                 ) : (
                   <SaveTrailIcon />
                 )}
               </span>
             </button>
-            {status ? <span className="paper-status">{status}</span> : null}
+            {status ? <span className="lm-status">{status}</span> : null}
           </div>
         </section>
       </div>

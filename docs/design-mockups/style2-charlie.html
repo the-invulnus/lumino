@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Style 2 — Charlie 高对比编辑风</title>
+<style>
+  /* ===== Charlie Design Tokens ===== */
+  :root {
+    --color-midnight-ink: #000000;
+    --color-paper-white: #ffffff;
+    --color-concrete-gray: #838383;
+    --color-alert-red: #ff0000;
+
+    --font-body: 'Helvetica Neue', 'NeueHaas', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Bebas Neue', 'Brasparz Variable', 'Impact', sans-serif;
+
+    --text-caption: 19px;
+    --text-body: 19px;
+    --text-subheading: 40px;
+    --text-heading: 60px;
+    --text-display: 80px;
+
+    --spacing-7: 7px;
+    --spacing-15: 15px;
+    --spacing-20: 20px;
+    --spacing-30: 30px;
+    --spacing-50: 50px;
+
+    --radius-pill: 100px;
+    --radius-card: 0px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--color-midnight-ink);
+    color: var(--color-paper-white);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: 1.32;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ===== Layout ===== */
+  .mockup-shell {
+    display: flex;
+    width: 1200px;
+    height: 800px;
+    border: 2px solid var(--color-paper-white);
+  }
+
+  /* ===== Divider: solid white line ===== */
+  .mockup-divider {
+    width: 2px;
+    background: var(--color-paper-white);
+    flex-shrink: 0;
+  }
+
+  .mockup-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ===== Red Hero Banner (top strip on chat panel) ===== */
+  .hero-banner {
+    background: var(--color-alert-red);
+    color: var(--color-midnight-ink);
+    padding: var(--spacing-15) var(--spacing-30);
+    font-family: var(--font-display);
+    font-size: var(--text-heading);
+    font-weight: 400;
+    line-height: 0.7;
+    letter-spacing: -0.03em;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+
+  /* ===== Panel Header ===== */
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-20) var(--spacing-30);
+    flex-shrink: 0;
+  }
+
+  .panel-logo {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 400;
+    color: var(--color-paper-white);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+
+  /* Pill nav buttons */
+  .panel-nav {
+    display: flex;
+    gap: var(--spacing-15);
+  }
+
+  .nav-btn-ghost {
+    background: transparent;
+    color: var(--color-paper-white);
+    border: 2px solid var(--color-paper-white);
+    border-radius: var(--radius-pill);
+    padding: 7px 20px;
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    font-weight: 400;
+    cursor: default;
+  }
+
+  .nav-btn-filled {
+    background: var(--color-paper-white);
+    color: var(--color-midnight-ink);
+    border: 2px solid var(--color-paper-white);
+    border-radius: var(--radius-pill);
+    padding: 7px 20px;
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    font-weight: 400;
+    cursor: default;
+  }
+
+  /* ===== Chat Area ===== */
+  .chat-scroll {
+    flex: 1;
+    overflow: hidden;
+    padding: var(--spacing-30);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-30);
+  }
+
+  .chat-row--user {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .chat-bubble--user {
+    background: transparent;
+    color: var(--color-paper-white);
+    border: 2px solid var(--color-paper-white);
+    border-radius: var(--radius-pill);
+    padding: 10px 24px;
+    font-family: var(--font-body);
+    font-size: 19px;
+    font-weight: 400;
+    line-height: 1.32;
+    max-width: 75%;
+  }
+
+  .chat-row--assistant {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-15);
+  }
+
+  .chat-bubble--assistant {
+    color: var(--color-paper-white);
+    font-family: var(--font-body);
+    font-size: 19px;
+    font-weight: 400;
+    line-height: 1.45;
+    max-width: 90%;
+  }
+
+  /* Tool call chip */
+  .tool-call {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-15);
+    padding: 8px 20px;
+    border: 2px solid var(--color-concrete-gray);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-body);
+    font-size: 19px;
+    color: var(--color-concrete-gray);
+  }
+
+  .tool-call-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--color-alert-red);
+    flex-shrink: 0;
+  }
+
+  /* Running indicator */
+  .running-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-15);
+    padding: var(--spacing-7) 0;
+    font-family: var(--font-body);
+    font-size: 19px;
+    color: var(--color-concrete-gray);
+  }
+
+  .running-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .running-dots span {
+    width: 6px;
+    height: 6px;
+    background: var(--color-alert-red);
+  }
+
+  /* ===== Composer ===== */
+  .composer-area {
+    padding: var(--spacing-20) var(--spacing-30);
+    flex-shrink: 0;
+  }
+
+  .composer-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-15);
+  }
+
+  .composer-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--color-paper-white);
+    padding: 8px 0;
+    font-family: var(--font-body);
+    font-size: 19px;
+    font-weight: 400;
+    color: var(--color-paper-white);
+    outline: none;
+  }
+
+  .composer-input::placeholder {
+    color: var(--color-concrete-gray);
+  }
+
+  .btn-send {
+    background: var(--color-paper-white);
+    color: var(--color-midnight-ink);
+    border: none;
+    border-radius: var(--radius-pill);
+    padding: 10px 28px;
+    font-family: var(--font-body);
+    font-size: 19px;
+    font-weight: 400;
+    cursor: default;
+  }
+
+  /* ===== Config Area ===== */
+  .config-scroll {
+    flex: 1;
+    overflow: hidden;
+    padding: var(--spacing-30);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-30);
+  }
+
+  /* Red accent block header */
+  .config-accent-block {
+    background: var(--color-alert-red);
+    color: var(--color-midnight-ink);
+    padding: var(--spacing-15) var(--spacing-20);
+    font-family: var(--font-display);
+    font-size: 40px;
+    font-weight: 400;
+    line-height: 0.7;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+  }
+
+  .config-section-title {
+    font-family: var(--font-body);
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--color-paper-white);
+    line-height: 1.08;
+  }
+
+  .config-helper {
+    font-family: var(--font-body);
+    font-size: 19px;
+    color: var(--color-concrete-gray);
+    line-height: 1.32;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-7);
+  }
+
+  .field-label {
+    font-family: var(--font-body);
+    font-size: 19px;
+    font-weight: 400;
+    color: var(--color-paper-white);
+  }
+
+  .field-input {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--color-paper-white);
+    padding: 8px 0;
+    font-family: var(--font-body);
+    font-size: 19px;
+    font-weight: 400;
+    color: var(--color-paper-white);
+    outline: none;
+  }
+
+  .field-input::placeholder {
+    color: var(--color-concrete-gray);
+  }
+
+  .field-helper {
+    font-family: var(--font-body);
+    font-size: 19px;
+    color: var(--color-concrete-gray);
+    line-height: 1.32;
+  }
+
+  /* Toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-7) 0;
+  }
+
+  .toggle-label strong {
+    font-family: var(--font-body);
+    font-size: 19px;
+    font-weight: 400;
+    color: var(--color-paper-white);
+    display: block;
+  }
+
+  .toggle-label small {
+    font-family: var(--font-body);
+    font-size: 19px;
+    color: var(--color-concrete-gray);
+    display: block;
+  }
+
+  .toggle-knob {
+    width: 48px;
+    height: 24px;
+    border-radius: var(--radius-pill);
+    border: 2px solid var(--color-concrete-gray);
+    background: transparent;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .toggle-knob--on {
+    border-color: var(--color-paper-white);
+    background: var(--color-paper-white);
+  }
+
+  .toggle-knob--on::after {
+    content: '';
+    position: absolute;
+    right: 3px;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    background: var(--color-midnight-ink);
+    border-radius: 50%;
+  }
+
+  .toggle-knob::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    background: var(--color-concrete-gray);
+    border-radius: 50%;
+  }
+
+  /* Config actions */
+  .config-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-15);
+    padding-top: var(--spacing-15);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-paper-white);
+    border: 2px solid var(--color-paper-white);
+    border-radius: var(--radius-pill);
+    padding: 7px 20px;
+    font-family: var(--font-body);
+    font-size: 19px;
+    font-weight: 400;
+    cursor: default;
+  }
+
+  /* Footer link style */
+  .footer-link {
+    font-family: var(--font-body);
+    font-size: 19px;
+    color: var(--color-concrete-gray);
+    text-decoration: underline;
+    cursor: default;
+  }
+</style>
+</head>
+<body>
+
+<div class="mockup-shell">
+
+  <!-- ===== LEFT: Chat Interface ===== -->
+  <div class="mockup-panel">
+    <!-- Red hero banner -->
+    <div class="hero-banner">LUMINO</div>
+
+    <header class="panel-header">
+      <div class="panel-logo">CHAT</div>
+      <nav class="panel-nav">
+        <button class="nav-btn-filled">对话</button>
+        <button class="nav-btn-ghost">设置</button>
+      </nav>
+    </header>
+
+    <div class="chat-scroll">
+      <div class="chat-row--user">
+        <div class="chat-bubble--user">
+          帮我查一下当前项目中有哪些TODO注释
+        </div>
+      </div>
+
+      <div class="chat-row--assistant">
+        <div class="chat-bubble--assistant">
+          好的，让我在项目中搜索 TODO 注释。
+        </div>
+        <div class="tool-call">
+          <span class="tool-call-dot"></span>
+          grep TODO
+        </div>
+        <div class="tool-call">
+          <span class="tool-call-dot"></span>
+          read_file src/sidepanel.tsx
+        </div>
+        <div class="chat-bubble--assistant">
+          找到了 3 处 TODO 注释。两处在 src/lib/chat/ 下，一处是未实现的导出功能，另一处是日期格式化的边界处理。
+        </div>
+      </div>
+
+      <div class="running-bar">
+        <div class="running-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <span>RUNNING…</span>
+      </div>
+    </div>
+
+    <div class="composer-area">
+      <div class="composer-row">
+        <input
+          class="composer-input"
+          type="text"
+          placeholder="输入消息，Enter 发送"
+          value="帮我写一个测试用例"
+          readonly
+        />
+        <button class="btn-send" type="button">SEND</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Divider ===== -->
+  <div class="mockup-divider"></div>
+
+  <!-- ===== RIGHT: Config Interface ===== -->
+  <div class="mockup-panel">
+    <header class="panel-header">
+      <div class="panel-logo">CONFIG</div>
+      <button class="nav-btn-ghost" type="button">← 返回对话</button>
+    </header>
+
+    <div class="config-scroll">
+      <!-- Red accent block -->
+      <div class="config-accent-block">SETUP</div>
+
+      <h2 class="config-section-title">模型连接</h2>
+
+      <p class="config-helper">
+        Base URL 示例：https://api.openai.com/v1 ——填好后，弹窗里的陪伴就会一直跟着你。
+      </p>
+
+      <label class="field-group">
+        <span class="field-label">Base URL</span>
+        <input class="field-input" type="text" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1" readonly />
+      </label>
+
+      <label class="field-group">
+        <span class="field-label">API Key</span>
+        <input class="field-input" type="password" placeholder="sk-..." value="sk-proj-••••••••" readonly />
+      </label>
+
+      <label class="field-group">
+        <span class="field-label">Model</span>
+        <input class="field-input" type="text" placeholder="gpt-4o-mini" value="gpt-4o-mini" readonly />
+      </label>
+
+      <h2 class="config-section-title">采集开关</h2>
+
+      <p class="config-helper">
+        控制 Lumino 采集哪些浏览行为数据。关闭项会立即停止采集。
+      </p>
+
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <strong>页面浏览</strong>
+          <small>长时间浏览的页面内容</small>
+        </div>
+        <div class="toggle-knob toggle-knob--on"></div>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <strong>输入框交互</strong>
+          <small>输入框内的文本输入与粘贴</small>
+        </div>
+        <div class="toggle-knob toggle-knob--on"></div>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <strong>复制内容</strong>
+          <small>复制到剪贴板的文本内容</small>
+        </div>
+        <div class="toggle-knob toggle-knob--on"></div>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <strong>书签变更</strong>
+          <small>新增、删除、修改书签操作</small>
+        </div>
+        <div class="toggle-knob"></div>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <strong>下载记录</strong>
+          <small>文件下载记录</small>
+        </div>
+        <div class="toggle-knob"></div>
+      </div>
+
+      <div class="config-actions">
+        <button class="btn-send" type="button">SAVE</button>
+        <span class="footer-link">Cancel</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

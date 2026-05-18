@@ -251,6 +251,21 @@ export function mountFloatingButton(ownerDocument: Document = document) {
   })
 
   ownerDocument.body.append(button)
+
+  // 读取当前主题并设置 data-theme
+  chrome.storage.sync.get("theme", (data) => {
+    const theme = data.theme || "paper"
+    button.setAttribute("data-theme", theme)
+  })
+
+  // 监听主题变化
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "sync" && "theme" in changes) {
+      const theme = changes.theme.newValue || "paper"
+      button.setAttribute("data-theme", theme)
+    }
+  })
+
   setupSidepanelDetector(button)
   enableDrag(button)
 

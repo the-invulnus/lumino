@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Style 3 — Fictional 俏皮贴纸风</title>
+<style>
+  /* ===== Fictional Design Tokens ===== */
+  :root {
+    --color-canvas-almond: #ffe9ce;
+    --color-paper-white: #ffffff;
+    --color-type-black: #000000;
+    --color-grape-punch: #8a53ff;
+    --color-bubblegum-red: #fd4b38;
+    --color-sunshine-yellow: #ffd80c;
+    --color-leafy-green: #3ccb09;
+    --color-deep-indigo: #0500a3;
+    --color-ash-gray: #666666;
+    --color-light-gray: #dddddd;
+    --color-input-gray: #101010;
+
+    --font-fictional: 'Comic Sans MS', 'Chalkboard SE', ui-rounded, system-ui, sans-serif;
+
+    --text-body-sm: 16px;
+    --text-body: 22px;
+    --text-subheading: 29px;
+    --text-heading-sm: 36px;
+    --text-heading: 48px;
+    --text-heading-lg: 72px;
+
+    --spacing-12: 12px;
+    --spacing-24: 24px;
+    --spacing-30: 30px;
+    --spacing-60: 60px;
+
+    --radius-sm: 5px;
+    --radius-md: 15px;
+    --radius-speech: 144px;
+    --radius-round: 50%;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--color-canvas-almond);
+    color: var(--color-type-black);
+    font-family: var(--font-fictional);
+    font-size: var(--text-body);
+    line-height: 1.4;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ===== Layout ===== */
+  .mockup-shell {
+    display: flex;
+    width: 1200px;
+    height: 800px;
+    background: var(--color-canvas-almond);
+    border-radius: var(--radius-md);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Decorative sticker shapes floating */
+  .sticker-deco {
+    position: absolute;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .sticker-deco--circle-purple {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--color-grape-punch);
+    top: 20px;
+    left: 520px;
+  }
+
+  .sticker-deco--circle-yellow {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--color-sunshine-yellow);
+    top: 60px;
+    left: 580px;
+  }
+
+  .sticker-deco--star {
+    width: 50px;
+    height: 50px;
+    background: var(--color-bubblegum-red);
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    top: 100px;
+    right: 40px;
+  }
+
+  .sticker-deco--dot-green {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--color-leafy-green);
+    bottom: 80px;
+    left: 50%;
+  }
+
+  /* ===== Divider ===== */
+  .mockup-divider {
+    width: 3px;
+    background: var(--color-type-black);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .mockup-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ===== Panel Header ===== */
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-24) var(--spacing-30);
+    flex-shrink: 0;
+  }
+
+  .panel-logo {
+    font-family: var(--font-fictional);
+    font-size: var(--text-heading-sm);
+    font-weight: 400;
+    color: var(--color-type-black);
+    letter-spacing: 0.012em;
+  }
+
+  .panel-nav {
+    display: flex;
+    gap: var(--spacing-12);
+  }
+
+  /* Ghost nav button */
+  .nav-btn {
+    background: transparent;
+    color: var(--color-type-black);
+    border: 2px solid var(--color-type-black);
+    border-radius: var(--radius-sm);
+    padding: 4px 16px;
+    font-family: var(--font-fictional);
+    font-size: var(--text-body-sm);
+    font-weight: 400;
+    cursor: default;
+  }
+
+  .nav-btn--filled {
+    background: var(--color-sunshine-yellow);
+    border-color: var(--color-type-black);
+  }
+
+  /* ===== Chat Area ===== */
+  .chat-scroll {
+    flex: 1;
+    overflow: hidden;
+    padding: var(--spacing-12) var(--spacing-30);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-24);
+  }
+
+  /* User message — speech bubble right */
+  .chat-row--user {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .chat-bubble--user {
+    background: var(--color-sunshine-yellow);
+    color: var(--color-type-black);
+    border-radius: var(--radius-speech) var(--radius-speech) var(--radius-sm) var(--radius-speech);
+    padding: 16px 24px;
+    font-family: var(--font-fictional);
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1.4;
+    max-width: 70%;
+  }
+
+  /* Assistant */
+  .chat-row--assistant {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-12);
+  }
+
+  .chat-bubble--assistant {
+    color: var(--color-type-black);
+    font-family: var(--font-fictional);
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1.4;
+    max-width: 90%;
+  }
+
+  /* Tool call chip — quirky card */
+  .tool-call {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-12);
+    padding: 8px 16px;
+    background: var(--color-grape-punch);
+    color: var(--color-paper-white);
+    border-radius: var(--radius-md);
+    font-family: var(--font-fictional);
+    font-size: 16px;
+  }
+
+  .tool-call-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--color-paper-white);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Running indicator */
+  .running-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-12);
+    padding: 8px 16px;
+    background: var(--color-paper-white);
+    border-radius: var(--radius-speech);
+    font-family: var(--font-fictional);
+    font-size: 16px;
+    color: var(--color-ash-gray);
+    align-self: flex-start;
+  }
+
+  .running-dots {
+    display: flex;
+    gap: 5px;
+  }
+
+  .running-dots span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-bubblegum-red);
+  }
+
+  /* ===== Composer ===== */
+  .composer-area {
+    padding: var(--spacing-24) var(--spacing-30);
+    flex-shrink: 0;
+  }
+
+  .composer-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-12);
+  }
+
+  .composer-input {
+    flex: 1;
+    background: var(--color-paper-white);
+    border: 2px solid var(--color-type-black);
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    font-family: var(--font-fictional);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--color-type-black);
+    outline: none;
+  }
+
+  .composer-input::placeholder {
+    color: var(--color-ash-gray);
+  }
+
+  /* Accent filled button */
+  .btn-accent {
+    background: var(--color-bubblegum-red);
+    color: var(--color-paper-white);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 10px 24px;
+    font-family: var(--font-fictional);
+    font-size: 22px;
+    font-weight: 400;
+  }
+
+  /* ===== Config Area ===== */
+  .config-scroll {
+    flex: 1;
+    overflow: hidden;
+    padding: var(--spacing-24) var(--spacing-30);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-24);
+  }
+
+  /* Callout label */
+  .callout-label {
+    display: inline-block;
+    background: var(--color-bubblegum-red);
+    color: var(--color-paper-white);
+    padding: 6px 16px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-fictional);
+    font-size: 16px;
+    align-self: flex-start;
+  }
+
+  .config-section-title {
+    font-family: var(--font-fictional);
+    font-size: var(--text-heading);
+    font-weight: 400;
+    color: var(--color-type-black);
+    line-height: 1.2;
+  }
+
+  .config-helper {
+    font-family: var(--font-fictional);
+    font-size: 16px;
+    color: var(--color-ash-gray);
+    line-height: 1.71;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-12);
+  }
+
+  .field-label {
+    font-family: var(--font-fictional);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--color-type-black);
+  }
+
+  .field-input {
+    background: var(--color-paper-white);
+    border: 2px solid var(--color-type-black);
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    font-family: var(--font-fictional);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--color-type-black);
+    outline: none;
+  }
+
+  .field-input::placeholder {
+    color: var(--color-ash-gray);
+  }
+
+  .field-helper {
+    font-family: var(--font-fictional);
+    font-size: 16px;
+    color: var(--color-ash-gray);
+    line-height: 1.71;
+  }
+
+  /* Toggle in a colorful card */
+  .toggle-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--color-paper-white);
+    border-radius: var(--radius-md);
+  }
+
+  .toggle-card:nth-child(odd) {
+    background: var(--color-sunshine-yellow);
+  }
+
+  .toggle-label strong {
+    font-family: var(--font-fictional);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--color-type-black);
+    display: block;
+  }
+
+  .toggle-label small {
+    font-family: var(--font-fictional);
+    font-size: 16px;
+    color: var(--color-ash-gray);
+    display: block;
+  }
+
+  .toggle-knob {
+    width: 50px;
+    height: 28px;
+    border-radius: var(--radius-speech);
+    border: 2px solid var(--color-type-black);
+    background: var(--color-light-gray);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .toggle-knob--on {
+    background: var(--color-leafy-green);
+  }
+
+  .toggle-knob--on::after {
+    content: '';
+    position: absolute;
+    right: 3px;
+    top: 2px;
+    width: 20px;
+    height: 20px;
+    background: var(--color-paper-white);
+    border-radius: 50%;
+    border: 2px solid var(--color-type-black);
+  }
+
+  .toggle-knob::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 20px;
+    height: 20px;
+    background: var(--color-paper-white);
+    border-radius: 50%;
+    border: 2px solid var(--color-type-black);
+  }
+
+  /* Config actions */
+  .config-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-12);
+    padding-top: var(--spacing-12);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-type-black);
+    border: 2px solid var(--color-type-black);
+    border-radius: var(--radius-sm);
+    padding: 6px 20px;
+    font-family: var(--font-fictional);
+    font-size: 22px;
+    font-weight: 400;
+  }
+
+  /* Speech bubble card */
+  .speech-card {
+    background: var(--color-paper-white);
+    border-radius: var(--radius-speech);
+    padding: 24px 32px;
+    font-family: var(--font-fictional);
+    font-size: 22px;
+    color: var(--color-type-black);
+    border: 2px solid var(--color-type-black);
+  }
+</style>
+</head>
+<body>
+
+<div class="mockup-shell">
+
+  <!-- Decorative stickers -->
+  <div class="sticker-deco sticker-deco--circle-purple"></div>
+  <div class="sticker-deco sticker-deco--circle-yellow"></div>
+  <div class="sticker-deco sticker-deco--star"></div>
+  <div class="sticker-deco sticker-deco--dot-green"></div>
+
+  <!-- ===== LEFT: Chat Interface ===== -->
+  <div class="mockup-panel">
+    <header class="panel-header">
+      <div class="panel-logo">Lumino Chat!</div>
+      <nav class="panel-nav">
+        <button class="nav-btn nav-btn--filled">聊天</button>
+        <button class="nav-btn">设置</button>
+      </nav>
+    </header>
+
+    <div class="chat-scroll">
+      <div class="chat-row--user">
+        <div class="chat-bubble--user">
+          帮我查一下当前项目中有哪些TODO注释
+        </div>
+      </div>
+
+      <div class="chat-row--assistant">
+        <div class="chat-bubble--assistant">
+          好的，让我在项目中搜索一下~
+        </div>
+        <div class="tool-call">
+          <span class="tool-call-dot"></span>
+          grep TODO
+        </div>
+        <div class="tool-call">
+          <span class="tool-call-dot"></span>
+          read_file src/sidepanel.tsx
+        </div>
+        <div class="chat-bubble--assistant">
+          找到了 3 处 TODO 注释。两处在 src/lib/chat/ 下，一处是未实现的导出功能，另一处是日期格式化的边界处理。需要我逐一查看吗？
+        </div>
+      </div>
+
+      <div class="running-bar">
+        <div class="running-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <span>正在思考…</span>
+      </div>
+    </div>
+
+    <div class="composer-area">
+      <div class="composer-row">
+        <input
+          class="composer-input"
+          type="text"
+          placeholder="输入消息，Enter 发送"
+          value="帮我写一个测试用例"
+          readonly
+        />
+        <button class="btn-accent" type="button">发送!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Divider ===== -->
+  <div class="mockup-divider"></div>
+
+  <!-- ===== RIGHT: Config Interface ===== -->
+  <div class="mockup-panel">
+    <header class="panel-header">
+      <div class="panel-logo">设置</div>
+      <button class="nav-btn" type="button">← 返回聊天</button>
+    </header>
+
+    <div class="config-scroll">
+      <span class="callout-label">⚡ 模型连接</span>
+
+      <h2 class="config-section-title">连上你的模型</h2>
+
+      <p class="config-helper">
+        填好 Base URL 和 API Key，Lumino 就能陪你聊天啦！
+      </p>
+
+      <label class="field-group">
+        <span class="field-label">Base URL</span>
+        <input class="field-input" type="text" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1" readonly />
+      </label>
+
+      <label class="field-group">
+        <span class="field-label">API Key</span>
+        <input class="field-input" type="password" placeholder="sk-..." value="sk-proj-••••••••" readonly />
+      </label>
+
+      <label class="field-group">
+        <span class="field-label">Model</span>
+        <input class="field-input" type="text" placeholder="gpt-4o-mini" value="gpt-4o-mini" readonly />
+      </label>
+
+      <span class="callout-label">🎛 采集开关</span>
+
+      <h2 class="config-section-title">控制采集</h2>
+
+      <p class="config-helper">
+        选择 Lumino 要采集哪些数据。关掉就会立即停止哦~
+      </p>
+
+      <div class="toggle-card">
+        <div class="toggle-label">
+          <strong>页面浏览</strong>
+          <small>长时间浏览的页面内容（保存 90 天）</small>
+        </div>
+        <div class="toggle-knob toggle-knob--on"></div>
+      </div>
+
+      <div class="toggle-card">
+        <div class="toggle-label">
+          <strong>输入框交互</strong>
+          <small>输入框内的文本输入与粘贴（保存 7 天）</small>
+        </div>
+        <div class="toggle-knob toggle-knob--on"></div>
+      </div>
+
+      <div class="toggle-card">
+        <div class="toggle-label">
+          <strong>复制内容</strong>
+          <small>复制到剪贴板的文本内容（保存 7 天）</small>
+        </div>
+        <div class="toggle-knob toggle-knob--on"></div>
+      </div>
+
+      <div class="toggle-card">
+        <div class="toggle-label">
+          <strong>书签变更</strong>
+          <small>新增、删除、修改书签操作（保存 90 天）</small>
+        </div>
+        <div class="toggle-knob"></div>
+      </div>
+
+      <div class="toggle-card">
+        <div class="toggle-label">
+          <strong>下载记录</strong>
+          <small>文件下载记录（保存 90 天）</small>
+        </div>
+        <div class="toggle-knob"></div>
+      </div>
+
+      <div class="config-actions">
+        <button class="btn-accent" type="button">保存这份默契!</button>
+        <button class="btn-ghost" type="button">取消</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
