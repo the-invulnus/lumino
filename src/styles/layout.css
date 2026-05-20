@@ -371,6 +371,7 @@ textarea {
   gap: 0;
   max-height: none;
   min-height: 120px;
+  overflow-x: hidden;
   padding: 10px 8px;
 }
 
@@ -381,6 +382,7 @@ textarea {
   gap: 0;
   max-height: min(52vh, 420px);
   min-height: 160px;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 10px 8px;
@@ -422,12 +424,63 @@ textarea {
   align-items: stretch;
 }
 
+/* 消息操作按钮 — 放在气泡底部，固定高度避免布局跳动 */
+.lm-chat-actions {
+  align-items: center;
+  display: flex;
+  gap: 2px;
+  height: 22px;
+  opacity: 0;
+  transition: opacity 180ms var(--lumi-ease-spring);
+  visibility: hidden;
+}
+
+.lm-chat-row-wrapper:hover .lm-chat-actions {
+  opacity: 1;
+  visibility: visible;
+}
+
+.lm-chat-action-btn {
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--lumi-text-faint);
+  cursor: pointer;
+  display: flex;
+  padding: 4px;
+}
+
+.lm-chat-action-btn:hover {
+  color: var(--lumi-text-soft);
+}
+
+.lm-chat-action-btn:last-child:hover {
+  color: #c03e3e;
+}
+
+.lm-chat-action-btn svg {
+  flex-shrink: 0;
+}
+
+.lm-chat-row-wrapper--user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.lm-chat-row-wrapper--assistant {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 .lm-chat-row--system {
   align-items: stretch;
 }
 
 .lm-chat-bubble {
   max-width: 100%;
+  overflow-x: hidden;
   white-space: pre-wrap;
   word-break: break-word;
 }

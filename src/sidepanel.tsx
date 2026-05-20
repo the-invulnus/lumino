@@ -837,12 +837,65 @@ function SidePanel() {
                     </p>
                   ) : (
                     visibleMessages.map((message, index) => (
-                      <ChatMessageBlock
+                      <div
                         key={`${activeThreadId}-${index}-${message.role}`}
-                        message={message}
-                        allMessages={visibleMessages}
-                        index={index}
-                      />
+                        className={`lm-chat-row-wrapper lm-chat-row-wrapper--${message.role === "user" ? "user" : "assistant"}`}
+                      >
+                        <ChatMessageBlock
+                          message={message}
+                          allMessages={visibleMessages}
+                          index={index}
+                        />
+                        <div className="lm-chat-actions">
+                          <button
+                            aria-label="复制消息内容"
+                            className="lm-chat-action-btn"
+                            onClick={() => {
+                              const text = typeof message.content === "string"
+                                ? message.content
+                                : ""
+                              navigator.clipboard.writeText(text).catch(() => {})
+                            }}
+                            title="复制"
+                            type="button"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                            </svg>
+                          </button>
+                          <button
+                            aria-label="删除此消息"
+                            className="lm-chat-action-btn"
+                            onClick={() => {
+                              setMessages((prev) => {
+                                const next = [...prev]
+                                const target = next[index]
+                                if (target.role === "assistant" && target.tool_calls) {
+                                  let i = index + 1
+                                  while (i < next.length && next[i].role === "tool") {
+                                    i++
+                                  }
+                                  next.splice(index, i - index)
+                                } else {
+                                  next.splice(index, 1)
+                                }
+                                saveThreadMessages(activeThreadId, next).catch(() => {})
+                                return next
+                              })
+                            }}
+                            title="删除"
+                            type="button"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <line x1="10" y1="11" x2="10" y2="17" />
+                              <line x1="14" y1="11" x2="14" y2="17" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
                     ))
                   )}
                   <div ref={scrollAnchorRef} />

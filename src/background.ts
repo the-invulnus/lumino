@@ -48,7 +48,7 @@ import { runAgentLoop } from "./lib/chat/agent-loop"
 import { registerAllTools } from "./lib/chat/tool-registry"
 import { cleanupEvictedFiles, EVICT_CLEANUP_ALARM } from "./lib/chat/tool-eviction"
 import type { OpenAiChatMessage } from "./lib/chat/openai-messages"
-import { saveThreadMessages } from "./lib/chat/thread-idb"
+import { getThread, saveThreadMessages } from "./lib/chat/thread-idb"
 
 export {}
 
@@ -135,11 +135,20 @@ async function executeAgentInBackground(
     return result
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
-      // 用户主动中止，通知 Side Panel 清除加载状态
-      chrome.runtime.sendMessage({
-        type: AGENT_COMPLETE_MESSAGE,
-        payload: { threadId, messages: historyMessages }
-      } as AgentCompleteMessage).catch(() => { /* Side Panel 可能已关闭 */ })
+      // 用户主动中止：读取 DB 中已保存的最新消息（包含 onMessagesUpdate 写入的进度），
+      // 避免用 historyMessages 覆盖已输出的内容
+      getThread(threadId).then((record) => {
+        const lastMessages = record?.messages ?? historyMessages
+        chrome.runtime.sendMessage({
+          type: AGENT_COMPLETE_MESSAGE,
+          payload: { threadId, messages: lastMessages }
+        } as AgentCompleteMessage).catch(() => { /* Side Panel 可能已关闭 */ })
+      }).catch(() => {
+        chrome.runtime.sendMessage({
+          type: AGENT_COMPLETE_MESSAGE,
+          payload: { threadId, messages: historyMessages }
+        } as AgentCompleteMessage).catch(() => { /* Side Panel 可能已关闭 */ })
+      })
       return
     }
 
