@@ -939,7 +939,7 @@ function SidePanel() {
                           void sendUserMessage()
                         }
                       }}
-                      placeholder="输入消息，Enter 发送，Shift+Enter 换行"
+                      placeholder="Enter 发送，Shift+Enter 换行"
                       rows={1}
                       value={draft}
                     />
@@ -976,7 +976,6 @@ function SidePanel() {
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
                 </span>
-                <span className="lm-side-nav-btn-label">Chat</span>
               </button>
             </nav>
           </div>

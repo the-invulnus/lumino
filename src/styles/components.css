@@ -243,6 +243,30 @@
   overflow-y: auto;
   padding: 8px 14px;
   resize: none;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.lm-input--composer::-webkit-scrollbar {
+  width: 4px;
+}
+
+.lm-input--composer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lm-input--composer::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 2px;
+}
+
+.lm-input--composer:hover::-webkit-scrollbar-thumb {
+  background: var(--lumi-border-strong);
+}
+
+.lm-input--composer:hover {
+  scrollbar-color: var(--lumi-border-strong) transparent;
 }
 
 .lm-composer-send {
@@ -697,20 +721,23 @@
 .lm-side-nav { border-left: 1px solid var(--lumi-border); }
 
 .lm-side-nav-btn {
-  border-radius: var(--lumi-radius-code);
   color: var(--lumi-text-faint);
 }
 
 .lm-side-nav-btn:hover {
-  color: var(--lumi-text-soft);
-  background: var(--lumi-border);
+  color: var(--lumi-text);
+  background: var(--lumi-surface-solid);
+  box-shadow: var(--lumi-shadow-soft);
 }
 
-.lm-side-nav-btn--active { color: var(--lumi-accent-a); }
-
-.lm-side-nav-btn--active .lm-side-nav-btn-icon {
+.lm-side-nav-btn--active {
+  color: var(--lumi-accent-a);
   background: var(--lumi-surface-solid);
-  box-shadow: 0 1px 6px rgba(45, 38, 34, 0.06);
+  box-shadow: var(--lumi-shadow-soft);
+}
+
+.lm-side-nav-btn--active:hover {
+  color: var(--lumi-accent-a);
 }
 
 .lm-side-nav-btn-label {
