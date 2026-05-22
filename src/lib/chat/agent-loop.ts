@@ -27,23 +27,65 @@ function openAiToModelMessages(msgs: OpenAiChatMessage[]): ModelMessage[] {
         case "user":
           return { role: "user", content: typeof m.content === "string" ? m.content : "" }
         case "assistant": {
-          const toolCalls = (m.tool_calls ?? []).map((tc: OpenAiToolCall) => ({
+          const text = typeof m.content === "string" ? m.content : ""
+          const toolCallParts = (m.tool_calls ?? []).map((tc: OpenAiToolCall) => ({
+            type: "tool-call" as const,
             toolCallId: tc.id,
             toolName: tc.function.name,
-            args: safeJsonParse(tc.function.arguments)
+            input: safeJsonParse(tc.function.arguments)
           }))
-          return { role: "assistant", content: m.content ?? "", toolCalls } as ModelMessage
+          return {
+            role: "assistant" as const,
+            content: toolCallParts.length > 0
+              ? [{ type: "text" as const, text }, ...toolCallParts]
+              : text
+          } as ModelMessage
         }
-        case "tool":
+        case "tool": {
+          // 从相邻 assistant 消息中获取 toolName
+          let toolName = ""
+          const idx = msgs.indexOf(m)
+          for (let i = idx - 1; i >= 0; i--) {
+            const prev = msgs[i]
+            if (prev.role === "assistant" && prev.tool_calls) {
+              const match = prev.tool_calls.find((tc: OpenAiToolCall) => tc.id === m.tool_call_id)
+              if (match) { toolName = match.function.name; break }
+            }
+          }
+          const rawContent = m.content
+          // AI SDK v6 toolResultPartSchema 要求 output 是 discriminated union:
+          // { type: "text", value: string } | { type: "json", value: JSONValue } | ...
+          let output: unknown
+          if (typeof rawContent === "string") {
+            output = { type: "text" as const, value: rawContent }
+            // 尝试解析为 JSON：如果看起来像 JSON，尝试解析
+            const trimmed = rawContent.trim()
+            if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+              try {
+                const parsed = JSON.parse(rawContent)
+                // 避免双包：如果已经带有 type/value 结构则直接使用
+                if (parsed && typeof parsed === "object" && "type" in parsed && ("value" in parsed || "reason" in parsed)) {
+                  output = parsed
+                } else {
+                  output = { type: "json" as const, value: parsed }
+                }
+              } catch { /* 保持 text 类型 */ }
+            }
+          } else if (typeof rawContent === "object" && rawContent !== null) {
+            output = { type: "json" as const, value: rawContent }
+          } else {
+            output = { type: "text" as const, value: String(rawContent ?? "") }
+          }
           return {
             role: "tool",
             content: [{
               type: "tool-result",
               toolCallId: m.tool_call_id,
-              toolName: "",
-              result: typeof m.content === "string" ? m.content : JSON.stringify(m.content)
+              toolName,
+              output
             }]
           } as unknown as ModelMessage
+        }
         default:
           return { role: "user", content: "" }
       }
@@ -73,10 +115,19 @@ function appendStepMessages(
       }))
     })
     for (const tr of step.toolResults ?? []) {
+      // AI SDK v6 tool output 是 discriminated union: { type: "text"|"json", value: ... }
+      // 提取内层 value 作为 OpenAiChatMessage 的 content
+      let toolContent: string
+      if (typeof tr.output === "object" && tr.output !== null && "value" in tr.output) {
+        const val = (tr.output as { value: unknown }).value
+        toolContent = typeof val === "string" ? val : JSON.stringify(val)
+      } else {
+        toolContent = typeof tr.output === "string" ? tr.output : JSON.stringify(tr.output)
+      }
       current.push({
         role: "tool",
         tool_call_id: tr.toolCallId,
-        content: typeof tr.output === "string" ? tr.output : JSON.stringify(tr.output)
+        content: toolContent
       })
     }
   } else if (step.text) {

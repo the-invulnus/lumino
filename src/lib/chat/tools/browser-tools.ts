@@ -734,10 +734,13 @@ export async function handleScroll(
   try {
     const [result] = await chrome.scripting.executeScript({
       target: { tabId },
-      func: (opts: { to?: string; by?: { x: number; y: number }; percent?: number; selector?: string }) => {
+      func: (opts: { to?: string; by?: { x: number; y: number }; percent?: number; selector?: string; direction?: string; by_x?: number; by_y?: number }) => {
         const scrollToPos = (top: number, left: number) => {
           window.scrollTo({ top, left, behavior: "instant" as ScrollBehavior })
         }
+
+        // 记录滚动方法用于输出
+        let method = "unknown"
 
         if (opts.selector) {
           const el = document.querySelector(opts.selector)
@@ -745,33 +748,43 @@ export async function handleScroll(
             return JSON.stringify({ error: "selector_not_found", selector: opts.selector })
           }
           el.scrollIntoView({ behavior: "instant", block: "start" })
-          const rect = el.getBoundingClientRect()
-          return JSON.stringify({
-            scrolled: true,
-            method: "selector",
-            selector: opts.selector,
-            scroll_y: Math.round(window.scrollY),
-            scroll_x: Math.round(window.scrollX)
-          })
-        }
-
-        if (opts.to === "top") {
+          method = "selector"
+        } else if (typeof opts.direction === "string") {
+          // 按页滚动：不传 direction 时用 down
+          const dir = opts.direction
+          const vh = window.innerHeight
+          const delta = Math.round(vh * 0.75)
+          if (dir === "down") {
+            window.scrollBy({ left: 0, top: delta, behavior: "instant" as ScrollBehavior })
+          } else if (dir === "up") {
+            window.scrollBy({ left: 0, top: -delta, behavior: "instant" as ScrollBehavior })
+          }
+          method = "direction_" + dir
+        } else if (typeof opts.by_x === "number" || typeof opts.by_y === "number") {
+          // 像素滚动
+          window.scrollBy({ left: opts.by_x ?? 0, top: opts.by_y ?? 0, behavior: "instant" as ScrollBehavior })
+          method = "by"
+        } else if (opts.to === "top") {
           scrollToPos(0, 0)
+          method = "to_top"
         } else if (opts.to === "bottom") {
           scrollToPos(document.documentElement.scrollHeight, 0)
+          method = "to_bottom"
         } else if (typeof opts.percent === "number") {
           const pct = Math.max(0, Math.min(100, opts.percent))
           const maxY = document.documentElement.scrollHeight - window.innerHeight
           scrollToPos(Math.round((pct / 100) * maxY), 0)
+          method = "percent"
         } else if (opts.by && (opts.by.x !== 0 || opts.by.y !== 0)) {
           window.scrollBy({ left: opts.by.x ?? 0, top: opts.by.y ?? 0, behavior: "instant" as ScrollBehavior })
+          method = "by"
         } else {
-          return JSON.stringify({ error: "no_scroll_target", hint: "需要指定 to、by、percent 或 selector 之一" })
+          return JSON.stringify({ error: "no_scroll_target", hint: "需要指定 direction、to、by、by_x/by_y、percent 或 selector 之一" })
         }
 
         return JSON.stringify({
           scrolled: true,
-          method: opts.to ? ("to_" + opts.to) : (typeof opts.percent === "number" ? "percent" : "by"),
+          method,
           scroll_y: Math.round(window.scrollY),
           scroll_x: Math.round(window.scrollX),
           page_height: document.documentElement.scrollHeight,
@@ -782,7 +795,10 @@ export async function handleScroll(
         to: args.to as string | undefined,
         by: args.by as { x: number; y: number } | undefined,
         percent: args.percent as number | undefined,
-        selector: args.selector as string | undefined
+        selector: args.selector as string | undefined,
+        direction: args.direction as string | undefined,
+        by_x: args.x as number | undefined,
+        by_y: args.y as number | undefined
       }]
     })
 

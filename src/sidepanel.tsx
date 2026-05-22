@@ -404,6 +404,10 @@ function SidePanel() {
   /** 每个 thread 的 AbortController，切换 tab 时 cancel 旧请求 */
   const abortMapRef = useRef<Record<string, AbortController>>({})
   const draftMapRef = useRef<Record<string, string>>({})
+  /** 正在编辑的消息在 messages 数组中的索引，-1 表示无 */
+  const [editingIndex, setEditingIndex] = useState<number>(-1)
+  const [editingText, setEditingText] = useState("")
+
 
   useEffect(() => {
     activeThreadIdRef.current = activeThreadId
@@ -625,66 +629,53 @@ function SidePanel() {
     []
   )
 
-  async function sendUserMessage() {
-    const trimmed = draft.trim()
+  /** 通用发送：将 history + userInput 发给 agent，同时更新 messages 状态 */
+  async function doSend(historyMessages: OpenAiChatMessage[], userInput: string) {
     const threadId = activeThreadIdRef.current
-
-    if (!trimmed) {
-      setError("请输入内容。")
-      return
-    }
-
-    if (!threadId) {
-      setError("请先选择或创建一个会话。")
-      return
-    }
-
-    if (!hasCompleteLlmSettings(settings)) {
-      setError("请先在设置页配置 Base URL、API Key 和模型。")
-      return
-    }
-
-    // 仅阻止当前 thread 重复发送，不阻止其他 thread
-    if (sendInFlightMapRef.current[threadId]) {
-      return
-    }
+    if (!threadId) return
 
     sendInFlightMapRef.current[threadId] = true
     setLoadingThreadIds((prev) => new Set(prev).add(threadId))
     setError("")
-    setDraft("")
+    setEditingIndex(-1)
+    setEditingText("")
 
-    console.log("[lumino:sidepanel]", "开始请求，当前消息数:", messages.length)
-
-    // 先乐观添加用户消息到本地
-    const history = cloneMessages(messages)
-    const userMsg: OpenAiChatMessage = { role: "user", content: trimmed }
-    const baseMessages = [...history, userMsg]
+    const userMsg: OpenAiChatMessage = { role: "user", content: userInput }
+    const baseMessages = [...historyMessages, userMsg]
     setMessages(cloneMessages(baseMessages))
+    // 立即持久化用户消息，确保输入不丢失
+    saveThreadMessages(threadId, baseMessages).catch(() => {})
 
-    // 通过 Service Worker 发起 agent 执行（不依赖 Side Panel 生命周期）
     const startPayload = {
       type: START_AGENT_MESSAGE,
-      payload: { threadId, historyMessages: history, userInput: trimmed }
+      payload: { threadId, historyMessages, userInput }
     } as StartAgentMessage
 
-    // 发送消息到 Service Worker，失败时自动重试一次（SW 可能处于休眠状态）
     async function sendStartWithRetry(): Promise<void> {
       try {
         await chrome.runtime.sendMessage(startPayload)
       } catch (firstErr) {
-        // SW 可能休眠中，等待 500ms 后重试
         await new Promise((r) => setTimeout(r, 500))
         try {
           await chrome.runtime.sendMessage(startPayload)
         } catch {
-          // 两次都失败才报错；SW 可能已收到第一次消息但通道提前关闭
           console.warn("[lumino:sidepanel]", "启动 agent 失败:", firstErr)
           setError("启动失败，请重试。")
         }
       }
     }
     sendStartWithRetry()
+  }
+
+  async function sendUserMessage() {
+    const trimmed = draft.trim()
+    if (!trimmed) { setError("请输入内容。"); return }
+    if (!activeThreadIdRef.current) { setError("请先选择或创建一个会话。"); return }
+    if (!hasCompleteLlmSettings(settings)) { setError("请先在设置页配置 Base URL、API Key 和模型。"); return }
+    if (sendInFlightMapRef.current[activeThreadIdRef.current]) return
+
+    setDraft("")
+    await doSend(cloneMessages(messages), trimmed)
   }
 
 
@@ -887,6 +878,34 @@ function SidePanel() {
                             </div>
                             <div className="lm-chat-actions">
                               <button
+                                aria-label="重新生成"
+                                className="lm-chat-action-btn"
+                                disabled={sendInFlightMapRef.current[activeThreadId]}
+                                onClick={() => {
+                                  const groupStart = messages.indexOf(group[0])
+                                  if (groupStart < 0) return
+                                  // 找到该 assistant group 前面最近的 user 消息
+                                  let prevUserIdx = groupStart - 1
+                                  while (prevUserIdx >= 0 && messages[prevUserIdx].role !== "user") {
+                                    prevUserIdx--
+                                  }
+                                  if (prevUserIdx < 0) return
+                                  const prevUser = messages[prevUserIdx]
+                                  // 删除当前 assistant group 及之后的消息
+                                  const newHistory = messages.slice(0, prevUserIdx)
+                                  saveThreadMessages(activeThreadId, newHistory).catch(() => {})
+                                  doSend(newHistory, formatMessagePreview(prevUser))
+                                }}
+                                title="重新生成"
+                                type="button"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="23 4 23 10 17 10" />
+                                  <polyline points="1 20 1 14 7 14" />
+                                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                </svg>
+                              </button>
+                              <button
                                 aria-label="复制消息内容"
                                 className="lm-chat-action-btn"
                                 onClick={() => {
@@ -931,17 +950,69 @@ function SidePanel() {
                       }
                       const msg = item as OpenAiChatMessage
                       const msgIndex = visibleMessages.indexOf(msg)
+                      const isEditingThis = msg.role === "user" && editingIndex === msgIndex
                       return (
                         <div
                           key={`${activeThreadId}-${gIdx}-${msg.role}`}
                           className={`lm-chat-row-wrapper lm-chat-row-wrapper--${msg.role === "user" ? "user" : "assistant"}`}
                         >
-                          <ChatMessageBlock
-                            message={msg}
-                            allMessages={visibleMessages}
-                            index={msgIndex}
-                          />
+                          {isEditingThis ? (
+                            <div className="lm-chat-row lm-chat-row--user" style={{ width: "100%" }}>
+                              <div className="lm-chat-bubble lm-chat-bubble--user lm-edit-bubble">
+                                <textarea
+                                  className="lm-edit-textarea"
+                                  value={editingText}
+                                  onChange={(e) => setEditingText(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                      e.preventDefault()
+                                      const trimmed = editingText.trim()
+                                      if (!trimmed) return
+                                      if (sendInFlightMapRef.current[activeThreadId]) return
+                                      // Delete this user message + everything after
+                                      const newHistory = messages.slice(0, msgIndex)
+                                      saveThreadMessages(activeThreadId, newHistory).catch(() => {})
+                                      doSend(newHistory, trimmed)
+                                    }
+                                    if (e.key === "Escape") {
+                                      setEditingIndex(-1)
+                                      setEditingText("")
+                                    }
+                                  }}
+                                  autoFocus
+                                  rows={3}
+                                />
+                                <div className="lm-edit-hint">
+                                  Enter 发送 · Shift+Enter 换行 · Esc 取消
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <ChatMessageBlock
+                              message={msg}
+                              allMessages={visibleMessages}
+                              index={msgIndex}
+                            />
+                          )}
                           <div className="lm-chat-actions">
+                            {msg.role === "user" && !isEditingThis ? (
+                              <button
+                                aria-label="编辑消息"
+                                className="lm-chat-action-btn"
+                                disabled={sendInFlightMapRef.current[activeThreadId]}
+                                onClick={() => {
+                                  setEditingIndex(msgIndex)
+                                  setEditingText(formatMessagePreview(msg))
+                                }}
+                                title="编辑"
+                                type="button"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                              </button>
+                            ) : null}
                             <button
                               aria-label="复制消息内容"
                               className="lm-chat-action-btn"
