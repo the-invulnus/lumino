@@ -466,6 +466,72 @@ const BASE_TOOLS: OpenAiToolDefinition[] = [
         additionalProperties: false
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "scroll",
+      description: "滚动当前页面。支持四种模式：to=\"top\"｜\"bottom\"（滚到两端）、percent=0-100（按百分比滚动）、by={x,y}（像素增量滚动）、selector（滚动到指定元素可见）。返回滚动后的 scrollY/scrollX 及页面高度信息。",
+      parameters: {
+        type: "object",
+        properties: {
+          tab_id: {
+            type: "number",
+            description: "目标标签页的 ID。不传则使用当前活跃标签页。"
+          },
+          to: {
+            type: "string",
+            description: "滚动目标位置：top（顶部）或 bottom（底部）",
+            enum: ["top", "bottom"]
+          },
+          by: {
+            type: "object",
+            description: "像素增量滚动，如 {x: 0, y: 500} 向下滚 500px",
+            properties: {
+              x: { type: "number", description: "水平滚动像素" },
+              y: { type: "number", description: "垂直滚动像素" }
+            },
+            required: ["x", "y"],
+            additionalProperties: false
+          },
+          percent: {
+            type: "number",
+            description: "按百分比滚动，0-100。0 即顶部，100 即底部。"
+          },
+          selector: {
+            type: "string",
+            description: "CSS 选择器，滚动到该元素可见。与 to/by/percent 互斥，优先 selector。"
+          }
+        },
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "press_key",
+      description: "模拟键盘按键。支持单键（Enter、Escape、Tab、ArrowDown、Backspace 等）和组合键（Ctrl+a、Shift+Enter、Cmd+s 等）。可通过 selector 参数指定目标元素，不传则派发到当前焦点元素。触发 keydown/keypress/keyup 完整按键序列。",
+      parameters: {
+        type: "object",
+        properties: {
+          tab_id: {
+            type: "number",
+            description: "目标标签页的 ID。不传则使用当前活跃标签页。"
+          },
+          key: {
+            type: "string",
+            description: "按键名称。单键如 Enter、Escape、Tab、ArrowDown、ArrowUp、Backspace、Delete、Space、a 等；组合键如 Ctrl+a、Shift+Enter、Cmd+s（Mac）或 Meta+s"
+          },
+          selector: {
+            type: "string",
+            description: "CSS 选择器。指定后按键事件将派发到该元素；不传则派发到当前焦点元素。"
+          }
+        },
+        required: ["key"],
+        additionalProperties: false
+      }
+    }
   }
 ];
 

@@ -717,3 +717,203 @@ export async function handleNavigate(
     })
   }
 }
+
+// ── scroll ──
+// 滚动页面到指定位置
+
+export async function handleScroll(
+  args: Record<string, unknown>
+): Promise<string> {
+  let tabId: number
+  try {
+    tabId = await resolveTabId(args)
+  } catch {
+    return JSON.stringify({ error: "no_tab_id" })
+  }
+
+  try {
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (opts: { to?: string; by?: { x: number; y: number }; percent?: number; selector?: string }) => {
+        const scrollToPos = (top: number, left: number) => {
+          window.scrollTo({ top, left, behavior: "instant" as ScrollBehavior })
+        }
+
+        if (opts.selector) {
+          const el = document.querySelector(opts.selector)
+          if (!el) {
+            return JSON.stringify({ error: "selector_not_found", selector: opts.selector })
+          }
+          el.scrollIntoView({ behavior: "instant", block: "start" })
+          const rect = el.getBoundingClientRect()
+          return JSON.stringify({
+            scrolled: true,
+            method: "selector",
+            selector: opts.selector,
+            scroll_y: Math.round(window.scrollY),
+            scroll_x: Math.round(window.scrollX)
+          })
+        }
+
+        if (opts.to === "top") {
+          scrollToPos(0, 0)
+        } else if (opts.to === "bottom") {
+          scrollToPos(document.documentElement.scrollHeight, 0)
+        } else if (typeof opts.percent === "number") {
+          const pct = Math.max(0, Math.min(100, opts.percent))
+          const maxY = document.documentElement.scrollHeight - window.innerHeight
+          scrollToPos(Math.round((pct / 100) * maxY), 0)
+        } else if (opts.by && (opts.by.x !== 0 || opts.by.y !== 0)) {
+          window.scrollBy({ left: opts.by.x ?? 0, top: opts.by.y ?? 0, behavior: "instant" as ScrollBehavior })
+        } else {
+          return JSON.stringify({ error: "no_scroll_target", hint: "需要指定 to、by、percent 或 selector 之一" })
+        }
+
+        return JSON.stringify({
+          scrolled: true,
+          method: opts.to ? ("to_" + opts.to) : (typeof opts.percent === "number" ? "percent" : "by"),
+          scroll_y: Math.round(window.scrollY),
+          scroll_x: Math.round(window.scrollX),
+          page_height: document.documentElement.scrollHeight,
+          viewport_height: window.innerHeight
+        })
+      },
+      args: [{
+        to: args.to as string | undefined,
+        by: args.by as { x: number; y: number } | undefined,
+        percent: args.percent as number | undefined,
+        selector: args.selector as string | undefined
+      }]
+    })
+
+    if (!result || !result.result) {
+      return JSON.stringify({ error: "execute_script_failed" })
+    }
+
+    return typeof result.result === "string" ? result.result : JSON.stringify(result.result)
+  } catch (error) {
+    return JSON.stringify({
+      error: "scroll_failed",
+      message: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+// ── press_key ──
+// 模拟键盘按键
+
+export async function handlePressKey(
+  args: Record<string, unknown>
+): Promise<string> {
+  const key = args.key as string | undefined
+  if (!key) {
+    return JSON.stringify({ error: "no_key", message: "请提供按键名称，如 Enter、Escape、Tab、ArrowDown、a、Control+a 等" })
+  }
+
+  let tabId: number
+  try {
+    tabId = await resolveTabId(args)
+  } catch {
+    return JSON.stringify({ error: "no_tab_id" })
+  }
+
+  // 解析组合键，如 "Control+a"、"Shift+Enter"
+  const parts = key.split("+")
+  const mainKey = parts.pop()!
+
+  // 修饰键映射
+  const modifierMap: Record<string, string> = {
+    "Control": "ctrlKey",
+    "Ctrl": "ctrlKey",
+    "Shift": "shiftKey",
+    "Alt": "altKey",
+    "Meta": "metaKey",
+    "Cmd": "metaKey"
+  }
+
+  try {
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (opts: { key: string; modifiers: string[]; selector?: string }) => {
+        const modMap: Record<string, string> = {
+          "Control": "ctrlKey", "Ctrl": "ctrlKey",
+          "Shift": "shiftKey",
+          "Alt": "altKey",
+          "Meta": "metaKey", "Cmd": "metaKey"
+        }
+
+        const init: KeyboardEventInit = {
+          key: opts.key,
+          code: "Key" + opts.key.toUpperCase(),
+          bubbles: true,
+          cancelable: true
+        }
+
+        for (const mod of opts.modifiers) {
+          const prop = modMap[mod]
+          if (prop) (init as Record<string, unknown>)[prop] = true
+        }
+
+        // 特殊 code 映射
+        const codeMap: Record<string, string> = {
+          "Enter": "Enter",
+          "Escape": "Escape",
+          "Tab": "Tab",
+          "Backspace": "Backspace",
+          "Delete": "Delete",
+          "ArrowUp": "ArrowUp",
+          "ArrowDown": "ArrowDown",
+          "ArrowLeft": "ArrowLeft",
+          "ArrowRight": "ArrowRight",
+          "Home": "Home",
+          "End": "End",
+          "PageUp": "PageUp",
+          "PageDown": "PageDown",
+          " ": "Space",
+          "Space": "Space"
+        }
+        init.code = codeMap[opts.key] || ("Key" + opts.key.toUpperCase())
+
+        let target: EventTarget = document
+
+        if (opts.selector) {
+          const el = document.querySelector(opts.selector)
+          if (!el) {
+            return JSON.stringify({ error: "selector_not_found", selector: opts.selector })
+          }
+          target = el
+        } else {
+          // 如果没有指定选择器，尝试将焦点元素作为目标
+          target = document.activeElement || document.body
+        }
+
+        target.dispatchEvent(new KeyboardEvent("keydown", init as KeyboardEventInit))
+        target.dispatchEvent(new KeyboardEvent("keypress", init as KeyboardEventInit))
+        target.dispatchEvent(new KeyboardEvent("keyup", init as KeyboardEventInit))
+
+        return JSON.stringify({
+          pressed: true,
+          key: opts.key,
+          modifiers: opts.modifiers,
+          target: opts.selector || ((document.activeElement?.tagName || "body").toLowerCase())
+        })
+      },
+      args: [{
+        key: mainKey,
+        modifiers: parts,
+        selector: args.selector as string | undefined
+      }]
+    })
+
+    if (!result || !result.result) {
+      return JSON.stringify({ error: "execute_script_failed" })
+    }
+
+    return typeof result.result === "string" ? result.result : JSON.stringify(result.result)
+  } catch (error) {
+    return JSON.stringify({
+      error: "press_key_failed",
+      message: error instanceof Error ? error.message : String(error)
+    })
+  }
+}

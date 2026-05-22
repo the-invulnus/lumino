@@ -28,7 +28,9 @@ import {
   handleFillForm,
   handleClickElement,
   handleScreenshot,
-  handleNavigate
+  handleNavigate,
+  handleScroll,
+  handlePressKey
 } from "./tools/browser-tools"
 
 let baseRegistered = false
@@ -63,6 +65,9 @@ function registerBaseTools(): void {
   registerTool("fill_form", handleFillForm)
   registerTool("click_element", handleClickElement)
   registerTool("screenshot", handleScreenshot)
+
+  registerTool("scroll", handleScroll)
+  registerTool("press_key", handlePressKey)
   registerTool("navigate", handleNavigate)
 }
 
