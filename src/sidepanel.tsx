@@ -2,6 +2,7 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type MouseEvent
@@ -269,13 +270,16 @@ function LumiToolCall({
 function ChatMessageBlock({
   message,
   allMessages,
-  index
+  index,
+  inGroup = false
 }: {
   message: OpenAiChatMessage
   allMessages: OpenAiChatMessage[]
   index: number
+  inGroup?: boolean
 }) {
   if (message.role === "user") {
+    if (inGroup) return <>{formatMessagePreview(message)}</>
     return (
       <div className="lm-chat-row lm-chat-row--user">
         <div className="lm-chat-bubble lm-chat-bubble--user">
@@ -306,29 +310,32 @@ function ChatMessageBlock({
       ? text.split(/\n{2,}/).filter((p) => p.trim().length > 0)
       : []
 
+    const inner = hasTools ? (
+      <div className="lumi-sequence-stack">
+        {toolCalls!.map((call, i) => (
+          <Fragment key={call.id}>
+            {i < paragraphs.length ? (
+              <div className="lm-chat-md">{paragraphs[i]}</div>
+            ) : null}
+            <LumiToolCall
+              call={call}
+              result={toolResults[call.id] ?? null}
+            />
+          </Fragment>
+        ))}
+        {paragraphs.slice(toolCalls!.length).map((part, i) => (
+          <div className="lm-chat-md" key={`md-${i}`}>{part}</div>
+        ))}
+      </div>
+    ) : (
+      <div className="lm-chat-md">{text}</div>
+    )
+
+    if (inGroup) return <>{inner}</>
     return (
       <div className="lm-chat-row lm-chat-row--assistant">
         <div className="lm-chat-bubble lm-chat-bubble--assistant">
-          {hasTools ? (
-            <div className="lumi-sequence-stack">
-              {toolCalls!.map((call, i) => (
-                <Fragment key={call.id}>
-                  {i < paragraphs.length ? (
-                    <div className="lm-chat-md">{paragraphs[i]}</div>
-                  ) : null}
-                  <LumiToolCall
-                    call={call}
-                    result={toolResults[call.id] ?? null}
-                  />
-                </Fragment>
-              ))}
-              {paragraphs.slice(toolCalls!.length).map((part, i) => (
-                <div className="lm-chat-md" key={`md-${i}`}>{part}</div>
-              ))}
-            </div>
-          ) : (
-            <div className="lm-chat-md">{text}</div>
-          )}
+          {inner}
         </div>
       </div>
     )
@@ -360,6 +367,7 @@ function ChatMessageBlock({
       }
     }
 
+    if (inGroup) return null
     return (
       <div className="lm-chat-row lm-chat-row--tool">
         <div className="lm-chat-meta">
@@ -739,6 +747,20 @@ function SidePanel() {
   }, [refreshThreadList])
 
   const visibleMessages = messages.filter((message) => message.role !== "system")
+  const mergedMessages = useMemo(() => {
+    const out: Array<OpenAiChatMessage | OpenAiChatMessage[]> = []
+    let i = 0
+    while (i < visibleMessages.length) {
+      const msg = visibleMessages[i]
+      if (msg.role === "user") { out.push(msg); i++; continue }
+      const group: OpenAiChatMessage[] = []
+      while (i < visibleMessages.length && visibleMessages[i].role !== "user") {
+        group.push(visibleMessages[i]); i++
+      }
+      out.push(group)
+    }
+    return out
+  }, [visibleMessages])
   const isConfigured = hasCompleteLlmSettings(settings)
 
   return (
@@ -836,67 +858,141 @@ function SidePanel() {
                       在下方输入后发送即可。
                     </p>
                   ) : (
-                    visibleMessages.map((message, index) => (
-                      <div
-                        key={`${activeThreadId}-${index}-${message.role}`}
-                        className={`lm-chat-row-wrapper lm-chat-row-wrapper--${message.role === "user" ? "user" : "assistant"}`}
-                      >
-                        <ChatMessageBlock
-                          message={message}
-                          allMessages={visibleMessages}
-                          index={index}
-                        />
-                        <div className="lm-chat-actions">
-                          <button
-                            aria-label="复制消息内容"
-                            className="lm-chat-action-btn"
-                            onClick={() => {
-                              const text = typeof message.content === "string"
-                                ? message.content
-                                : ""
-                              navigator.clipboard.writeText(text).catch(() => {})
-                            }}
-                            title="复制"
-                            type="button"
+                    mergedMessages.map((item, gIdx) => {
+                      if (Array.isArray(item)) {
+                        const group = item as OpenAiChatMessage[]
+                        const groupText = group
+                          .map(m => typeof m.content === 'string' ? m.content : '')
+                          .filter(Boolean)
+                          .join('\n\n')
+                        return (
+                          <div
+                            key={`${activeThreadId}-group-${gIdx}`}
+                            className="lm-chat-row-wrapper lm-chat-row-wrapper--assistant"
                           >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                            </svg>
-                          </button>
-                          <button
-                            aria-label="删除此消息"
-                            className="lm-chat-action-btn"
-                            onClick={() => {
-                              setMessages((prev) => {
-                                const next = [...prev]
-                                const target = next[index]
-                                if (target.role === "assistant" && target.tool_calls) {
-                                  let i = index + 1
-                                  while (i < next.length && next[i].role === "tool") {
-                                    i++
+                            <div className="lm-chat-row lm-chat-row--assistant">
+                              <div className="lm-chat-bubble lm-chat-bubble--assistant">
+                                <div className="lumi-sequence-stack">
+                                  {group.map((msg, si) => (
+                                    <ChatMessageBlock
+                                      key={si}
+                                      message={msg}
+                                      allMessages={visibleMessages}
+                                      index={visibleMessages.indexOf(msg)}
+                                      inGroup
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="lm-chat-actions">
+                              <button
+                                aria-label="复制消息内容"
+                                className="lm-chat-action-btn"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(groupText).catch(() => {})
+                                }}
+                                title="复制"
+                                type="button"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                </svg>
+                              </button>
+                              <button
+                                aria-label="删除此消息"
+                                className="lm-chat-action-btn"
+                                onClick={() => {
+                                  setMessages((prev) => {
+                                    const next = [...prev]
+                                    const delStart = prev.indexOf(group[0])
+                                    const delEnd = prev.indexOf(group[group.length - 1])
+                                    if (delStart >= 0 && delEnd >= delStart) {
+                                      next.splice(delStart, delEnd - delStart + 1)
+                                    }
+                                    saveThreadMessages(activeThreadId, next).catch(() => {})
+                                    return next
+                                  })
+                                }}
+                                title="删除"
+                                type="button"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                  <line x1="10" y1="11" x2="10" y2="17" />
+                                  <line x1="14" y1="11" x2="14" y2="17" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      }
+                      const msg = item as OpenAiChatMessage
+                      const msgIndex = visibleMessages.indexOf(msg)
+                      return (
+                        <div
+                          key={`${activeThreadId}-${gIdx}-${msg.role}`}
+                          className={`lm-chat-row-wrapper lm-chat-row-wrapper--${msg.role === "user" ? "user" : "assistant"}`}
+                        >
+                          <ChatMessageBlock
+                            message={msg}
+                            allMessages={visibleMessages}
+                            index={msgIndex}
+                          />
+                          <div className="lm-chat-actions">
+                            <button
+                              aria-label="复制消息内容"
+                              className="lm-chat-action-btn"
+                              onClick={() => {
+                                const text = typeof msg.content === "string"
+                                  ? msg.content
+                                  : ""
+                                navigator.clipboard.writeText(text).catch(() => {})
+                              }}
+                              title="复制"
+                              type="button"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                              </svg>
+                            </button>
+                            <button
+                              aria-label="删除此消息"
+                              className="lm-chat-action-btn"
+                              onClick={() => {
+                                setMessages((prev) => {
+                                  const next = [...prev]
+                                  const target = next[msgIndex]
+                                  if (target.role === "assistant" && target.tool_calls) {
+                                    let i2 = msgIndex + 1
+                                    while (i2 < next.length && next[i2].role === "tool") {
+                                      i2++
+                                    }
+                                    next.splice(msgIndex, i2 - msgIndex)
+                                  } else {
+                                    next.splice(msgIndex, 1)
                                   }
-                                  next.splice(index, i - index)
-                                } else {
-                                  next.splice(index, 1)
-                                }
-                                saveThreadMessages(activeThreadId, next).catch(() => {})
-                                return next
-                              })
-                            }}
-                            title="删除"
-                            type="button"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                              <line x1="10" y1="11" x2="10" y2="17" />
-                              <line x1="14" y1="11" x2="14" y2="17" />
-                            </svg>
-                          </button>
+                                  saveThreadMessages(activeThreadId, next).catch(() => {})
+                                  return next
+                                })
+                              }}
+                              title="删除"
+                              type="button"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                <line x1="10" y1="11" x2="10" y2="17" />
+                                <line x1="14" y1="11" x2="14" y2="17" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      )
+                    })
                   )}
                   <div ref={scrollAnchorRef} />
                 </div>

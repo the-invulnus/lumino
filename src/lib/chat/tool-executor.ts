@@ -3,6 +3,10 @@ import { maybeEvictToolResult } from "./tool-eviction"
 
 type ToolHandler = (args: Record<string, unknown>) => Promise<string> | string
 
+export function getToolHandler(name: string): ToolHandler | undefined {
+  return toolRegistry.get(name)
+}
+
 const toolRegistry = new Map<string, ToolHandler>()
 
 export function registerTool(name: string, handler: ToolHandler): void {
