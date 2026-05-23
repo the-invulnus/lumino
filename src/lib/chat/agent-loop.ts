@@ -11,7 +11,7 @@ import type { LlmSettings } from "../llm/types"
 import { buildAgentMessages } from "./system-prompt"
 import { getLuminoAgentTools } from "./tool-definitions"
 
-const MAX_AGENT_STEPS = 15
+const MAX_AGENT_STEPS = 100
 const DEBUG_AGENT = true
 function debugLog(...args: unknown[]) {
   if (DEBUG_AGENT) console.log("[lumino:agent]", ...args)
@@ -237,7 +237,18 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMes
       }
     })
     debugLog("← generateText 返回")
-    debugLog(`Agent 结束，耗时 ${Date.now() - startTime}ms，步骤=${result.steps?.length ?? 0}，最终消息数=${accumulatedMessages.length}`)
+
+    const stepCount = result.steps?.length ?? 0
+    // 达到步数上限时追加提示，让用户知道 agent 被截断了
+    if (stepCount >= MAX_AGENT_STEPS && !result.text) {
+      accumulatedMessages.push({
+        role: "assistant",
+        content: `（已达到最大步数 ${MAX_AGENT_STEPS}，agent 终止。可继续补充提问或重新生成。）`
+      })
+      if (onMessagesUpdate) await onMessagesUpdate(accumulatedMessages)
+    }
+
+    debugLog(`Agent 结束，耗时 ${Date.now() - startTime}ms，步骤=${stepCount}，最终消息数=${accumulatedMessages.length}`)
     return accumulatedMessages
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
