@@ -1,0 +1,14 @@
+{
+  "name": "lumino-demo",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "compositions": [
+    {
+      "id": "lumino-demo",
+      "file": "index.html",
+      "start": 0,
+      "duration": 30
+    }
+  ]
+}
