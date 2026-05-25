@@ -108,7 +108,7 @@ function IndexOptions() {
       const fresh = await getCollectionConfig()
       setCollectionConfig(fresh)
       setIgnoredPatternsText(fresh.ignoredUrlPatterns.join("\n"))
-      setStatus("好啦，已经收进小抽屉里了。")
+      setStatus("设置已保存。")
       setTimeout(() => window.close(), 800)
     } catch {
       setStatus("保存失败，请稍后重试。")
@@ -133,7 +133,7 @@ function IndexOptions() {
 
       <div className="lm-bezel-outer">
         <section className="lm-bezel-inner">
-          <p className="lm-eyebrow">Lumino · gentle setup</p>
+          <p className="lm-eyebrow">Lumino · 设置</p>
 
           <header className="lm-header">
             <div className="lm-brand">
@@ -141,10 +141,9 @@ function IndexOptions() {
                 L
               </div>
               <div>
-                <h1 className="lm-title">把门轻轻推开</h1>
+                <h1 className="lm-title">Lumino 配置</h1>
                 <p className="lm-subtitle">
-                  这里是 Lumino
-                  的小书房：连上你喜欢的模型，控制采集开关，其余的情绪与节奏，交给我们。
+                  连接模型、管理数据采集偏好，所有设置会自动保存到浏览器。
                 </p>
               </div>
             </div>
@@ -153,7 +152,7 @@ function IndexOptions() {
 
           {/* === 主题选择 === */}
           <h2 className="lm-section-title">界面主题</h2>
-          <p className="lm-helper">选择你喜欢的视觉风格，切换即时生效。</p>
+          <p className="lm-helper">选择你喜欢的视觉风格，切换后即时生效。</p>
           <div className="lm-toggle-group">
             {(Object.keys(themeLabels) as ThemeName[]).map((t) => (
               <label key={t} className="lm-toggle">
@@ -177,7 +176,7 @@ function IndexOptions() {
 
           <p className="lm-helper">
             Base URL 示例：https://api.openai.com/v1
-            ——填好后，弹窗里的陪伴就会一直跟着你。
+            ——配置完成后，Lumino 将通过此 API 与模型通信。
           </p>
 
           <label className="lm-field">
@@ -215,8 +214,8 @@ function IndexOptions() {
           <h2 className="lm-section-title">Obsidian 集成</h2>
 
           <p className="lm-helper">
-            连接 Obsidian Local REST API 插件后，Agent 可以直接读写你的 vault。
-            需要先在 Obsidian 中安装并启用 Local REST API 插件，然后在下方填入 API Key。
+            连接 Obsidian Local REST API 后，Agent 可以直接读写你的 vault。需要先在
+            Obsidian 中安装并启用 Local REST API 插件，然后在下方填入 API Key。
           </p>
 
           <div className="lm-toggles">
@@ -283,7 +282,7 @@ function IndexOptions() {
           <h2 className="lm-section-title">采集开关</h2>
 
           <p className="lm-helper">
-            控制 Lumino 采集哪些浏览行为数据。关闭项会立即停止采集，已采集数据不受影响。
+            控制 Lumino 采集哪些浏览行为数据。关闭后立即停止采集，已采集的数据不受影响。
           </p>
 
           <div className="lm-toggle-group">
@@ -419,8 +418,7 @@ function IndexOptions() {
             />
             <span className="lm-helper">
               匹配这些正则的页面不会采集（含页面内容/输入框/复制）。内置了
-              chrome://、localhost、内网 IP、银行、政府、医疗、成人等站点规则，
-              可自由删改。
+              chrome://、localhost、内网 IP、银行、政府、医疗、成人等站点规则，可自由修改或删除。
             </span>
           </label>
 
@@ -431,7 +429,7 @@ function IndexOptions() {
               onClick={saveSettings}
               type="button">
               <span className="lm-primary-label">
-                {isSaving ? "正在收好…" : "保存这份默契"}
+                {isSaving ? "正在保存…" : "保存设置"}
               </span>
               <span className="lm-primary-trail">
                 {isSaving ? (

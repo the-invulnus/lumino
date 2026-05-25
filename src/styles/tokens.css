@@ -92,8 +92,8 @@
   --lumi-radius-btn: 9999px;
   --lumi-radius-btn-sm: 999px;
   --lumi-radius-send-btn: 50%;
-  --lumi-radius-bubble: 16px;
-  --lumi-radius-input: 14px;
+  --lumi-radius-bubble: 14px;
+  --lumi-radius-input: 12px;
   --lumi-radius-chip: 8px;
   --lumi-radius-tag: 8px;
   --lumi-radius-badge: 999px;
@@ -103,9 +103,9 @@
   --lumi-radius-code-sm: 4px;
 
   /* — Component shape tokens: shadows — */
-  --lumi-shadow-card: 0 1px 3px rgba(45, 38, 34, 0.04), 0 8px 24px -12px rgba(45, 38, 34, 0.08);
-  --lumi-shadow-soft: 0 14px 32px -20px rgba(45, 38, 34, 0.06);
-  --lumi-shadow-bubble: 0 10px 24px -16px rgba(45, 38, 34, 0.08);
+  --lumi-shadow-card: 0 0.5px 2px rgba(45, 38, 34, 0.03);
+  --lumi-shadow-soft: 0 4px 12px -6px rgba(45, 38, 34, 0.05);
+  --lumi-shadow-bubble: 0 2px 8px -4px rgba(45, 38, 34, 0.06);
 
   /* — Component colors — */
   --lumi-btn-primary-bg: var(--lumi-gradient-accent);
@@ -122,6 +122,22 @@
 
   /* — Easing — */
   --lumi-ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* — Motion — */
+  --lumi-motion-duration-instant: 80ms;
+  --lumi-motion-duration-micro: 150ms;
+  --lumi-motion-duration-short: 250ms;
+  --lumi-motion-duration-medium: 400ms;
+  --lumi-motion-ease-entry: cubic-bezier(0, 0, 0.2, 1);
+  --lumi-motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --lumi-motion-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --lumi-motion-ease-slide: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+
+  /* — Emotion — */
+  --lumi-mood-noise-opacity: 0.025;
+  --lumi-mood-blur-intensity: 56px;
+  --lumi-mood-blob-count: 3;
+  --lumi-mood-blob-opacity: 0.16;
 }
 
 /* Paper theme: dark mode */
@@ -153,7 +169,17 @@
     --lumi-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.14), 0 8px 28px -12px rgba(0, 0, 0, 0.28);
     --lumi-shadow-soft: 0 16px 40px -20px rgba(0, 0, 0, 0.3);
     --lumi-gradient-bezel: linear-gradient(165deg, rgba(48, 42, 38, 0.55), rgba(26, 22, 20, 0.35));
-  }
+
+  /* — Motion — */
+  --lumi-motion-duration-instant: 80ms;
+  --lumi-motion-duration-micro: 150ms;
+  --lumi-motion-duration-short: 250ms;
+  --lumi-motion-duration-medium: 400ms;
+  --lumi-motion-ease-entry: cubic-bezier(0, 0, 0.2, 1);
+  --lumi-motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --lumi-motion-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --lumi-motion-ease-slide: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
 }
 
 /* ===== ORYZO: 暗黑电影感 — 克制、建筑感、无阴影 ===== */
@@ -269,6 +295,22 @@
   --lumi-chat-meta-size: 10px;
 
   --lumi-ease-spring: ease;
+
+  /* — Motion — */
+  --lumi-motion-duration-instant: 80ms;
+  --lumi-motion-duration-micro: 150ms;
+  --lumi-motion-duration-short: 250ms;
+  --lumi-motion-duration-medium: 400ms;
+  --lumi-motion-ease-entry: cubic-bezier(0, 0, 0.2, 1);
+  --lumi-motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --lumi-motion-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --lumi-motion-ease-slide: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+
+  /* — Emotion — */
+  --lumi-mood-noise-opacity: 0.025;
+  --lumi-mood-blur-intensity: 56px;
+  --lumi-mood-blob-count: 3;
+  --lumi-mood-blob-opacity: 0.16;
 }
 
 /* ===== FICTIONAL: 俏皮贴纸风 — 圆润、多彩、硬边投影 ===== */
@@ -384,4 +426,20 @@
   --lumi-chat-meta-size: 12px;
 
   --lumi-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* — Motion — */
+  --lumi-motion-duration-instant: 80ms;
+  --lumi-motion-duration-micro: 150ms;
+  --lumi-motion-duration-short: 250ms;
+  --lumi-motion-duration-medium: 400ms;
+  --lumi-motion-ease-entry: cubic-bezier(0, 0, 0.2, 1);
+  --lumi-motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --lumi-motion-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --lumi-motion-ease-slide: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+
+  /* — Emotion — */
+  --lumi-mood-noise-opacity: 0.025;
+  --lumi-mood-blur-intensity: 56px;
+  --lumi-mood-blob-count: 3;
+  --lumi-mood-blob-opacity: 0.16;
 }

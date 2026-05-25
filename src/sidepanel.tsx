@@ -760,6 +760,8 @@ function SidePanel() {
         <div className="lm-blob lm-blob--a" />
         <div className="lm-blob lm-blob--b" />
         <div className="lm-blob lm-blob--c" />
+        <div className="lm-blob lm-blob--d" />
+        <div className="lm-blob lm-blob--e" />
       </div>
 
       <div className="lm-bezel-outer lm-bezel-outer--side">
@@ -860,6 +862,7 @@ function SidePanel() {
                           <div
                             key={`${activeThreadId}-group-${gIdx}`}
                             className="lm-chat-row-wrapper lm-chat-row-wrapper--assistant"
+                            style={{ "--lumi-msg-index": gIdx } as React.CSSProperties}
                           >
                             <div className="lm-chat-row lm-chat-row--assistant">
                               <div className="lm-chat-bubble lm-chat-bubble--assistant">
@@ -955,6 +958,7 @@ function SidePanel() {
                         <div
                           key={`${activeThreadId}-${gIdx}-${msg.role}`}
                           className={`lm-chat-row-wrapper lm-chat-row-wrapper--${msg.role === "user" ? "user" : "assistant"}`}
+                          style={{ "--lumi-msg-index": gIdx } as React.CSSProperties}
                         >
                           {isEditingThis ? (
                             <div className="lm-chat-row lm-chat-row--user" style={{ width: "100%" }}>
@@ -1088,7 +1092,6 @@ function SidePanel() {
                 )}
 
                 <div className="lm-composer">
-                  <div className="lm-composer-row">
                     <textarea
                       aria-label="对话输入"
                       className="lm-input lm-input--composer"
@@ -1123,7 +1126,6 @@ function SidePanel() {
                         <SendArrowIcon />
                       )}
                     </button>
-                  </div>
 
                   {error ? (
                     <p className="lm-error lm-error--tight" role="alert">

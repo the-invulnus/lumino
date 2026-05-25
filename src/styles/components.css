@@ -10,6 +10,55 @@
 @import "./layout.css";
 
 /* ================================================
+   Global Interaction Transitions
+   ================================================ */
+
+.lm-session-chip,
+.lm-session-chip-main,
+.lm-session-chip-del,
+.lm-session-add,
+.lm-chat-bubble,
+.lm-chat-action-btn,
+.lm-side-nav-btn,
+.lm-composer-send,
+.lm-input,
+.lm-textarea,
+.lm-toggle,
+.lm-primary-button,
+.lm-secondary-button,
+.lmi-tool-call__trigger,
+.lmi-tool-call__detail,
+.lmi-stop-btn,
+.lm-memory-tag,
+.lm-bezel-outer,
+.lm-bezel-inner {
+  transition:
+    background-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+    border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+    color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+    opacity var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+    box-shadow var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+    transform var(--lumi-motion-duration-instant) var(--lumi-motion-ease-bounce);
+}
+
+/* Active/press feedback */
+.lm-composer-send:active:not(:disabled),
+.lm-primary-button:active:not(:disabled),
+.lm-secondary-button:active:not(:disabled),
+.lm-session-add:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* Focus ring animation */
+.lm-input:focus,
+.lm-textarea:focus {
+  transition:
+    border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+    box-shadow var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry);
+}
+
+
+/* ================================================
    Base
    ================================================ */
 
@@ -59,26 +108,30 @@
    ================================================ */
 
 .lm-options .lm-bezel-outer {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  background: var(--lumi-gradient-bezel);
+  background: var(--lumi-surface);
   border: 1px solid var(--lumi-border);
   border-radius: var(--lumi-radius-input);
   box-shadow: var(--lumi-shadow-card);
 }
 
 .lm-options .lm-bezel-inner {
-  background: var(--lumi-surface);
-  border: 1px solid var(--lumi-border);
-  border-radius: var(--lumi-radius-bubble);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
+
 
 /* ================================================
    Sidepanel Header
    ================================================ */
 
-.lm-logo-cat { box-shadow: var(--lumi-shadow-soft); }
+.lm-logo-cat { box-shadow: none; }
+
+.lm-sp-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
 
 .lm-sp-title {
   font-size: var(--lumi-text-md);
@@ -89,10 +142,26 @@
 
 .lm-sp-tagline {
   color: var(--lumi-text-soft);
-  font-size: var(--lumi-text-base);
+  font-size: var(--lumi-text-sm);
   font-weight: var(--lumi-weight-medium);
   letter-spacing: var(--lumi-tracking-wide);
   line-height: var(--lumi-leading-snug);
+}
+
+/* Header logo breathing on page load */
+.lm-logo-cat {
+  animation: lumi-logo-enter 0.6s var(--lumi-motion-ease-bounce) both;
+}
+
+@keyframes lumi-logo-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.8) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
 }
 
 
@@ -169,7 +238,7 @@
 .lm-chat-bubble--assistant {
   background: var(--lumi-surface-solid);
   border: 1px solid var(--lumi-border);
-  box-shadow: var(--lumi-shadow-bubble);
+  box-shadow: none;
 }
 
 .lm-chat-row--assistant .lm-chat-md { line-height: var(--lumi-leading-relaxed); }
@@ -231,54 +300,156 @@
   font-size: var(--lumi-text-sm);
 }
 
+
+/* Message cascade entry — each wrapper gets a staggered slide-in */
+.lm-chat-row-wrapper {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: lumi-message-enter 0.35s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+/* Stagger: each child in a list gets incrementally delayed.
+   The --lumi-msg-index is set inline on each wrapper. */
+.lm-chat-row-wrapper[style*="--lumi-msg-index"] {
+  animation-delay: calc(var(--lumi-msg-index) * 60ms);
+}
+
+@keyframes lumi-message-enter {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Streaming text cursor pulse */
+.lumi-streaming-cursor::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 1px;
+  background: var(--lumi-accent-a);
+  vertical-align: text-bottom;
+  animation: lumi-cursor-pulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes lumi-cursor-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Running indicator breathing */
+.lumi-running-indicator {
+  animation: lumi-breath 2s var(--lumi-motion-ease-entry) infinite;
+}
+
+@keyframes lumi-breath {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* Chewron rotation for tool calls */
+.lumi-tool-call__chevron {
+  transition: transform var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry);
+}
+
+.lumi-tool-call__chevron--open {
+  transform: rotate(90deg);
+}
+
+/* Tool call detail expand */
+.lumi-tool-call__detail {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height var(--lumi-motion-duration-medium) var(--lumi-motion-ease-entry),
+              opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry);
+  opacity: 0;
+}
+
+.lumi-tool-call__detail--open {
+  max-height: 600px;
+  opacity: 1;
+}
+
 /* ================================================
    Composer
    ================================================ */
 
+.lm-composer {
+  padding: 10px 0 0;
+  margin-top: 8px;
+}
+
+/* Textarea itself is the rounded container. Send button overlays inside, bottom-right. */
 .lm-input--composer {
-  border-radius: var(--lumi-radius-btn-sm);
-  font-size: var(--lumi-text-md);
-  line-height: var(--lumi-leading-snug);
-  min-height: 36px;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  background: var(--lumi-surface);
+  border: 1px solid var(--lumi-border);
+  border-radius: var(--lumi-radius-bubble);
+  color: var(--lumi-text);
+  font-family: inherit;
+  font-size: var(--lumi-text-base);
+  line-height: var(--lumi-leading-relaxed);
+  min-height: 44px;
+  max-height: 160px;
   overflow-y: auto;
-  padding: 8px 14px;
+  padding: 12px 48px 12px 16px;
   resize: none;
+  outline: none;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
+  transition: border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              box-shadow var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
 }
 
-.lm-input--composer::-webkit-scrollbar {
-  width: 4px;
+.lm-input--composer:focus {
+  border-color: var(--lumi-accent-b);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
 }
 
-.lm-input--composer::-webkit-scrollbar-track {
-  background: transparent;
+.lm-input--composer::placeholder {
+  color: var(--lumi-text-faint);
 }
 
-.lm-input--composer::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 2px;
-}
+.lm-input--composer::-webkit-scrollbar { width: 4px; }
+.lm-input--composer::-webkit-scrollbar-track { background: transparent; }
+.lm-input--composer::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; }
+.lm-input--composer:hover::-webkit-scrollbar-thumb { background: var(--lumi-border-strong); }
+.lm-input--composer:hover { scrollbar-color: var(--lumi-border-strong) transparent; }
 
-.lm-input--composer:hover::-webkit-scrollbar-thumb {
-  background: var(--lumi-border-strong);
-}
-
-.lm-input--composer:hover {
-  scrollbar-color: var(--lumi-border-strong) transparent;
-}
-
+/* Send button: absolutely placed inside the textarea, always bottom-right */
 .lm-composer-send {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
   background: var(--lumi-send-btn-bg);
   background-size: 140% 140%;
-  border-radius: var(--lumi-radius-btn);
-  box-shadow: var(--lumi-send-btn-shadow);
+  border-radius: 50%;
   color: var(--lumi-send-btn-color);
+  box-shadow: 0 2px 8px -2px rgba(180, 120, 140, 0.3);
+  transition: box-shadow var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              transform var(--lumi-motion-duration-instant) var(--lumi-motion-ease-bounce);
+  z-index: 2;
 }
 
 .lm-composer-send:hover:not(:disabled) {
-  box-shadow: var(--lumi-send-btn-shadow-hover);
+
+  box-shadow: 0 4px 14px -4px rgba(160, 110, 200, 0.35);
+}
+
+.lm-composer-send:active:not(:disabled) {
+  transform: scale(0.92);
 }
 
 .lm-spinner--on-accent {
@@ -362,8 +533,8 @@
 
 .lm-input,
 .lm-textarea {
-  background: var(--lumi-surface-raised);
-  border: 1px solid var(--lumi-border-strong);
+  background: var(--lumi-surface);
+  border: 1px solid var(--lumi-border);
   border-radius: var(--lumi-radius-input);
   color: var(--lumi-text);
   font-size: var(--lumi-text-base);
@@ -378,8 +549,8 @@
 
 .lm-input:focus,
 .lm-textarea:focus {
-  border-color: rgba(167, 139, 250, 0.5);
-  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.12);
+  border-color: rgba(167, 139, 250, 0.4);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.08);
 }
 
 .lm-input::placeholder,
@@ -486,7 +657,14 @@
 
 .lm-error--tight {
   font-size: var(--lumi-text-sm);
-  padding: var(--lumi-space-4) var(--lumi-space-5);
+  padding: var(--lumi-space-3) var(--lumi-space-5);
+  position: absolute;
+  bottom: 100%;
+  left: 4px;
+  right: 4px;
+  margin-bottom: 4px;
+  z-index: 3;
+  pointer-events: none;
 }
 
 .lm-spinner {
@@ -727,13 +905,13 @@
 .lm-side-nav-btn:hover {
   color: var(--lumi-text);
   background: var(--lumi-surface-solid);
-  box-shadow: var(--lumi-shadow-soft);
+  box-shadow: none;
 }
 
 .lm-side-nav-btn--active {
   color: var(--lumi-accent-a);
   background: var(--lumi-surface-solid);
-  box-shadow: var(--lumi-shadow-soft);
+  box-shadow: none;
 }
 
 .lm-side-nav-btn--active:hover {

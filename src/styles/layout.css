@@ -37,7 +37,7 @@ textarea {
   max-width: 100%;
   min-width: 340px;
   overflow: hidden;
-  padding: 10px 12px 12px;
+  padding: 8px 0 10px;
   width: 100%;
 }
 
@@ -55,10 +55,46 @@ textarea {
   z-index: 0;
 }
 
+/* Noise texture overlay */
+.lm-ambient::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+  opacity: var(--lumi-mood-noise-opacity, 0.02);
+  pointer-events: none;
+  z-index: 0;
+}
+
 .lm-blob {
   border-radius: 50%;
   position: absolute;
   will-change: transform;
+}
+
+/* Extra blobs for richer movement */
+.lm-blob--d {
+  animation: lumi-drift-d 30s var(--lumi-ease-spring) infinite alternate;
+  background: radial-gradient(circle, var(--lumi-blob-a) 0%, transparent 65%);
+  filter: blur(var(--lumi-mood-blur-intensity, 56px));
+  opacity: calc(var(--lumi-mood-blob-opacity, 0.16) * 0.5);
+  height: 160px;
+  width: 160px;
+  left: 40%;
+  bottom: 20%;
+}
+
+.lm-blob--e {
+  animation: lumi-drift-e 34s var(--lumi-ease-spring) infinite alternate;
+  background: radial-gradient(circle, var(--lumi-blob-b) 0%, transparent 65%);
+  filter: blur(var(--lumi-mood-blur-intensity, 56px));
+  opacity: calc(var(--lumi-mood-blob-opacity, 0.16) * 0.5);
+  height: 140px;
+  width: 140px;
+  right: 30%;
+  bottom: 50%;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -180,10 +216,11 @@ textarea {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+  padding: 0 10px;
 }
 
 /* — Sidepanel header — */
@@ -336,6 +373,7 @@ textarea {
   left: 8px;
   position: absolute;
   right: 8px;
+  transition: background var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry);
 }
 
 .lm-session-add {
@@ -373,7 +411,7 @@ textarea {
   max-height: none;
   min-height: 120px;
   overflow-x: hidden;
-  padding: 10px 8px;
+  padding: 10px 2px;
 }
 
 .lm-chat-scroll {
@@ -381,8 +419,9 @@ textarea {
   flex: 1;
   flex-direction: column;
   gap: 0;
-  max-height: min(52vh, 420px);
+  max-height: min(58vh, 500px);
   min-height: 160px;
+  scroll-behavior: smooth;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -586,39 +625,16 @@ textarea {
   flex-direction: column;
   flex-shrink: 0;
   gap: 6px;
-}
-
-.lm-composer-row {
-  align-items: flex-end;
-  display: flex;
-  flex-shrink: 0;
-  gap: 8px;
+  /* wrapper for textarea positioning context */
+  position: relative;
 }
 
 .lm-input--composer {
-  flex: 1;
-  min-width: 0;
+  /* textarea IS the container. Send button overlays inside. */
 }
 
 .lm-composer-send {
-  align-items: center;
-  align-self: stretch;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  flex-shrink: 0;
-  justify-content: center;
-  min-height: 36px;
-  width: 36px;
-  transition: box-shadow 420ms var(--lumi-ease-spring), transform 420ms var(--lumi-ease-spring);
-}
-
-.lm-composer-send:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.lm-composer-send:active:not(:disabled) {
-  transform: scale(0.96);
+  /* absolute within .lm-composer (positioning context) */
 }
 
 .lm-composer-send:disabled {
@@ -634,7 +650,7 @@ textarea {
   flex-shrink: 0;
   gap: 8px;
   overflow-y: auto;
-  padding: 12px 4px;
+  padding: 12px 10px 12px 6px;
   scrollbar-width: none;
   width: 40px;
 }
@@ -1219,6 +1235,12 @@ textarea {
 }
 
 /* — Session strip hint — */
+.lm-session-strip {
+  padding: 4px 0 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--lumi-border);
+}
+
 .lm-session-strip-hint {
   flex-shrink: 0;
   padding: 6px 4px;
