@@ -933,3 +933,35 @@ export async function handlePressKey(
     })
   }
 }
+
+// ── close_tab ──
+// 关闭指定标签页
+
+export async function handleCloseTab(
+  args: Record<string, unknown>
+): Promise<string> {
+  const tabId = args.tab_id as number | undefined
+  if (!tabId || tabId <= 0) {
+    return JSON.stringify({ error: "missing_tab_id", message: "关闭标签页需要提供有效的 tab_id" })
+  }
+
+  try {
+    const tab = await chrome.tabs.get(tabId)
+    const title = tab.title ?? ""
+    const url = tab.url ?? ""
+
+    await chrome.tabs.remove(tabId)
+
+    return JSON.stringify({
+      closed: true,
+      tab_id: tabId,
+      title,
+      url
+    })
+  } catch (error) {
+    return JSON.stringify({
+      error: "close_tab_failed",
+      message: error instanceof Error ? error.message : String(error)
+    })
+  }
+}

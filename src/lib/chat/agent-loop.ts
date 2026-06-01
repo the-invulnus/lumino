@@ -166,22 +166,7 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMes
     .join("\n\n")
 
   // 工具列表
-  const luminoTools = await getLuminoAgentTools()
-  const toolNames = [
-    "memory_get", "memory_search",
-    "ls", "read_file", "write_file", "edit_file", "glob", "grep", "rm", "export",
-    "current_page", "tabs", "get_active_tab_id",
-    "get_page_content", "take_selection", "inspect_element",
-    "fill_form", "click_element", "screenshot",
-    "scroll", "press_key", "navigate",
-    "obsidian_list", "obsidian_read", "obsidian_write",
-    "obsidian_append", "obsidian_patch", "obsidian_search", "obsidian_open"
-  ]
-  const tools: ToolSet = {}
-  for (let i = 0; i < luminoTools.length; i++) {
-    const name = toolNames[i]
-    if (name) tools[name] = luminoTools[i] as unknown as ToolSet[string]
-  }
+  const tools = await getLuminoAgentTools() as unknown as ToolSet
 
   // OpenAI provider（强制 Chat API）
   const openai = createOpenAI({

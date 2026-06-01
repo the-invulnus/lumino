@@ -29,6 +29,7 @@ import {
   handleClickElement,
   handleScreenshot,
   handleNavigate,
+  handleCloseTab,
   handleScroll,
   handlePressKey
 } from "./tools/browser-tools"
@@ -69,6 +70,7 @@ function registerBaseTools(): void {
   registerTool("scroll", handleScroll)
   registerTool("press_key", handlePressKey)
   registerTool("navigate", handleNavigate)
+  registerTool("close_tab", handleCloseTab)
 }
 
 export async function registerAllTools(): Promise<void> {

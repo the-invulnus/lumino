@@ -12,7 +12,7 @@ function luminoTool<NAME extends string, SCHEMA extends z.ZodTypeAny>(opts: {
   description: string
   inputSchema: SCHEMA
 }) {
-  return tool({
+  const t = tool({
     description: opts.description,
     inputSchema: opts.inputSchema,
     execute: async (args) => {
@@ -35,6 +35,9 @@ function luminoTool<NAME extends string, SCHEMA extends z.ZodTypeAny>(opts: {
       }
     }
   })
+  // 挂载 luminoName 到返回对象上，方便通过工具实例自身获取名称
+  ;(t as any).luminoName = opts.name
+  return t
 }
 
 // ═══════════════════════════════════════════
@@ -253,6 +256,15 @@ export const navigateTool = luminoTool({
   })
 })
 
+export const closeTabTool = luminoTool({
+  name: "close_tab",
+  description: "关闭指定标签页。必须传入要关闭的标签页 tab_id。",
+  inputSchema: z.z.object({
+    tab_id: z.z.number().int().describe("要关闭的标签页 ID")
+  })
+})
+
+
 // ═══════════════════════════════════════════
 // Obsidian 工具
 // ═══════════════════════════════════════════
@@ -329,7 +341,7 @@ export const BASE_TOOLS = [
   currentPageTool, tabsTool, getActiveTabIdTool,
   getPageContentTool, takeSelectionTool, inspectElementTool,
   fillFormTool, clickElementTool, screenshotTool,
-  scrollTool, pressKeyTool, navigateTool
+  scrollTool, pressKeyTool, navigateTool, closeTabTool
 ]
 
 export const OBSIDIAN_TOOLS = [
@@ -337,10 +349,15 @@ export const OBSIDIAN_TOOLS = [
   obsidianAppendTool, obsidianPatchTool, obsidianSearchTool, obsidianOpenTool
 ]
 
-export async function getLuminoAgentTools() {
+export async function getLuminoAgentTools(): Promise<Record<string, any>> {
   const settings = await getObsidianSettings()
-  if (isObsidianConfigured(settings)) {
-    return [...BASE_TOOLS, ...OBSIDIAN_TOOLS]
+  const allTools = isObsidianConfigured(settings)
+    ? [...BASE_TOOLS, ...OBSIDIAN_TOOLS]
+    : BASE_TOOLS
+  const tools: Record<string, any> = {}
+  for (const t of allTools) {
+    const name = (t as any).luminoName
+    if (name) tools[name] = t
   }
-  return BASE_TOOLS
+  return tools
 }
