@@ -39,6 +39,7 @@ import {
 import "./styles/components.css"
 import { applyTheme, getTheme, type ThemeName } from "./lib/theme"
 import blackCatGif from "data-base64:~black_cat.gif"
+import { marked } from "marked"
 
 registerAllTools().catch(() => { })
 
@@ -73,6 +74,11 @@ function formatMessagePreview(message: OpenAiChatMessage): string {
   }
 
   return ""
+}
+
+function renderMarkdown(text: string): JSX.Element {
+  const html = marked.parse(text, { async: false }) as string
+  return <div className="lm-chat-md" dangerouslySetInnerHTML={{ __html: html }} />
 }
 
 function formatSessionTime(updatedAt: number): string {
@@ -315,7 +321,7 @@ function ChatMessageBlock({
         {toolCalls!.map((call, i) => (
           <Fragment key={call.id}>
             {i < paragraphs.length ? (
-              <div className="lm-chat-md">{paragraphs[i]}</div>
+              renderMarkdown(paragraphs[i])
             ) : null}
             <LumiToolCall
               call={call}
@@ -324,11 +330,11 @@ function ChatMessageBlock({
           </Fragment>
         ))}
         {paragraphs.slice(toolCalls!.length).map((part, i) => (
-          <div className="lm-chat-md" key={`md-${i}`}>{part}</div>
+          <Fragment key={`md-${i}`}>{renderMarkdown(part)}</Fragment>
         ))}
       </div>
     ) : (
-      <div className="lm-chat-md">{text}</div>
+      renderMarkdown(text)
     )
 
     if (inGroup) return <>{inner}</>

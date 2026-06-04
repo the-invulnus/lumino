@@ -650,7 +650,7 @@ export async function handleInspectElement(
           })
         }
       },
-      args: [selector, depth, includeChildren]
+      args: [selector ?? null, depth, includeChildren]
     })
 
     if (!result || !result.result) {
