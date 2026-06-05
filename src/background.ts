@@ -49,6 +49,7 @@ import { registerAllTools } from "./lib/chat/tool-registry"
 import { cleanupEvictedFiles, EVICT_CLEANUP_ALARM } from "./lib/chat/tool-eviction"
 import type { OpenAiChatMessage } from "./lib/chat/openai-messages"
 import { getThread, saveThreadMessages } from "./lib/chat/thread-idb"
+import { setAgentWindowId } from "./lib/chat/tools/agent-window"
 
 export {}
 
@@ -190,7 +191,11 @@ function setupMessageHandlers(): void {
 
     // ---- Side Panel → SW：启动 agent ----
     if (message?.type === START_AGENT_MESSAGE) {
-      const { threadId, historyMessages, userInput } = (message as StartAgentMessage).payload
+      const { threadId, historyMessages, userInput, windowId } = (message as StartAgentMessage).payload
+
+      if (windowId != null) {
+        void setAgentWindowId(windowId)
+      }
 
       // 如果同一个 thread 已在运行，忽略重复请求并确认收到
       if (runningAgents.has(threadId)) {

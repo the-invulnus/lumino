@@ -1,10 +1,16 @@
+import { getAgentWindowId } from "./agent-window"
+
 // ── 工具函数 ──
 
 function getActiveTab(): Promise<chrome.tabs.Tab> {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-      if (!tab) return reject(new Error("no_active_tab"))
-      resolve(tab)
+  return getAgentWindowId().then((agentWid) => {
+    console.log('[lumino:bt] getActiveTab agentWid:', agentWid)
+    const query = agentWid != null
+      ? { active: true, windowId: agentWid }
+      : { active: true, currentWindow: true }
+    return chrome.tabs.query(query).then(([tab]) => {
+      if (!tab) throw new Error("no_active_tab")
+      return tab
     })
   })
 }
@@ -699,10 +705,12 @@ export async function handleNavigate(
 
     if (existingTabId && existingTabId > 0) {
       // 在已有 tab 上导航，复用不新开
+      const agentWindowId = await getAgentWindowId()
       tab = await chrome.tabs.update(existingTabId, { url: normalizedUrl, active: false })
     } else {
       // 新开后台标签页
-      tab = await chrome.tabs.create({ url: normalizedUrl, active: false })
+      const agentWinId = await getAgentWindowId()
+      tab = await chrome.tabs.create({ url: normalizedUrl, active: false, ...(agentWinId != null ? { windowId: agentWinId } : {}) })
     }
 
     return JSON.stringify({

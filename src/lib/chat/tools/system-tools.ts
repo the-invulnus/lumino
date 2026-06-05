@@ -1,8 +1,19 @@
+import { getAgentWindowId } from "./agent-window"
+
+async function queryAgentWindow(queryBase: chrome.tabs.QueryInfo): Promise<chrome.tabs.Tab[]> {
+  const agentWid = await getAgentWindowId()
+  if (agentWid != null) {
+    return chrome.tabs.query({ ...queryBase, windowId: agentWid })
+  }
+  return chrome.tabs.query(queryBase)
+}
+
+
 export async function handleCurrentPage(
   _args: Record<string, unknown>
 ): Promise<string> {
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+    const [tab] = await queryAgentWindow({ active: true, currentWindow: true })
 
     if (!tab) {
       return JSON.stringify({ error: "no_active_tab", message: "无法获取当前标签页信息。" })
@@ -51,7 +62,7 @@ export async function handleGetActiveTabId(
   _args: Record<string, unknown>
 ): Promise<string> {
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+    const [tab] = await queryAgentWindow({ active: true, currentWindow: true })
     if (!tab) {
       return JSON.stringify({ error: "no_active_tab" })
     }

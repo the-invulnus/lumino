@@ -78,7 +78,23 @@ function formatMessagePreview(message: OpenAiChatMessage): string {
 
 function renderMarkdown(text: string): JSX.Element {
   const html = marked.parse(text, { async: false }) as string
-  return <div className="lm-chat-md" dangerouslySetInnerHTML={{ __html: html }} />
+  return (
+    <div
+      className="lm-chat-md"
+      dangerouslySetInnerHTML={{ __html: html }}
+      onClick={(e) => {
+        const target = e.target as HTMLElement
+        const anchor = target.closest("a")
+        if (anchor) {
+          e.preventDefault()
+          const href = anchor.getAttribute("href")
+          if (href) {
+            chrome.tabs.create({ url: href }).catch(() => {})
+          }
+        }
+      }}
+    />
+  )
 }
 
 function formatSessionTime(updatedAt: number): string {
@@ -652,9 +668,10 @@ function SidePanel() {
     // 立即持久化用户消息，确保输入不丢失
     saveThreadMessages(threadId, baseMessages).catch(() => {})
 
+    const win = await chrome.windows.getCurrent()
     const startPayload = {
       type: START_AGENT_MESSAGE,
-      payload: { threadId, historyMessages, userInput }
+      payload: { threadId, historyMessages, userInput, windowId: win.id }
     } as StartAgentMessage
 
     async function sendStartWithRetry(): Promise<void> {

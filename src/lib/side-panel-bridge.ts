@@ -14,6 +14,8 @@ export type StartAgentMessage = {
     threadId: string
     historyMessages: unknown[] // OpenAiChatMessage[]
     userInput: string
+    /** Side Panel 所在窗口的 ID，agent 所有浏览器操作锚定到此窗口 */
+    windowId?: number
   }
 }
 
