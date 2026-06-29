@@ -1,5 +1,4 @@
-import { writeWorkspaceFile } from "../fs/workspace"
-import { listWorkspaceDir } from "../fs/workspace"
+import { writeWorkspaceFile, listWorkspaceDir, deleteWorkspaceFile } from "../fs/workspace"
 
 /** 不需要驱逐的工具列表（这些工具的结果对 Agent 上下文至关重要） */
 export const TOOLS_EXCLUDED_FROM_EVICTION = new Set([
@@ -130,7 +129,6 @@ export async function cleanupEvictedFiles(): Promise<number> {
       const ts = extractTimestamp(entry.name)
       if (ts === null || ts < cutoff) {
         // 无法解析时间戳的文件也一并清理（可能是旧格式）
-        const { deleteWorkspaceFile } = await import("../fs/workspace")
         try {
           await deleteWorkspaceFile(`${EVICT_DIR}/${entry.name}`)
           deletedCount++

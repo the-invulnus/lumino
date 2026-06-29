@@ -47,7 +47,7 @@ export const SEMI_STATIC_SYSTEM_PROMPT = `## 记忆管理
   - 支持完整 URL（https://github.com）或省略协议的域名（github.com）
 - 打开页面后等待几秒让页面加载，再用 get_page_content/inspect_element 等工具操作
 - 使用 close_tab 关闭不再需要的标签页，保持浏览器整洁
-  - 必须传入 tab_id 指定要关闭的标签页
+  - 传入 tab_ids 列表，可一次性关闭多个标签页
   - navigate 打开的页面用完后应及时关闭
 
 ### 页面内容与交互

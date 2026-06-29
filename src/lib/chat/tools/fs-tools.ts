@@ -3,7 +3,9 @@ import {
   listWorkspaceDir,
   readWorkspaceFile,
   writeWorkspaceFile,
-  deleteWorkspaceFile
+  deleteWorkspaceFile,
+  exportWorkspaceFile,
+  exportWorkspaceDir
 } from "../../fs/workspace"
 
 async function resolvePath(
@@ -407,15 +409,13 @@ export async function handleRm(
 export async function handleExport(
   args: Record<string, unknown>
 ): Promise<string> {
-  const path = (args.path as string) || ""
-
-  const { exportWorkspaceFile, exportWorkspaceDir } = await import("../../fs/workspace")
+  const filePath = (args.file_path as string) || ""
 
   let result: { blob: Blob; filename: string } | null = null
 
-  if (path) {
-    const root = await (await import("../../fs/workspace")).getWorkspaceHandle()
-    const parts = path.replace(/^\/+/, "").split("/").filter(Boolean)
+  if (filePath) {
+    const root = await getWorkspaceHandle()
+    const parts = filePath.replace(/^\/+/, "").split("/").filter(Boolean)
     let current: FileSystemDirectoryHandle | FileSystemFileHandle = root
     let isDir = false
 
@@ -433,14 +433,14 @@ export async function handleExport(
           current = await (current as FileSystemDirectoryHandle).getDirectoryHandle(parts[i])
         }
       } catch {
-        return JSON.stringify({ error: "not_found", message: `路径不存在：${path}` })
+        return JSON.stringify({ error: "not_found", message: `路径不存在：${filePath}` })
       }
     }
 
     if (isDir || current.kind === "directory") {
-      result = await exportWorkspaceDir(path)
+      result = await exportWorkspaceDir(filePath)
     } else {
-      result = await exportWorkspaceFile(path)
+      result = await exportWorkspaceFile(filePath)
     }
   } else {
     result = await exportWorkspaceDir()
@@ -451,11 +451,18 @@ export async function handleExport(
   }
 
   try {
-    const url = URL.createObjectURL(result.blob)
+    // Service Worker 中没有 URL.createObjectURL，通过 FileReader 转 base64 data URL
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => reject(new Error("Failed to read blob"))
+      reader.readAsDataURL(result!.blob)
+    })
+
     const downloadId = await new Promise<number>((resolve, reject) => {
       chrome.downloads.download(
         {
-          url,
+          url: dataUrl,
           filename: result!.filename,
           saveAs: true
         },
@@ -468,8 +475,6 @@ export async function handleExport(
         }
       )
     })
-
-    setTimeout(() => URL.revokeObjectURL(url), 60000)
 
     return JSON.stringify({
       success: true,

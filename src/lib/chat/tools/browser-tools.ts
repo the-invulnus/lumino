@@ -943,33 +943,46 @@ export async function handlePressKey(
 }
 
 // ── close_tab ──
-// 关闭指定标签页
+// 关闭指定标签页，支持一次性关闭多个
 
 export async function handleCloseTab(
   args: Record<string, unknown>
 ): Promise<string> {
-  const tabId = args.tab_id as number | undefined
-  if (!tabId || tabId <= 0) {
-    return JSON.stringify({ error: "missing_tab_id", message: "关闭标签页需要提供有效的 tab_id" })
+  const tabIds = args.tab_ids as number[] | undefined
+  if (!tabIds || !Array.isArray(tabIds) || tabIds.length === 0) {
+    return JSON.stringify({ error: "missing_tab_ids", message: "关闭标签页需要提供有效的 tab_ids 列表" })
   }
 
-  try {
-    const tab = await chrome.tabs.get(tabId)
-    const title = tab.title ?? ""
-    const url = tab.url ?? ""
+  const results: Array<{ tab_id: number; title: string; url: string; closed: boolean; error?: string }> = []
 
-    await chrome.tabs.remove(tabId)
+  for (const tabId of tabIds) {
+    try {
+      const tab = await chrome.tabs.get(tabId)
+      const title = tab.title ?? ""
+      const url = tab.url ?? ""
 
-    return JSON.stringify({
-      closed: true,
-      tab_id: tabId,
-      title,
-      url
-    })
-  } catch (error) {
-    return JSON.stringify({
-      error: "close_tab_failed",
-      message: error instanceof Error ? error.message : String(error)
-    })
+      await chrome.tabs.remove(tabId)
+
+      results.push({
+        tab_id: tabId,
+        title,
+        url,
+        closed: true
+      })
+    } catch (error) {
+      results.push({
+        tab_id: tabId,
+        title: "",
+        url: "",
+        closed: false,
+        error: error instanceof Error ? error.message : String(error)
+      })
+    }
   }
+
+  return JSON.stringify({
+    closed_count: results.filter(r => r.closed).length,
+    failed_count: results.filter(r => !r.closed).length,
+    results
+  })
 }

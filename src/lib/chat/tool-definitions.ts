@@ -258,9 +258,9 @@ export const navigateTool = luminoTool({
 
 export const closeTabTool = luminoTool({
   name: "close_tab",
-  description: "关闭指定标签页。必须传入要关闭的标签页 tab_id。",
+  description: "关闭指定标签页。传入 tab_ids 列表以支持一次性关闭多个标签页。",
   inputSchema: z.z.object({
-    tab_id: z.z.number().int().describe("要关闭的标签页 ID")
+    tab_ids: z.z.array(z.z.number().int()).describe("要关闭的标签页 ID 列表")
   })
 })
 
