@@ -190,7 +190,7 @@ lumino/
 │   │   │   ├── active-thread-storage.ts    # 当前活跃会话（chrome.storage.local）
 │   │   │   ├── agent-loop.ts               # Agent 循环：AI SDK generateText + onStepFinish
 │   │   │   ├── openai-messages.ts          # OpenAI 消息/工具调用类型
-│   │   │   ├── system-prompt.ts            # 系统提示词（静态 + 动态画像/记忆 + Obsidian）
+│   │   │   ├── system-prompt.ts            # 系统提示词组装（静态 + 半静态 + 动态画像/记忆 + Obsidian）
 │   │   │   ├── thread-idb.ts               # IndexedDB 会话 CRUD
 │   │   │   ├── tool-definitions.ts         # AI SDK tool() 定义（luminoTool 包装 + Zod v4 schema）
 │   │   │   ├── tool-executor.ts            # 工具注册表 & 统一执行 & getToolHandler
