@@ -315,14 +315,15 @@ function ChatMessageBlock({
     const text = formatMessagePreview(message)
     const toolCalls = message.tool_calls
 
-    // 收集后续 tool results
+    // 收集后续 tool results（遍历所有后续消息，不因非 tool 消息 break,
+    // 因为 AI SDK 可能在不同 step 中交错传递 toolCalls 和 toolResults）
     const toolResults: Record<string, string> = {}
     for (let j = index + 1; j < allMessages.length; j++) {
       const next = allMessages[j]
       if (next.role === "tool" && next.tool_call_id) {
-        toolResults[next.tool_call_id] = next.content ?? ""
-      } else if (next.role !== "tool") {
-        break
+        if (!(next.tool_call_id in toolResults)) {
+          toolResults[next.tool_call_id] = next.content ?? ""
+        }
       }
     }
 

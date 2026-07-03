@@ -20,8 +20,30 @@ function debugLog(...args: unknown[]) {
 // ═══════════════ OpenAI → AI SDK ModelMessage ═══════════════
 
 function openAiToModelMessages(msgs: OpenAiChatMessage[]): ModelMessage[] {
-  return msgs
-    .filter((m) => m.role !== "system")
+  // 修复历史消息：收集所有已有 tool result 的 ID，过滤掉没有对应结果的 tool_calls
+  // 避免 AI_MissingToolResultsError（可能由之前的 bug 导致）
+  const existingToolResultIds = new Set(
+    msgs.filter((m) => m.role === "tool" && m.tool_call_id).map((m) => m.tool_call_id!)
+  )
+  const repaired = msgs.map((m) => {
+    if (m.role === "assistant" && m.tool_calls && m.tool_calls.length > 0) {
+      const filtered = m.tool_calls.filter((tc) => existingToolResultIds.has(tc.id))
+      if (filtered.length === m.tool_calls.length) return m
+      return { ...m, tool_calls: filtered.length > 0 ? filtered : undefined }
+    }
+    return m
+  })
+
+  return repaired
+    .filter((m) => {
+      if (m.role === "system") return false
+      // 过滤掉修复后既没有内容也没有 tool_calls 的 assistant 消息
+      if (m.role === "assistant" && !m.tool_calls?.length) {
+        const text = typeof m.content === "string" ? m.content.trim() : ""
+        if (!text) return false
+      }
+      return true
+    })
     .map((m): ModelMessage => {
       switch (m.role) {
         case "user":
@@ -103,7 +125,10 @@ function appendStepMessages(
   }
 ): OpenAiChatMessage[] {
   const hasToolCalls = step.toolCalls && step.toolCalls.length > 0
+  const hasToolResults = step.toolResults && step.toolResults.length > 0
 
+  // AI SDK 可能将 tool calls 和 tool results 拆分到不同 step：
+  // Step N 含 toolCalls 无 toolResults；Step N+1 无 toolCalls 含 toolResults
   if (hasToolCalls) {
     current.push({
       role: "assistant",
@@ -114,9 +139,17 @@ function appendStepMessages(
         function: { name: tc.toolName, arguments: JSON.stringify(tc.input) }
       }))
     })
-    for (const tr of step.toolResults ?? []) {
+  }
+
+  if (hasToolResults) {
+    for (const tr of step.toolResults!) {
+      // 跳过已存在的 tool 结果（AI SDK 可能重复传递）
+      const alreadyExists = current.some(
+        (m) => m.role === "tool" && m.tool_call_id === tr.toolCallId
+      )
+      if (alreadyExists) continue
+
       // AI SDK v6 tool output 是 discriminated union: { type: "text"|"json", value: ... }
-      // 提取内层 value 作为 OpenAiChatMessage 的 content
       let toolContent: string
       if (typeof tr.output === "object" && tr.output !== null && "value" in tr.output) {
         const val = (tr.output as { value: unknown }).value
@@ -130,7 +163,9 @@ function appendStepMessages(
         content: toolContent
       })
     }
-  } else if (step.text) {
+  }
+
+  if (!hasToolCalls && !hasToolResults && step.text) {
     current.push({ role: "assistant", content: step.text })
   }
 
