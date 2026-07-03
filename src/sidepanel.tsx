@@ -551,7 +551,7 @@ function SidePanel() {
   }, [])
 
   useEffect(() => {
-    scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+    scrollAnchorRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "end" })
   }, [messages, loadingThreadIds, activeThreadId])
 
   const openOptionsPage = useCallback(async () => {
@@ -631,6 +631,7 @@ function SidePanel() {
       const rows = await listThreads()
 
       if (rows.length === 0) {
+
         const created = await createEmptyThread()
         await setActiveThreadId(created.id)
         setActiveThreadIdState(created.id)
@@ -642,6 +643,7 @@ function SidePanel() {
       setThreads(rows)
 
       if (wasActive) {
+
         const nextId = rows[0].id
         await setActiveThreadId(nextId)
         setActiveThreadIdState(nextId)

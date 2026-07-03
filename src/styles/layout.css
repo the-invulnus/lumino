@@ -421,7 +421,6 @@ textarea {
   gap: 0;
   max-height: min(58vh, 500px);
   min-height: 160px;
-  scroll-behavior: smooth;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
