@@ -20,6 +20,51 @@ export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"]
 }
 
+// ============================================================
+// 健壮的消息发送：自动处理 Service Worker 重启导致 "context invalidated"
+// ============================================================
+
+/**
+ * SW 空闲 30s 后被 Chrome 强制卸载，content script 发消息时会遇到
+ * "Extension context invalidated" 错误。此函数自动重试直到 SW 恢复。
+ */
+let swRestarting = false
+
+async function safeSendMessage(message: unknown): Promise<void> {
+  const maxRetries = 5
+  const baseDelay = 200
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      await chrome.runtime.sendMessage(message)
+      if (swRestarting) {
+        console.log("[Lumino CS] SW 连接恢复")
+        swRestarting = false
+      }
+      return
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (
+        msg.includes("Extension context invalidated") ||
+        msg.includes("Could not establish connection") ||
+        msg.includes("message port closed")
+      ) {
+        if (!swRestarting) {
+          console.warn("[Lumino CS] SW 上下文失效，等待重建...")
+          swRestarting = true
+        }
+        // 指数退避：200ms → 400ms → 800ms → 1600ms → 3200ms
+        await new Promise((r) => setTimeout(r, baseDelay * Math.pow(2, attempt)))
+        continue
+      }
+      // 非上下文失效的异常直接吞掉（原有行为）
+      console.warn("[Lumino CS] 发送失败:", msg)
+      return
+    }
+  }
+  console.warn("[Lumino CS] SW 重试耗尽，消息发送失败")
+}
+
 let pendingPasteSource = false
 let pendingPastedLength = 0
 let lastUrl = ""
@@ -59,9 +104,7 @@ function reportTabOpen(): void {
     payload: { url, title: document.title, hostname }
   }
 
-  chrome.runtime.sendMessage(message).catch((err) =>
-    console.warn("[Lumino CS] tab-open 发送失败:", err)
-  )
+  safeSendMessage(message)
 
   lastUrl = url
 }
@@ -124,12 +167,10 @@ function setupInputListeners(): void {
         pendingPasteSource = false
         pendingPastedLength = 0
 
-        chrome.runtime.sendMessage({
+        safeSendMessage({
           type: INPUT_EVENT_MESSAGE,
           payload
-        } as InputEventMessage).catch((err) =>
-          console.warn("[Lumino CS] input-event 发送失败:", err)
-        )
+        } as InputEventMessage)
 
         console.log("[Lumino CS] input 上报:", source, text.slice(0, 30))
       }, 2000)
@@ -171,12 +212,10 @@ function setupCopyListeners(): void {
 
     const hostname = extractHostname()
 
-    chrome.runtime.sendMessage({
+    safeSendMessage({
       type: COPY_EVENT_MESSAGE,
       payload: { hostname, text }
-    } as CopyEventMessage).catch((err) =>
-      console.warn("[Lumino CS] copy-event 发送失败:", err)
-    )
+    } as CopyEventMessage)
 
     console.log("[Lumino CS] copy 上报:", text.slice(0, 40))
   })
