@@ -5,9 +5,9 @@
   "description": "A Chrome extension built with Plasmo.",
   "author": "",
   "scripts": {
-    "dev": "plasmo dev",
-    "build": "plasmo build",
-    "package": "plasmo package",
+    "dev": "NODE_OPTIONS='--no-deprecation' plasmo dev",
+    "build": "NODE_OPTIONS='--no-deprecation' plasmo build",
+    "package": "NODE_OPTIONS='--no-deprecation' plasmo package",
     "test": "vitest run"
   },
   "dependencies": {

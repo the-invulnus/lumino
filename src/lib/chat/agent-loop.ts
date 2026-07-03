@@ -224,7 +224,7 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMes
     { role: "user", content: userInput }
   ]
 
-  debugLog(`Agent 启动，历史=${historyMessages.length}，工具=${Object.keys(tools).length}，model=${settings.model}`)
+  debugLog(`Agent 启动，历史=${historyMessages.length}，工具=${Object.keys(tools).length}，工具名=${Object.keys(tools).join(",")}，model=${settings.model}`)
 
   try {
     debugLog("→ 调用 generateText...")

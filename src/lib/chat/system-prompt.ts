@@ -168,7 +168,8 @@ export async function buildAgentMessages(
         messages.push({
             role: "system",
             content: `## Obsidian 集成
-- 新建笔记时，默认保存在Lumino/目录下合适的地方
+- 当用户明确提及Obsidian或Vault时，才使用Obsidian相关工具，否则默认在工作区内读写文件
+- 新建Obsidian笔记时，默认保存在Lumino/目录下合适的地方
 `
         })
     }

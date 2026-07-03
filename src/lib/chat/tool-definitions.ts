@@ -13,8 +13,7 @@
 
 import { tool } from "ai"
 import * as z from "zod"
-import { isObsidianConfigured, getObsidianSettings } from "../settings"
-import { getToolHandler } from "./tool-executor"
+import { getObsidianMcpClient } from "./tools/obsidian-mcp"
 
 // ═══════════════════════════════════════════
 // luminoTool — AI SDK tool 包装器
@@ -297,159 +296,11 @@ export const closeTabTool = luminoTool({
 
 
 // ═══════════════════════════════════════════
-// Obsidian MCP 工具（16 个）
+// Obsidian MCP 工具
 //
-// 这些工具的 handler 由 obsidian-mcp 在运行时动态注册到 toolRegistry。
-// schema 定义在这里是因为它们是静态的 Zod schema，
-// 但 execute 必须通过 toolRegistry 查找 handler。
-//
-// getLuminoAgentTools() 只在 Obsidian 已配置 AND handler 实际注册成功
-// 时才返回这些工具，杜绝 schema 和 handler 不一致的问题。
+// 不在这里静态定义——运行时通过 MCP client.listTools() 动态获取
+// 服务端返回的 schema 和 description，由 getLuminoAgentTools() 组装。
 // ═══════════════════════════════════════════
-
-export const vaultListTool = luminoTool({
-  name: "vault_list",
-  description: "列出 Obsidian vault 中的文件和子目录。目录条目以 / 结尾。不传 path 则列出根目录。",
-  inputSchema: z.z.object({
-    path: z.z.string().describe("目录路径，相对于 vault 根目录。可选，默认根目录。").optional()
-  })
-})
-
-export const vaultReadTool = luminoTool({
-  name: "vault_read",
-  description: "读取 Obsidian vault 中笔记的内容和元数据。返回 JSON：content（Markdown 全文）、path、tags、frontmatter（YAML 元数据对象）、stat、links、backlinks。可通过 targetType + target 读取指定片段。",
-  inputSchema: z.z.object({
-    path: z.z.string().describe("笔记文件路径，相对于 vault 根目录"),
-    targetType: z.z.enum(["heading", "block", "frontmatter"]).optional().describe("按片段读取时的目标类型"),
-    target: z.z.string().optional().describe("片段目标：标题文本、块 ID（不含^）或 frontmatter 字段名。嵌套标题用 '::' 分隔"),
-    targetDelimiter: z.z.string().optional().describe("嵌套标题路径分隔符，默认 '::'")
-  })
-})
-
-export const vaultWriteTool = luminoTool({
-  name: "vault_write",
-  description: "创建新笔记或覆写已有笔记。自动创建缺失的父目录。",
-  inputSchema: z.z.object({
-    path: z.z.string().describe("笔记文件路径，如 收集/AI工具推荐.md"),
-    content: z.z.string().describe("Markdown 格式的笔记完整内容")
-  })
-})
-
-export const vaultAppendTool = luminoTool({
-  name: "vault_append",
-  description: "向笔记末尾追加内容。文件不存在时自动创建。",
-  inputSchema: z.z.object({
-    path: z.z.string().describe("笔记文件路径"),
-    content: z.z.string().describe("要追加的 Markdown 内容")
-  })
-})
-
-export const vaultPatchTool = luminoTool({
-  name: "vault_patch",
-  description: "精确定位修改笔记的特定部分。支持 heading/frontmatter/block 的 replace/prepend/append。" +
-    "contentType='application/json' 可设置 frontmatter 类型化值或追加表格行。" +
-    "createTargetIfMissing=true 可在目标不存在时自动创建。" +
-    "搭配 vault_get_document_map 使用，先获取文件结构再精确 patch。",
-  inputSchema: z.z.object({
-    path: z.z.string().describe("笔记文件路径"),
-    targetType: z.z.enum(["heading", "block", "frontmatter"]).describe("目标类型：heading=标题区块，block=块引用，frontmatter=YAML 字段"),
-    target: z.z.string().describe("目标名称。heading 填标题文本；block 填块ID（不含^）；frontmatter 填字段名（如 tags、status）。嵌套标题用 '::' 分隔"),
-    operation: z.z.enum(["replace", "prepend", "append"]).describe("操作：replace=替换，prepend=插入到开头，append=追加到末尾"),
-    content: z.z.unknown().describe("内容。contentType='text/markdown' 时传字符串；contentType='application/json' 时可传原生 JSON 值"),
-    contentType: z.z.string().optional().describe("MIME 类型。'text/markdown'（默认）或 'application/json'。JSON 模式可用于 setting typed frontmatter values"),
-    createTargetIfMissing: z.z.boolean().optional().describe("目标不存在时自动创建（仅 heading 和 frontmatter，默认 false）"),
-    trimTargetWhitespace: z.z.boolean().optional().describe("去除目标内容首尾空白再操作（默认 false）"),
-    rejectIfContentPreexists: z.z.boolean().optional().describe("如果内容已存在则拒绝操作，用于幂等保护（默认 false）"),
-    targetDelimiter: z.z.string().optional().describe("嵌套标题路径分隔符，默认 '::'"),
-    targetScope: z.z.enum(["content", "marker", "markerAndContent"]).optional().describe("操作范围：content=仅内容（默认），marker=仅标题行/块ID，markerAndContent=标题和内容一起")
-  })
-})
-
-export const vaultDeleteTool = luminoTool({
-  name: "vault_delete",
-  description: "从 vault 中删除指定文件。文件不存在时会报错。",
-  inputSchema: z.z.object({
-    path: z.z.string().describe("要删除的文件路径，相对于 vault 根目录")
-  })
-})
-
-export const vaultMoveTool = luminoTool({
-  name: "vault_move",
-  description: "移动（重命名）vault 中的文件。自动创建目标父目录。保留文件历史并更新 Obsidian 内部链接。目标路径以 / 结尾时保留源文件名。",
-  inputSchema: z.z.object({
-    path: z.z.string().describe("源文件路径，相对于 vault 根目录"),
-    destination: z.z.string().describe("目标路径。以 / 结尾时保留源文件名放入该目录"),
-    allowOverwrite: z.z.boolean().optional().describe("允许覆盖已存在的目标文件（默认 false）")
-  })
-})
-
-export const vaultGetDocumentMapTool = luminoTool({
-  name: "vault_get_document_map",
-  description: "获取文件的文档结构映射：headings 列表、block ID 列表、frontmatter 字段名列表。搭配 vault_read 和 vault_patch 使用，先获取结构再精准操作。",
-  inputSchema: z.z.object({
-    path: z.z.string().describe("笔记文件路径，相对于 vault 根目录")
-  })
-})
-
-export const activeFileGetPathTool = luminoTool({
-  name: "active_file_get_path",
-  description: "获取 Obsidian 中当前打开文件的路径。返回的路径可直接用于 vault_read、vault_patch 等操作。无打开文件时出错。",
-  inputSchema: z.z.object({})
-})
-
-export const periodicNoteGetPathTool = luminoTool({
-  name: "periodic_note_get_path",
-  description: "获取当前日期的周期性笔记（日记/周记/月记/季记/年记）路径。需要 Periodic Notes 或 Calendar 插件。不存在时自动创建并应用模板。",
-  inputSchema: z.z.object({
-    period: z.z.enum(["daily", "weekly", "monthly", "quarterly", "yearly"]).describe("周期类型：daily/ weekly/ monthly/ quarterly/ yearly")
-  })
-})
-
-export const searchQueryTool = luminoTool({
-  name: "search_query",
-  description: "使用 JsonLogic 查询高级搜索 vault 中的笔记。支持正则、glob 匹配等。查询对象包含 path、content、tags、frontmatter、stat、links、backlinks 字段。",
-  inputSchema: z.z.object({
-    query: z.z.record(z.z.unknown()).describe("JsonLogic 查询对象。例：{\"in\":[\"tag\",{\"var\":\"tags\"}]} 查找含某标签的笔记")
-  })
-})
-
-export const searchSimpleTool = luminoTool({
-  name: "search_simple",
-  description: "使用 Obsidian 内置简单搜索引擎搜索 vault。返回按相关度排序的匹配文件列表及上下文片段。",
-  inputSchema: z.z.object({
-    query: z.z.string().describe("搜索关键词"),
-    contextLength: z.z.number().optional().describe("每个匹配结果的上下文字符数，默认 100")
-  })
-})
-
-export const tagListTool = luminoTool({
-  name: "tag_list",
-  description: "获取 vault 中所有标签及其使用次数。标签名不含 # 前缀。要对文件添加/移除标签，使用 vault_patch 操作 frontmatter。",
-  inputSchema: z.z.object({})
-})
-
-export const commandListTool = luminoTool({
-  name: "command_list",
-  description: "获取 Obsidian 所有注册命令的列表（id 和名称）。配合 command_execute 使用。",
-  inputSchema: z.z.object({})
-})
-
-export const commandExecuteTool = luminoTool({
-  name: "command_execute",
-  description: "通过 ID 执行 Obsidian 命令。先用 command_list 获取可用命令列表。",
-  inputSchema: z.z.object({
-    commandId: z.z.string().describe("命令 ID，如 'editor:toggle-bold'")
-  })
-})
-
-export const openFileTool = luminoTool({
-  name: "open_file",
-  description: "在 Obsidian UI 中打开指定文件。文件不存在时会自动创建。",
-  inputSchema: z.z.object({
-    path: z.z.string().describe("笔记文件路径"),
-    newLeaf: z.z.boolean().optional().describe("在新窗格中打开（默认 false，在当前窗格打开）")
-  })
-})
 
 // ═══════════════════════════════════════════
 // 工具列表
@@ -464,24 +315,51 @@ export const BASE_TOOLS = [
   scrollTool, pressKeyTool, navigateTool, closeTabTool
 ]
 
-export const OBSIDIAN_TOOLS = [
-  vaultListTool, vaultReadTool, vaultWriteTool,
-  vaultAppendTool, vaultPatchTool, vaultDeleteTool, vaultMoveTool,
-  vaultGetDocumentMapTool, activeFileGetPathTool, periodicNoteGetPathTool,
-  searchQueryTool, searchSimpleTool, tagListTool,
-  commandListTool, commandExecuteTool, openFileTool
-]
+function jsonSchemaToZod(schema: Record<string, unknown>): z.ZodTypeAny {
+  if (!schema || typeof schema !== "object") return z.z.any()
+
+  const s = schema as Record<string, unknown>
+  const type = s.type as string
+
+  if (type === "object") {
+    const props = (s.properties || {}) as Record<string, Record<string, unknown>>
+    const required = (s.required || []) as string[]
+    const shape: Record<string, z.ZodTypeAny> = {}
+    for (const [key, propSchema] of Object.entries(props)) {
+      let field = jsonSchemaToZod(propSchema)
+      if (propSchema.description) {
+        field = field.describe(propSchema.description as string)
+      }
+      if (!required.includes(key)) {
+        field = field.optional()
+      }
+      shape[key] = field
+    }
+    return z.z.object(shape)
+  }
+
+  if (type === "string") {
+    if (s.enum) return z.z.enum(s.enum as [string, ...string[]])
+    return z.z.string()
+  }
+
+  if (type === "number" || type === "integer") return z.z.number()
+  if (type === "boolean") return z.z.boolean()
+  if (type === "array") {
+    const items = s.items as Record<string, unknown> | undefined
+    return z.z.array(items ? jsonSchemaToZod(items) : z.z.any())
+  }
+
+  return z.z.any()
+}
 
 /**
  * 获取当前可用的 AI SDK 工具集。
  *
- * Obsidian 工具的条件：只有 settings 中 enabled=true 且 handler 已成功
- * 注册到 toolRegistry 时才暴露。避免 LLM 看到工具但调用时报 unknown_tool。
+ * Obsidian 工具从 MCP client.listTools() 动态获取 schema 和 description，
+ * 不再是静态定义。只有 MCP 已连接且 handler 已注册时才暴露。
  */
 export async function getLuminoAgentTools(): Promise<Record<string, any>> {
-  const settings = await getObsidianSettings()
-  const configured = isObsidianConfigured(settings)
-
   const tools: Record<string, any> = {}
 
   // 基础工具始终可用
@@ -490,15 +368,37 @@ export async function getLuminoAgentTools(): Promise<Record<string, any>> {
     if (name) tools[name] = t
   }
 
-  // Obsidian 工具：只暴露已成功注册了 handler 的
-  if (configured) {
-    for (const t of OBSIDIAN_TOOLS) {
-      const name = (t as any).luminoName as string
-      // 检查 handler 是否确实注册了
-      if (name && getToolHandler(name)) {
-        tools[name] = t
+  // Obsidian MCP 工具：从客户端动态获取
+  try {
+    const client = getObsidianMcpClient()
+    if (client?.isConnected) {
+      const serverTools = await client.listTools()
+      console.log(`[lumino:tools] MCP 动态获取到 ${serverTools.length} 个工具:`, serverTools.map(t => t.name))
+      for (const st of serverTools) {
+        try {
+          const zodSchema = jsonSchemaToZod(st.inputSchema as Record<string, unknown>)
+          tools[st.name] = tool({
+            description: st.description || "",
+            inputSchema: zodSchema,
+            execute: async (args) => {
+              try {
+                return await client.callTool(st.name, args as Record<string, unknown>)
+              } catch (error) {
+                return JSON.stringify({
+                  error: "obsidian_mcp_failed",
+                  tool: st.name,
+                  message: error instanceof Error ? error.message : String(error)
+                })
+              }
+            }
+          })
+        } catch (schemaErr) {
+          console.warn(`[lumino:tools] MCP 工具 ${st.name} schema 转换失败:`, schemaErr, st.inputSchema)
+        }
       }
     }
+  } catch (err) {
+    console.warn("[lumino:tools] 获取 Obsidian MCP 工具列表失败:", err)
   }
 
   return tools

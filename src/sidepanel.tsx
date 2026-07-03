@@ -1103,17 +1103,6 @@ function SidePanel() {
                     <span className="lumi-running-dot" />
                     <span className="lumi-running-dot" />
                     <span className="lumi-running-dot" />
-                    <span>运行中…</span>
-                    <button
-                      aria-label="停止生成"
-                      className="lumi-stop-btn"
-                      onClick={handleStop}
-                      type="button">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
                   </div>
                 )}
 
@@ -1121,7 +1110,7 @@ function SidePanel() {
                     <textarea
                       aria-label="对话输入"
                       className="lm-input lm-input--composer"
-                      disabled={loadingThreadIds.has(activeThreadId) || !isReady || isHydrating}
+                      disabled={!isReady || isHydrating}
                       onChange={(event) => {
                         setDraft(event.target.value)
                         // 自动调整高度
@@ -1141,13 +1130,25 @@ function SidePanel() {
                     />
                     <button
                       aria-busy={loadingThreadIds.has(activeThreadId)}
-                      aria-label={loadingThreadIds.has(activeThreadId) ? "正在发送" : "发送"}
-                      className="lm-composer-send"
-                      disabled={!isReady || loadingThreadIds.has(activeThreadId) || isHydrating}
-                      onClick={() => void sendUserMessage()}
+                      aria-label={loadingThreadIds.has(activeThreadId) ? "停止生成" : "发送"}
+                      className={`lm-composer-send${loadingThreadIds.has(activeThreadId) ? " lm-composer-send--stop" : ""}`}
+                      disabled={!isReady || isHydrating}
+                      onClick={() => {
+                        if (loadingThreadIds.has(activeThreadId)) {
+                          handleStop()
+                        } else {
+                          void sendUserMessage()
+                        }
+                      }}
                       type="button">
                       {loadingThreadIds.has(activeThreadId) ? (
-                        <span aria-hidden className="lm-spinner lm-spinner--on-accent" />
+                        <svg
+                          aria-hidden
+                          className="lm-stop-icon"
+                          fill="currentColor"
+                          viewBox="0 0 24 24">
+                          <rect x="6" y="6" width="12" height="12" rx="1.5" />
+                        </svg>
                       ) : (
                         <SendArrowIcon />
                       )}

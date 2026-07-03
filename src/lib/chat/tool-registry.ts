@@ -15,7 +15,7 @@ import {
   createMcpHandler,
   ensureMcpClient,
   resetMcpClient,
-  MCP_OBSIDIAN_TOOL_NAMES
+  getObsidianMcpClient
 } from "./tools/obsidian-mcp"
 import { isObsidianConfigured, getObsidianSettings } from "../settings"
 import {
@@ -87,15 +87,18 @@ async function registerObsidianMcpTools(): Promise<void> {
   console.log("[lumino:registry] 尝试连接 Obsidian MCP...")
   try {
     // 确保 MCP 客户端已连接
-    await ensureMcpClient()
+    const client = await ensureMcpClient()
+
+    // 从服务端动态获取工具列表
+    const serverTools = await client.listTools()
 
     // 为每个 MCP 工具创建 handler 并注册
-    for (const toolName of MCP_OBSIDIAN_TOOL_NAMES) {
-      registerTool(toolName, createMcpHandler(toolName))
+    for (const tool of serverTools) {
+      registerTool(tool.name, createMcpHandler(tool.name))
     }
 
     mcpRegistered = true
-    console.log(`[lumino:registry] Obsidian MCP: ${MCP_OBSIDIAN_TOOL_NAMES.length} 个工具注册成功`)
+    console.log(`[lumino:registry] Obsidian MCP: ${serverTools.length} 个工具注册成功`)
   } catch (err) {
     console.warn("[lumino:registry] Obsidian MCP 连接失败，工具未注册:", err)
     mcpRegistered = false

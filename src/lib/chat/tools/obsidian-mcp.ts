@@ -8,26 +8,6 @@
 import { McpClient } from "../mcp/mcp-client"
 import { getObsidianSettings, isObsidianConfigured } from "../../settings"
 
-/** 16 个 Obsidian MCP 工具名 */
-export const MCP_OBSIDIAN_TOOL_NAMES: string[] = [
-  "vault_list",
-  "vault_read",
-  "vault_write",
-  "vault_append",
-  "vault_patch",
-  "vault_delete",
-  "vault_move",
-  "vault_get_document_map",
-  "active_file_get_path",
-  "periodic_note_get_path",
-  "search_query",
-  "search_simple",
-  "tag_list",
-  "command_list",
-  "command_execute",
-  "open_file"
-]
-
 // ── 模块级客户端状态 ──
 
 let mcpClient: McpClient | null = null
@@ -90,15 +70,4 @@ export function createMcpHandler(mcpToolName: string): ToolHandler {
       })
     }
   }
-}
-
-/**
- * 批量创建所有 Obsidian MCP handlers
- */
-export function createAllMcpHandlers(): Record<string, ToolHandler> {
-  const handlers: Record<string, ToolHandler> = {}
-  for (const name of MCP_OBSIDIAN_TOOL_NAMES) {
-    handlers[name] = createMcpHandler(name)
-  }
-  return handlers
 }
