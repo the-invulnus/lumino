@@ -92,94 +92,87 @@ export const SEMI_STATIC_SYSTEM_PROMPT = `## 记忆管理
 `
 
 export async function buildDynamicSystemBlock(): Promise<string> {
-  const profile = await loadUserProfile()
-  const today = new Date().toISOString().slice(0, 10)
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+    const profile = await loadUserProfile()
+    const today = new Date().toISOString().slice(0, 10)
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
 
-  const allMemories = await loadAllDailyMemories()
-  const recentMemories = allMemories
-    .filter((m) => m.date === today || m.date === yesterday)
-    .sort((a, b) => b.createdAt - a.createdAt)
+    const allMemories = await loadAllDailyMemories()
+    const recentMemories = allMemories
+        .filter((m) => m.date === today || m.date === yesterday)
+        .sort((a, b) => b.createdAt - a.createdAt)
 
-  const lines: string[] = []
+    const lines: string[] = []
 
-  lines.push("## 用户画像")
-  if (profile.name) lines.push(`- 名称：${profile.name}`)
-  lines.push(`- 语言：${profile.language === "zh" ? "中文" : "English"}`)
-  if (profile.interests.length > 0) lines.push(`- 关注：${profile.interests.join("、")}`)
-  if (profile.notes) lines.push(`- 备注：${profile.notes}`)
-  if (profile.frequentSites.length > 0) {
-    lines.push(`- 常用站点：${profile.frequentSites.slice(0, 5).join(", ")}`)
-  }
-
-  lines.push("\n## 近期记忆摘要")
-  if (recentMemories.length > 0) {
-    for (const m of recentMemories.slice(0, 5)) {
-      lines.push(`- [${m.date}] ${m.summary.slice(0, 200)}`)
+    lines.push("## 用户画像")
+    if (profile.name) lines.push(`- 名称：${profile.name}`)
+    lines.push(`- 语言：${profile.language === "zh" ? "中文" : "English"}`)
+    if (profile.interests.length > 0) lines.push(`- 关注：${profile.interests.join("、")}`)
+    if (profile.notes) lines.push(`- 备注：${profile.notes}`)
+    if (profile.frequentSites.length > 0) {
+        lines.push(`- 常用站点：${profile.frequentSites.slice(0, 5).join(", ")}`)
     }
-  } else {
-    lines.push("（暂无近期记忆）")
-  }
 
-  const now = new Date()
-  lines.push(`\n## 当前时间\n${now.toISOString()}（${now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}）`)
+    lines.push("\n## 近期记忆摘要")
+    if (recentMemories.length > 0) {
+        for (const m of recentMemories.slice(0, 5)) {
+            lines.push(`- [${m.date}] ${m.summary.slice(0, 200)}`)
+        }
+    } else {
+        lines.push("（暂无近期记忆）")
+    }
 
-  return lines.join("\n")
+    const now = new Date()
+    lines.push(`\n## 当前时间\n${now.toISOString()}（${now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}）`)
+
+    return lines.join("\n")
 }
 
 export async function buildAgentMessages(
-  historyMessages: Array<{
-    role: "system" | "user" | "assistant" | "tool"
-    content: string | null
-    tool_calls?: unknown[]
-    tool_call_id?: string
-  }>
+    historyMessages: Array<{
+        role: "system" | "user" | "assistant" | "tool"
+        content: string | null
+        tool_calls?: unknown[]
+        tool_call_id?: string
+    }>
 ): Promise<Array<{
-  role: "system" | "user" | "assistant" | "tool"
-  content: string | null
-  tool_calls?: unknown[]
-  tool_call_id?: string
-}>> {
-  const dynamicBlock = await buildDynamicSystemBlock()
-
-  const messages: Array<{
     role: "system" | "user" | "assistant" | "tool"
     content: string | null
     tool_calls?: unknown[]
     tool_call_id?: string
-  }> = [
-    {
-      role: "system",
-      content: STATIC_SYSTEM_PROMPT
-    },
-    {
-      role: "system",
-      content: SEMI_STATIC_SYSTEM_PROMPT
-    },
-    {
-      role: "system",
-      content: dynamicBlock
+}>> {
+    const dynamicBlock = await buildDynamicSystemBlock()
+
+    const messages: Array<{
+        role: "system" | "user" | "assistant" | "tool"
+        content: string | null
+        tool_calls?: unknown[]
+        tool_call_id?: string
+    }> = [
+            {
+                role: "system",
+                content: STATIC_SYSTEM_PROMPT
+            },
+            {
+                role: "system",
+                content: SEMI_STATIC_SYSTEM_PROMPT
+            },
+            {
+                role: "system",
+                content: dynamicBlock
+            }
+        ]
+
+    // 仅在 Obsidian 已配置时注入指引
+    const obsidianSettings = await getObsidianSettings()
+    if (isObsidianConfigured(obsidianSettings)) {
+        messages.push({
+            role: "system",
+            content: `## Obsidian 集成
+- 新建笔记时，默认保存在Lumino/目录下合适的地方
+`
+        })
     }
-  ]
 
-  // 仅在 Obsidian 已配置时注入指引
-  const obsidianSettings = await getObsidianSettings()
-  if (isObsidianConfigured(obsidianSettings)) {
-    messages.push({
-      role: "system",
-      content: `## Obsidian 集成
-- 使用 obsidian_list 浏览 vault 目录结构
-- 使用 obsidian_read 读取笔记内容
-- 使用 obsidian_write 创建或覆写笔记。默认保存在 vault 中的 Lumino/ 目录下，如 Lumino/收集/AI工具推荐.md。用户明确指定路径时以用户为准。
-- 使用 obsidian_append 向笔记末尾追加内容
-- 使用 obsidian_patch 精确定位修改（支持 heading/frontmatter/block 的 append/prepend/replace）
-- 使用 obsidian_search 全文搜索 vault 中的笔记
-- 使用 obsidian_open 在 Obsidian UI 中打开笔记
-- 典型场景：用户说"保存到 Obsidian"→ 内容写入 Lumino/ 目录下的对应笔记
-- 所有 obsidian_* 工具均为静默操作，不会弹窗或打断用户`
-    })
-  }
-
-  messages.push(...historyMessages)
-  return messages
+    messages.push(...historyMessages)
+    return messages
 }

@@ -49,6 +49,7 @@ import { registerAllTools } from "./lib/chat/tool-registry"
 import { cleanupEvictedFiles, EVICT_CLEANUP_ALARM } from "./lib/chat/tool-eviction"
 import type { OpenAiChatMessage } from "./lib/chat/openai-messages"
 import { getThread, saveThreadMessages } from "./lib/chat/thread-idb"
+import { getStorageStats } from "./lib/memory/memory-idb"
 import { setAgentWindowId } from "./lib/chat/tools/agent-window"
 
 export {}
@@ -419,7 +420,6 @@ async function boot(): Promise<void> {
   await runDwellCheck()
 
   try {
-    const { getStorageStats } = await import("./lib/memory/memory-idb")
     const stats = await getStorageStats()
     console.log("[Lumino] IDB 存储统计:", JSON.stringify(stats, null, 2))
   } catch (e) {

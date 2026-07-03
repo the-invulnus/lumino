@@ -117,7 +117,7 @@ const tool = luminoTool({
 | 文件系统 | `ls`, `read_file`, `write_file`, `edit_file`, `glob`, `grep`, `rm`, `export` | `tools/fs-tools.ts` |
 | 浏览器系统 | `current_page`, `tabs`, `get_active_tab_id` | `tools/system-tools.ts` |
 | 浏览器交互 | `get_page_content`, `take_selection`, `inspect_element`, `fill_form`, `click_element`, `screenshot`, `scroll`, `press_key`, `navigate` | `tools/browser-tools.ts` |
-| Obsidian | `obsidian_list`, `obsidian_read`, `obsidian_write`, `obsidian_append`, `obsidian_patch`, `obsidian_search`, `obsidian_open` | `tools/obsidian-tools.ts` |
+| Obsidian (MCP) | `vault_list`, `vault_read`, `vault_write`, `vault_append`, `vault_patch`, `vault_delete`, `vault_move`, `vault_get_document_map`, `active_file_get_path`, `periodic_note_get_path`, `search_query`, `search_simple`, `tag_list`, `command_list`, `command_execute`, `open_file` | `mcp/mcp-client.ts` + `tools/obsidian-mcp.ts` |
 
 ### Side Panel ↔ Service Worker 通信
 
@@ -200,7 +200,7 @@ lumino/
 │   │   │       ├── browser-tools.ts        # 浏览器交互工具
 │   │   │       ├── fs-tools.ts             # 文件系统工具
 │   │   │       ├── memory-tools.ts         # 记忆系统工具
-│   │   │       ├── obsidian-tools.ts       # Obsidian 集成工具
+│   │   │       ├── obsidian-mcp.ts         # Obsidian MCP 工具
 │   │   │       ├── system-tools.ts         # 浏览器系统工具
 │   │   │       └── browser-tools.test.ts
 │   │   ├── llm/

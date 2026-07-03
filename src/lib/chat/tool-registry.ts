@@ -12,14 +12,11 @@ import {
 } from "./tools/fs-tools"
 import { handleCurrentPage, handleTabs, handleGetActiveTabId } from "./tools/system-tools"
 import {
-  handleObsidianList,
-  handleObsidianRead,
-  handleObsidianWrite,
-  handleObsidianAppend,
-  handleObsidianPatch,
-  handleObsidianSearch,
-  handleObsidianOpen
-} from "./tools/obsidian-tools"
+  createMcpHandler,
+  ensureMcpClient,
+  resetMcpClient,
+  MCP_OBSIDIAN_TOOL_NAMES
+} from "./tools/obsidian-mcp"
 import { isObsidianConfigured, getObsidianSettings } from "../settings"
 import {
   handleGetPageContent,
@@ -35,10 +32,12 @@ import {
 } from "./tools/browser-tools"
 
 let baseRegistered = false
+let mcpRegistered = false
 
 function registerBaseTools(): void {
   if (baseRegistered) return
   baseRegistered = true
+  console.log("[lumino:registry] 注册基础工具...")
 
   // 记忆系统工具
   registerTool("memory_get", handleMemoryGet)
@@ -73,18 +72,45 @@ function registerBaseTools(): void {
   registerTool("close_tab", handleCloseTab)
 }
 
+async function registerObsidianMcpTools(): Promise<void> {
+  if (mcpRegistered) {
+    console.log("[lumino:registry] Obsidian MCP 工具已注册，跳过")
+    return
+  }
+
+  const settings = await getObsidianSettings()
+  if (!isObsidianConfigured(settings)) {
+    console.log("[lumino:registry] Obsidian 未配置，跳过 MCP 工具")
+    return
+  }
+
+  console.log("[lumino:registry] 尝试连接 Obsidian MCP...")
+  try {
+    // 确保 MCP 客户端已连接
+    await ensureMcpClient()
+
+    // 为每个 MCP 工具创建 handler 并注册
+    for (const toolName of MCP_OBSIDIAN_TOOL_NAMES) {
+      registerTool(toolName, createMcpHandler(toolName))
+    }
+
+    mcpRegistered = true
+    console.log(`[lumino:registry] Obsidian MCP: ${MCP_OBSIDIAN_TOOL_NAMES.length} 个工具注册成功`)
+  } catch (err) {
+    console.warn("[lumino:registry] Obsidian MCP 连接失败，工具未注册:", err)
+    mcpRegistered = false
+    await resetMcpClient()
+  }
+}
+
 export async function registerAllTools(): Promise<void> {
   registerBaseTools()
+  await registerObsidianMcpTools()
+}
 
-  // Obsidian 集成工具每次执行时都检查配置状态，避免竞态导致漏注册
-  const obsidianSettings = await getObsidianSettings()
-  if (isObsidianConfigured(obsidianSettings)) {
-    registerTool("obsidian_list", handleObsidianList)
-    registerTool("obsidian_read", handleObsidianRead)
-    registerTool("obsidian_write", handleObsidianWrite)
-    registerTool("obsidian_append", handleObsidianAppend)
-    registerTool("obsidian_patch", handleObsidianPatch)
-    registerTool("obsidian_search", handleObsidianSearch)
-    registerTool("obsidian_open", handleObsidianOpen)
-  }
+/** settings 变更时调用：重置 MCP 状态，下次自动重连 */
+export async function reinitObsidianMcp(): Promise<void> {
+  await resetMcpClient()
+  mcpRegistered = false
+  await registerObsidianMcpTools()
 }
