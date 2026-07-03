@@ -1,5 +1,7 @@
 # Lumino 架构文档
 
+这个文档描述了当前工作目录下的Lumino项目架构。随着功能的新增或架构的升级，同步修改此`CLAUDE.md`文档
+
 ## 项目概述
 
 Lumino 是一款基于 Plasmo 框架构建的 Chrome 浏览器扩展，定位为「陪伴型 AI 助手」。用户通过 Side Panel 与 AI 对话，AI 通过 Agent 框架（Vercel AI SDK v6）自主调度内置工具系统，可读取网页内容、操作 DOM、管理文件、存取 Obsidian 笔记。配备完整的三层记忆系统和 OPFS 文件系统工作区。
