@@ -14,6 +14,7 @@
 import { tool } from "ai"
 import * as z from "zod"
 import { getObsidianMcpClient } from "./tools/obsidian-mcp"
+import { getToolHandler } from "./tool-executor"
 
 // ═══════════════════════════════════════════
 // luminoTool — AI SDK tool 包装器
