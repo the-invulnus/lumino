@@ -244,7 +244,7 @@ function LumiToolCall({
           <div className="lumi-tool-call__detail-section">
             <div className="lumi-tool-call__detail-label-row">
               <span className="lumi-tool-call__detail-label">Arguments:</span>
-              {(call.function.name === "read_file" || call.function.name === "write_file") && (() => {
+              {(call.function.name === "read_file" || call.function.name === "write_file" || call.function.name === "edit_file") && (() => {
                 let filePath: string | null = null
                 try {
                   const args = JSON.parse(call.function.arguments)
