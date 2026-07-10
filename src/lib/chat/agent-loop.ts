@@ -85,8 +85,12 @@ function openAiToModelMessages(msgs: OpenAiChatMessage[]): ModelMessage[] {
             if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
               try {
                 const parsed = JSON.parse(rawContent)
-                // 避免双包：如果已经带有 type/value 结构则直接使用
-                if (parsed && typeof parsed === "object" && "type" in parsed && ("value" in parsed || "reason" in parsed)) {
+                // 避免双包：如果已经带有合法的 output discriminator 结构则直接使用
+                // AI SDK v6 合法的 output type: text, json, execution-denied, error-text, error-json, content
+                const VALID_OUTPUT_TYPES = new Set(["text", "json", "execution-denied", "error-text", "error-json", "content"])
+                if (parsed && typeof parsed === "object" && "type" in parsed
+                  && VALID_OUTPUT_TYPES.has((parsed as Record<string, unknown>).type as string)
+                  && ("value" in parsed || "reason" in parsed)) {
                   output = parsed
                 } else {
                   output = { type: "json" as const, value: parsed }
@@ -275,7 +279,33 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMes
       debugLog("Agent 被用户中止")
       throw err
     }
-    console.error("[lumino:agent] 执行出错:", err)
+    // AI SDK v6 AI_RetryError 包含 lastError / reason / errors，message 中可能缺失详情
+    if (err instanceof Error) {
+      const retryErr = err as { reason?: string; lastError?: unknown; errors?: unknown[] }
+      console.error("[lumino:agent] 执行出错:", err.message)
+      if (retryErr.reason) console.error("[lumino:agent]   原因:", retryErr.reason)
+      if (retryErr.lastError) {
+        const lastErr = retryErr.lastError as Error
+        console.error("[lumino:agent]   最后一次错误:", lastErr.message || lastErr)
+        if (lastErr.cause) console.error("[lumino:agent]   cause:", lastErr.cause)
+        // 打印 lastError 的全部可枚举属性
+        const props = Object.entries(lastErr).filter(([k]) => k !== "message")
+        if (props.length > 0) console.error("[lumino:agent]   属性:", Object.fromEntries(props))
+      }
+      if (retryErr.errors) {
+        console.error("[lumino:agent]   全部错误列表:")
+        for (let i = 0; i < retryErr.errors.length; i++) {
+          const e = retryErr.errors[i] as Error | undefined
+          console.error(`[lumino:agent]     [${i + 1}]`, e?.message || e)
+        }
+      }
+      // 如果连 message 都没有，打印原始 object
+      if (!err.message) {
+        console.error("[lumino:agent]   原始错误对象:", JSON.parse(JSON.stringify(err)))
+      }
+    } else {
+      console.error("[lumino:agent] 执行出错:", err)
+    }
     debugLog("Agent 出错:", err)
     throw err
   }

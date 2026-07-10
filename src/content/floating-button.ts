@@ -16,7 +16,15 @@ function requestOpenSidePanel() {
     type: OPEN_SIDE_PANEL_MESSAGE
   }
 
-  void chrome.runtime.sendMessage(message)
+  chrome.runtime.sendMessage(message).catch((err) => {
+    // Service Worker may be idle/restarting — silently ignore context invalidation
+    const msg = err?.message ?? String(err)
+    if (!msg.includes("Extension context invalidated") &&
+        !msg.includes("Could not establish connection") &&
+        !msg.includes("message port closed")) {
+      console.warn("[Lumino] sendMessage failed:", msg)
+    }
+  })
 }
 
 
