@@ -106,11 +106,13 @@ export const lsTool = luminoTool({
 
 export const readFileTool = luminoTool({
   name: "read_file",
-  description: "读取工作区中的文件内容。支持通过 offset/limit 分页读取大文件。",
+  description: "读取工作区中的文件内容。支持通过 offset/limit 按行分页，或通过 char_offset/char_limit 按字符位置读取大文件。",
   inputSchema: z.z.object({
     file_path: z.z.string().describe("文件路径，相对于工作区根目录，必须以 / 开头"),
-    offset: z.z.number().int().describe("起始行号（0-indexed）。默认 0。").optional(),
-    limit: z.z.number().int().describe("最多读取的行数。默认 100。").optional()
+    offset: z.z.number().int().describe("起始行号（0-indexed）。默认 0。与 char_offset 互斥。").optional(),
+    limit: z.z.number().int().describe("最多读取的行数。默认 100。与 char_limit 互斥。").optional(),
+    char_offset: z.z.number().int().describe("起始字符位置（0-indexed）。与 offset 互斥，用于精确按字符读取截断文件。").optional(),
+    char_limit: z.z.number().int().describe("最多读取的字符数。与 limit 互斥，与 char_offset 配合使用。默认 5000。").optional()
   })
 })
 

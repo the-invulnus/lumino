@@ -10,7 +10,8 @@ export const TOOLS_EXCLUDED_FROM_EVICTION = new Set([
   "rm",
   "write_file",
   "edit_file",
-  "export"
+  "export",
+  "get_page_content"  // 已在页面端自行截断 + evict，不需要全局 eviction 再次处理
 ])
 
 /** 结果超过此字符数时触发驱逐（≈20000 tokens） */

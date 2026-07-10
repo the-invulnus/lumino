@@ -71,8 +71,8 @@ export async function handleReadFile(
 ): Promise<string> {
   const root = await getWorkspaceHandle()
   const filePath = args.file_path as string
-  const offset = (args.offset as number) ?? 0
-  const limit = (args.limit as number) ?? 100
+  const charOffset = args.char_offset as number | undefined
+  const charLimit = (args.char_limit as number) ?? 5000
 
   const target = await resolvePath(root, filePath)
   if (!target) {
@@ -86,6 +86,36 @@ export async function handleReadFile(
   const fileHandle = target as FileSystemFileHandle
   const file = await fileHandle.getFile()
   const content = await file.text()
+
+  // 按字符位置读取模式（与按行读取互斥）
+  if (charOffset !== undefined) {
+    const start = charOffset
+    const end = charLimit === 0 ? content.length : start + charLimit
+    const slice = content.slice(start, end)
+
+    const resultLines: string[] = []
+    // 以原始内容的行号标注（从 charOffset 位置开始计算）
+    const prefix = content.slice(0, start)
+    const prefixLines = prefix.split("\n")
+    const startLineNum = prefixLines.length  // 1-indexed 起始行号
+
+    const sliceLines = slice.split("\n")
+    for (let i = 0; i < sliceLines.length; i++) {
+      const lineNum = (startLineNum + i).toString().padStart(6, " ")
+      resultLines.push(`${lineNum}  ${sliceLines[i]}`)
+    }
+
+    if (end < content.length) {
+      const remaining = content.length - end
+      resultLines.push(`[Truncated: ${remaining} more chars not shown. Use char_offset=${end} to continue.]`)
+    }
+
+    return resultLines.join("\n")
+  }
+
+  // 按行读取模式（默认）
+  const offset = (args.offset as number) ?? 0
+  const limit = (args.limit as number) ?? 100
 
   const allLines = content.split("\n")
   const effectiveLimit = limit === 0 ? allLines.length : limit

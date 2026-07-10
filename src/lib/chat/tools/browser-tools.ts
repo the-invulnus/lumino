@@ -1,4 +1,5 @@
 import { getAgentWindowId } from "./agent-window"
+import { writeWorkspaceFile } from "../../fs/workspace"
 
 // ── 工具函数 ──
 
@@ -15,11 +16,6 @@ function getActiveTab(): Promise<chrome.tabs.Tab> {
   })
 }
 
-// ── resolveTabId ──
-// 优先使用 args.tab_id，未提供时回退到当前活跃 tab
-// agent 在任务开始时调用 get_active_tab_id 锁定 tab，
-// 后续工具调用都带上 tab_id 确保操作不会受用户切换 tab 影响
-
 async function resolveTabId(args: Record<string, unknown>): Promise<number> {
   if (typeof args.tab_id === "number" && args.tab_id > 0) {
     return args.tab_id
@@ -30,13 +26,21 @@ async function resolveTabId(args: Record<string, unknown>): Promise<number> {
 }
 
 // ── get_page_content ──
-// 提取当前页面文本内容，支持三种模式
+// 提取当前页面文本内容，支持三种模式。
+// 在页面端截断后再回传，避免超大内容（如 base64 图片）撑爆消息通道。
+
+/** get_page_content 在页面端截断的默认最大字符数 */
+const DEFAULT_MAX_CHARS = 5000
+
+/** 驱逐文件存储目录 */
+const EVICT_DIR = "/large_tool_results"
 
 export async function handleGetPageContent(
   args: Record<string, unknown>
 ): Promise<string> {
   const mode = (args.mode as string) || "text"
   const selector = args.selector as string | undefined
+  const maxChars = (args.max_chars as number) || DEFAULT_MAX_CHARS
 
   let tabId: number
   try {
@@ -48,11 +52,16 @@ export async function handleGetPageContent(
   try {
     const [result] = await chrome.scripting.executeScript({
       target: { tabId },
-      func: (m: string, sel: string | null) => {
+      func: (m: string, sel: string | null, max: number) => {
         let text = ""
+        let truncated = false
 
         if (m === "full_html") {
-          text = document.documentElement.outerHTML
+          // 过滤 data: URI（base64 图片等），避免百万字符的 base64 撑爆上下文
+          text = document.documentElement.outerHTML.replace(
+            /\s(src|srcset|href|poster|content)="data:[^"]*"/gi,
+            ' $1="data:...(base64 content removed)..."'
+          )
         } else if (m === "structured" && sel) {
           // 提取特定选择器下的结构化内容
           const el = document.querySelector(sel)
@@ -63,7 +72,18 @@ export async function handleGetPageContent(
             text: (c as HTMLElement).innerText?.slice(0, 500) || "",
             href: (c as HTMLAnchorElement).href || null
           }))
-          return JSON.stringify({ selector: sel, count: items.length, items })
+          const json = JSON.stringify({ selector: sel, count: items.length, items })
+          // structured 模式也做截断保护
+          if (json.length > max) {
+            return JSON.stringify({
+              selector: sel,
+              count: items.length,
+              items: items.slice(0, Math.max(1, Math.floor(items.length * max / json.length))),
+              _truncated: true,
+              _original_chars: json.length
+            })
+          }
+          return json
         } else {
           // mode === "text" (默认)
           if (sel) {
@@ -76,16 +96,54 @@ export async function handleGetPageContent(
           }
         }
 
+        // 页面端截断：超过 max 字符就截断，避免大内容传输
+        if (text.length > max) {
+          truncated = true
+          text = text.slice(0, max)
+        }
+
+        // 用特殊分隔符标记截断信息，方便外部解析
+        if (truncated) {
+          return "\n__CONTENT_TRUNCATED__\n" + text
+        }
+
         return text
       },
-      args: [mode, selector ?? null]
+      args: [mode, selector ?? null, maxChars]
     })
 
     if (!result || !result.result) {
       return JSON.stringify({ error: "execute_script_failed" })
     }
 
-    return typeof result.result === "string" ? result.result : JSON.stringify(result.result)
+    const rawResult = typeof result.result === "string" ? result.result : JSON.stringify(result.result)
+
+    // 检查是否在页面端被截断
+    const TRUNCATE_MARKER = "\n__CONTENT_TRUNCATED__\n"
+    if (rawResult.startsWith(TRUNCATE_MARKER)) {
+      const preview = rawResult.slice(TRUNCATE_MARKER.length)
+      const originalLength = preview.length // 这是截断后的长度，原始长度未知
+
+      // 将截断后的内容写入 OPFS，标记为被截断的页面内容
+      const timestamp = Date.now()
+      const sanitizedMode = mode.replace(/[^a-zA-Z0-9_-]/g, "_")
+      const evictPath = `${EVICT_DIR}/page_content_${sanitizedMode}_${timestamp}.txt`
+
+      try {
+        await writeWorkspaceFile(evictPath, preview)
+
+        return [
+          preview,
+          "",
+          `[Content truncated at ${maxChars} chars. Full preview saved to ${evictPath}. Use read_file to view the complete extracted text.]`
+        ].join("\n")
+      } catch {
+        // 写入 OPFS 失败，至少返回截断后的内容
+        return preview + `\n\n[Content truncated at ${maxChars} chars. OPFS write failed — full content unavailable.]`
+      }
+    }
+
+    return rawResult
   } catch (error) {
     return JSON.stringify({
       error: "get_page_content_failed",
