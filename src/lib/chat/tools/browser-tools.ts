@@ -35,6 +35,109 @@ const DEFAULT_MAX_CHARS = 5000
 /** 驱逐文件存储目录 */
 const EVICT_DIR = "/large_tool_results"
 
+/** executeScript 最大重试次数（应对 tab 导航中的 race condition） */
+const MAX_RETRIES = 2
+/** 重试间隔（毫秒） */
+const RETRY_DELAY_MS = 300
+
+/**
+ * 执行 executeScript 并注入 func，带自动重试。
+ * 返回 func 的结果字符串，注入失败时返回 null。
+ */
+async function executeScriptWithRetry(
+  tabId: number,
+  mode: string,
+  selector: string | null,
+  max: number
+): Promise<string | null> {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
+    }
+
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (m: string, sel: string | null, maxChars: number) => {
+        try {
+          let text = ""
+          let truncated = false
+
+          if (m === "full_html") {
+            text = document.documentElement.outerHTML.replace(
+              /\s(src|srcset|href|poster|content)="data:[^"]*"/gi,
+              ' $1="data:...(base64 content removed)..."'
+            )
+          } else if (m === "structured" && sel) {
+            const el = document.querySelector(sel)
+            if (!el) return JSON.stringify({ error: "selector_not_found", selector: sel })
+            const children = Array.from(el.children)
+            const items = children.map((c) => ({
+              tag: c.tagName,
+              text: (c as HTMLElement).innerText?.slice(0, 500) || "",
+              href: (c as HTMLAnchorElement).href || null
+            }))
+            const json = JSON.stringify({ selector: sel, count: items.length, items })
+            if (json.length > maxChars) {
+              return JSON.stringify({
+                selector: sel,
+                count: items.length,
+                items: items.slice(0, Math.max(1, Math.floor(items.length * maxChars / json.length))),
+                _truncated: true,
+                _original_chars: json.length
+              })
+            }
+            return json
+          } else {
+            if (sel) {
+              const el = document.querySelector(sel)
+              text = el ? (el as HTMLElement).innerText || "" : ""
+            } else {
+              const main = document.querySelector("main, article, [role=main]")
+              text = main ? (main as HTMLElement).innerText || "" : document.body.innerText || ""
+            }
+          }
+
+          if (text.length > maxChars) {
+            truncated = true
+            text = text.slice(0, maxChars)
+          }
+
+          if (truncated) {
+            return "\n__CONTENT_TRUNCATED__\n" + text
+          }
+
+          return text
+        } catch (e) {
+          return JSON.stringify({
+            error: "func_execution_error",
+            message: e instanceof Error ? e.message : String(e),
+            stack: e instanceof Error ? e.stack?.split("\n").slice(0, 3).join("\n") : null
+          })
+        }
+      },
+      args: [mode, selector, max]
+    })
+
+    if (result && result.result) {
+      return typeof result.result === "string" ? result.result : JSON.stringify(result.result)
+    }
+
+    const lastError = chrome.runtime.lastError
+    // 有 lastError 说明是权限/CSP/受保护页面问题，重试无意义
+    if (lastError) {
+      console.error("[lumino:tool] get_page_content execute_script_failed (permanent):", lastError.message, { tabId })
+      return null
+    }
+
+    console.warn(
+      `[lumino:tool] get_page_content executeScript returned empty result (attempt ${attempt + 1}/${MAX_RETRIES + 1})`,
+      { tabId }
+    )
+  }
+
+  return null
+}
+
 export async function handleGetPageContent(
   args: Record<string, unknown>
 ): Promise<string> {
@@ -50,73 +153,17 @@ export async function handleGetPageContent(
   }
 
   try {
-    const [result] = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: (m: string, sel: string | null, max: number) => {
-        let text = ""
-        let truncated = false
+    const result = await executeScriptWithRetry(tabId, mode, selector ?? null, maxChars)
 
-        if (m === "full_html") {
-          // 过滤 data: URI（base64 图片等），避免百万字符的 base64 撑爆上下文
-          text = document.documentElement.outerHTML.replace(
-            /\s(src|srcset|href|poster|content)="data:[^"]*"/gi,
-            ' $1="data:...(base64 content removed)..."'
-          )
-        } else if (m === "structured" && sel) {
-          // 提取特定选择器下的结构化内容
-          const el = document.querySelector(sel)
-          if (!el) return JSON.stringify({ error: "selector_not_found", selector: sel })
-          const children = Array.from(el.children)
-          const items = children.map((c) => ({
-            tag: c.tagName,
-            text: (c as HTMLElement).innerText?.slice(0, 500) || "",
-            href: (c as HTMLAnchorElement).href || null
-          }))
-          const json = JSON.stringify({ selector: sel, count: items.length, items })
-          // structured 模式也做截断保护
-          if (json.length > max) {
-            return JSON.stringify({
-              selector: sel,
-              count: items.length,
-              items: items.slice(0, Math.max(1, Math.floor(items.length * max / json.length))),
-              _truncated: true,
-              _original_chars: json.length
-            })
-          }
-          return json
-        } else {
-          // mode === "text" (默认)
-          if (sel) {
-            const el = document.querySelector(sel)
-            text = el ? (el as HTMLElement).innerText || "" : ""
-          } else {
-            // 优先取 main/article，否则取 body
-            const main = document.querySelector("main, article, [role=main]")
-            text = main ? (main as HTMLElement).innerText || "" : document.body.innerText || ""
-          }
-        }
-
-        // 页面端截断：超过 max 字符就截断，避免大内容传输
-        if (text.length > max) {
-          truncated = true
-          text = text.slice(0, max)
-        }
-
-        // 用特殊分隔符标记截断信息，方便外部解析
-        if (truncated) {
-          return "\n__CONTENT_TRUNCATED__\n" + text
-        }
-
-        return text
-      },
-      args: [mode, selector ?? null, maxChars]
-    })
-
-    if (!result || !result.result) {
-      return JSON.stringify({ error: "execute_script_failed" })
+    if (!result) {
+      return JSON.stringify({
+        error: "execute_script_failed",
+        detail: "executeScript returned empty after retry",
+        hint: "Tab may have been closed or is a restricted page (e.g. chrome://)."
+      })
     }
 
-    const rawResult = typeof result.result === "string" ? result.result : JSON.stringify(result.result)
+    const rawResult = typeof result === "string" ? result : JSON.stringify(result)
 
     // 检查是否在页面端被截断
     const TRUNCATE_MARKER = "\n__CONTENT_TRUNCATED__\n"
