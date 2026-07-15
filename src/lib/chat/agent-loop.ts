@@ -23,7 +23,7 @@ function openAiToModelMessages(msgs: OpenAiChatMessage[]): ModelMessage[] {
   // 修复历史消息：收集所有已有 tool result 的 ID，过滤掉没有对应结果的 tool_calls
   // 避免 AI_MissingToolResultsError（可能由之前的 bug 导致）
   const existingToolResultIds = new Set(
-    msgs.filter((m) => m.role === "tool" && m.tool_call_id).map((m) => m.tool_call_id!)
+    msgs.filter((m): m is OpenAiChatMessage & { role: "tool" } => m.role === "tool" && !!m.tool_call_id).map((m) => m.tool_call_id)
   )
   const repaired = msgs.map((m) => {
     if (m.role === "assistant" && m.tool_calls && m.tool_calls.length > 0) {

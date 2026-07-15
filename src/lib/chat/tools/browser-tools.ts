@@ -27,10 +27,11 @@ async function resolveTabId(args: Record<string, unknown>): Promise<number> {
 
 // ── get_page_content ──
 // 提取当前页面文本内容，支持三种模式。
-// 在页面端截断后再回传，避免超大内容（如 base64 图片）撑爆消息通道。
+// 完整内容始终通过 executeScript 获取，然后在 handleGetPageContent 中
+// 决定是否需要 evict 到 OPFS。full_html 模式在页面端过滤 base64 data URI。
 
-/** get_page_content 在页面端截断的默认最大字符数 */
-const DEFAULT_MAX_CHARS = 5000
+/** get_page_content 的截断阈值（字符数） */
+const PAGE_CONTENT_MAX_CHARS = 10_000
 
 /** 驱逐文件存储目录 */
 const EVICT_DIR = "/large_tool_results"
@@ -47,8 +48,7 @@ const RETRY_DELAY_MS = 300
 async function executeScriptWithRetry(
   tabId: number,
   mode: string,
-  selector: string | null,
-  max: number
+  selector: string | null
 ): Promise<string | null> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     if (attempt > 0) {
@@ -57,17 +57,16 @@ async function executeScriptWithRetry(
 
     const [result] = await chrome.scripting.executeScript({
       target: { tabId },
-      func: (m: string, sel: string | null, maxChars: number) => {
+      func: (m: string, sel: string | null) => {
         try {
-          let text = ""
-          let truncated = false
-
           if (m === "full_html") {
-            text = document.documentElement.outerHTML.replace(
+            return document.documentElement.outerHTML.replace(
               /\s(src|srcset|href|poster|content)="data:[^"]*"/gi,
               ' $1="data:...(base64 content removed)..."'
             )
-          } else if (m === "structured" && sel) {
+          }
+
+          if (m === "structured" && sel) {
             const el = document.querySelector(sel)
             if (!el) return JSON.stringify({ error: "selector_not_found", selector: sel })
             const children = Array.from(el.children)
@@ -76,36 +75,18 @@ async function executeScriptWithRetry(
               text: (c as HTMLElement).innerText?.slice(0, 500) || "",
               href: (c as HTMLAnchorElement).href || null
             }))
-            const json = JSON.stringify({ selector: sel, count: items.length, items })
-            if (json.length > maxChars) {
-              return JSON.stringify({
-                selector: sel,
-                count: items.length,
-                items: items.slice(0, Math.max(1, Math.floor(items.length * maxChars / json.length))),
-                _truncated: true,
-                _original_chars: json.length
-              })
-            }
-            return json
+            return JSON.stringify({ selector: sel, count: items.length, items })
+          }
+
+          // text 模式（默认）
+          let text: string
+          if (sel) {
+            const el = document.querySelector(sel)
+            text = el ? (el as HTMLElement).innerText || "" : ""
           } else {
-            if (sel) {
-              const el = document.querySelector(sel)
-              text = el ? (el as HTMLElement).innerText || "" : ""
-            } else {
-              const main = document.querySelector("main, article, [role=main]")
-              text = main ? (main as HTMLElement).innerText || "" : document.body.innerText || ""
-            }
+            const main = document.querySelector("main, article, [role=main]")
+            text = main ? (main as HTMLElement).innerText || "" : document.body.innerText || ""
           }
-
-          if (text.length > maxChars) {
-            truncated = true
-            text = text.slice(0, maxChars)
-          }
-
-          if (truncated) {
-            return "\n__CONTENT_TRUNCATED__\n" + text
-          }
-
           return text
         } catch (e) {
           return JSON.stringify({
@@ -115,7 +96,7 @@ async function executeScriptWithRetry(
           })
         }
       },
-      args: [mode, selector, max]
+      args: [mode, selector]
     })
 
     if (result && result.result) {
@@ -143,7 +124,6 @@ export async function handleGetPageContent(
 ): Promise<string> {
   const mode = (args.mode as string) || "text"
   const selector = args.selector as string | undefined
-  const maxChars = (args.max_chars as number) || DEFAULT_MAX_CHARS
 
   let tabId: number
   try {
@@ -153,7 +133,7 @@ export async function handleGetPageContent(
   }
 
   try {
-    const result = await executeScriptWithRetry(tabId, mode, selector ?? null, maxChars)
+    const result = await executeScriptWithRetry(tabId, mode, selector ?? null)
 
     if (!result) {
       return JSON.stringify({
@@ -163,34 +143,41 @@ export async function handleGetPageContent(
       })
     }
 
-    const rawResult = typeof result === "string" ? result : JSON.stringify(result)
+    const fullContent = typeof result === "string" ? result : JSON.stringify(result)
 
-    // 检查是否在页面端被截断
-    const TRUNCATE_MARKER = "\n__CONTENT_TRUNCATED__\n"
-    if (rawResult.startsWith(TRUNCATE_MARKER)) {
-      const preview = rawResult.slice(TRUNCATE_MARKER.length)
-      const originalLength = preview.length // 这是截断后的长度，原始长度未知
-
-      // 将截断后的内容写入 OPFS，标记为被截断的页面内容
-      const timestamp = Date.now()
-      const sanitizedMode = mode.replace(/[^a-zA-Z0-9_-]/g, "_")
-      const evictPath = `${EVICT_DIR}/page_content_${sanitizedMode}_${timestamp}.txt`
-
-      try {
-        await writeWorkspaceFile(evictPath, preview)
-
-        return [
-          preview,
-          "",
-          `[Content truncated at ${maxChars} chars. Full preview saved to ${evictPath}. Use read_file to view the complete extracted text.]`
-        ].join("\n")
-      } catch {
-        // 写入 OPFS 失败，至少返回截断后的内容
-        return preview + `\n\n[Content truncated at ${maxChars} chars. OPFS write failed — full content unavailable.]`
-      }
+    // 内容在阈值内，直接返回
+    if (fullContent.length <= PAGE_CONTENT_MAX_CHARS) {
+      return fullContent
     }
 
-    return rawResult
+    // 内容超过阈值：完整内容写入 OPFS，只返回前 N 个字符 + 行号 hint
+    const preview = fullContent.slice(0, PAGE_CONTENT_MAX_CHARS)
+    // 计算预览内容对应的完整行数（确保最后一行是完整的）
+    const previewLines = preview.split("\n")
+    const lastLine = previewLines[previewLines.length - 1]
+    // 如果截断点不在行尾，去掉不完整的最后一行
+    const completePreviewLines = lastLine.length > 0 && fullContent[PAGE_CONTENT_MAX_CHARS - 1] !== "\n"
+      ? previewLines.slice(0, -1)
+      : previewLines
+    const completePreview = completePreviewLines.join("\n")
+    const shownLineCount = completePreviewLines.length
+
+    const timestamp = Date.now()
+    const sanitizedMode = mode.replace(/[^a-zA-Z0-9_-]/g, "_")
+    const evictPath = `${EVICT_DIR}/page_content_${sanitizedMode}_${timestamp}.txt`
+
+    try {
+      await writeWorkspaceFile(evictPath, fullContent)
+
+      return [
+        completePreview,
+        "",
+        `[Content truncated. Lines 1-${shownLineCount} shown (${completePreview.length} chars). Full content (${fullContent.length} chars) saved to ${evictPath}. Use read_file with offset=${shownLineCount} to continue.]`
+      ].join("\n")
+    } catch {
+      // 写入 OPFS 失败，至少返回截断后的内容
+      return completePreview + `\n\n[Content truncated at ${completePreview.length} chars. Full content (${fullContent.length} chars). OPFS write failed — full content unavailable.]`
+    }
   } catch (error) {
     return JSON.stringify({
       error: "get_page_content_failed",

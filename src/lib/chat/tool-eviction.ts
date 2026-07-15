@@ -14,8 +14,8 @@ export const TOOLS_EXCLUDED_FROM_EVICTION = new Set([
   "get_page_content"  // 已在页面端自行截断 + evict，不需要全局 eviction 再次处理
 ])
 
-/** 结果超过此字符数时触发驱逐（≈20000 tokens） */
-export const TOOL_TOKEN_LIMIT_BEFORE_EVICT = 80_000
+/** 结果超过此字符数时触发驱逐（≈2500 tokens） */
+export const TOOL_TOKEN_LIMIT_BEFORE_EVICT = 10_000
 
 /** 驱逐文件的保留时间（毫秒），默认 1 小时 */
 const EVICT_FILE_TTL_MS = 60 * 60 * 1000
