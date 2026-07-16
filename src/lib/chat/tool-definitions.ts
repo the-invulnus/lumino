@@ -193,15 +193,15 @@ export const getActiveTabIdTool = luminoTool({
 })
 
 // ═══════════════════════════════════════════
-// 浏览器交互工具
+// 页面阅读工具
 // ═══════════════════════════════════════════
 
 export const getPageContentTool = luminoTool({
   name: "get_page_content",
-  description: "读取当前页面的文本内容。可通过 selector 精确提取某个区域。内容过长时会自动保存到文件并通过提示告知续读方式。",
+  description: "读取当前页面的可见文本内容。text 模式提取页面文本（默认），structured 模式提取指定区域子元素的结构化列表。内容过长时会自动保存到文件并通过提示告知续读方式。注意：本工具只返回页面文本，不返回 DOM 结构和 CSS 样式。如需运行时 DOM 树使用 scrape_structure，如需 CSS 样式使用 scrape_styles。",
   inputSchema: z.z.object({
     tab_id: z.z.number().int().describe("目标标签页的 ID。不传则使用当前活跃标签页。").optional(),
-    mode: z.z.enum(["text", "full_html", "structured"]).describe("提取模式：text（默认）/ full_html / structured").optional(),
+    mode: z.z.enum(["text", "structured"]).describe("提取模式：text（默认，提取可见文本） / structured（提取指定选择器的直接子元素列表）").optional(),
     selector: z.z.string().describe("CSS 选择器，精确提取某个区域，如 '.article-content'").optional()
   })
 })
@@ -214,9 +214,13 @@ export const takeSelectionTool = luminoTool({
   })
 })
 
+// ═══════════════════════════════════════════
+// 浏览器交互工具
+// ═══════════════════════════════════════════
+
 export const inspectElementTool = luminoTool({
   name: "inspect_element",
-  description: "探查页面 DOM 结构。传入 CSS 选择器精确探查某个元素；不传则智能探测交互区域。",
+  description: "探查页面可交互元素。传入 CSS 选择器探查某个元素的标签、属性和交互能力（可点击/可聚焦/可编辑/可见）；不传则智能探测表单、对话框、导航等交互区域。用于在操控页面前先找到目标元素。注意：不返回 CSS 样式，如需样式使用 scrape_styles。",
   inputSchema: z.z.object({
     tab_id: z.z.number().int().describe("目标标签页的 ID。不传则使用当前活跃标签页。").optional(),
     selector: z.z.string().describe("CSS 选择器。不传则智能探测。").optional(),
@@ -294,6 +298,57 @@ export const closeTabTool = luminoTool({
   })
 })
 
+// ═══════════════════════════════════════════
+// 页面爬取工具
+// ═══════════════════════════════════════════
+
+export const scrapeStructureTool = luminoTool({
+  name: "scrape_structure",
+  description: "提取当前页面的运行时 DOM 结构。format=html 直接返回完整的 outerHTML 字符串（相当于 Elements 面板中复制 HTML），format=json 返回结构化的树形数据（含 bounding box 等）。结果保存到内部文件系统，读取需用 read_file。用于复刻/重建页面布局时使用。",
+  inputSchema: z.z.object({
+    tab_id: z.z.number().int().describe("目标标签页的 ID。不传则使用当前活跃标签页。").optional(),
+    format: z.z.enum(["html", "json"]).describe("输出格式：html=返回运行时 DOM 的 outerHTML 字符串（所见即所得），json=返回结构化的树形数据含 bounding box。默认 json。").optional(),
+    selector: z.z.string().describe("CSS 选择器，限定爬取范围。html 模式下不传返回整页 HTML，json 模式下不传从 body 开始。").optional(),
+    depth: z.z.number().int().describe("（仅 json 模式）DOM 树递归深度，默认 10。").optional(),
+    max_nodes: z.z.number().int().describe("（仅 json 模式）最大节点数，默认 500。").optional(),
+    include_text: z.z.boolean().describe("（仅 json 模式）是否包含元素内的文本内容。默认 true。").optional(),
+    include_bbox: z.z.boolean().describe("（仅 json 模式）是否包含元素的位置和尺寸。默认 true。").optional()
+  })
+})
+
+export const scrapeStylesTool = luminoTool({
+  name: "scrape_styles",
+  description: "获取页面元素的完整计算样式（font/color/spacing/border/background/layout 等 40+ 关键 CSS 属性）。也可获取伪元素样式和盒模型数据。结果保存到内部文件系统。用于复刻/重建页面的视觉效果时使用。",
+  inputSchema: z.z.object({
+    tab_id: z.z.number().int().describe("目标标签页的 ID。不传则使用当前活跃标签页。").optional(),
+    selector: z.z.string().describe("CSS 选择器，定位目标元素。如 '.hero-section' 或 '#main-content'"),
+    properties: z.z.array(z.z.string()).describe("要获取的 CSS 属性列表。不传则返回约 40 个关键属性（color, font-family, font-size, font-weight, line-height, text-align, background-color, border, border-radius, padding, margin, width, height, display, flex-direction, align-items, justify-content, position, box-shadow, opacity, transform, z-index 等）。").optional(),
+    include_box_model: z.z.boolean().describe("是否同时返回盒模型数据（content/padding/border/margin 四边宽度）。默认 true。").optional(),
+    include_pseudo: z.z.array(z.z.string()).describe("同时获取伪元素的样式，如 ['::before', '::after']。").optional(),
+    recursion: z.z.enum(["none", "children", "descendants"]).describe("是否递归获取子元素样式。none=仅目标元素，children=直接子元素，descendants=所有后代。默认 none。").optional()
+  })
+})
+
+export const scrapeResourcesTool = luminoTool({
+  name: "scrape_resources",
+  description: "发现页面引用的外部资源 URL。返回页面的 CSS 文件、图片、字体、图标、脚本等资源的 URL 列表。同一域名下的 CSS 可直接读取规则数量和内容，跨域 CSS 文件标记为不可访问并用 fetch_resource 工具获取内容。结果保存到内部文件系统。用于收集复刻页面所需的所有静态资源。",
+  inputSchema: z.z.object({
+    tab_id: z.z.number().int().describe("目标标签页的 ID。不传则使用当前活跃标签页。").optional(),
+    resource_types: z.z.array(z.z.enum(["css", "images", "fonts", "icons", "scripts"])).describe("要收集的资源类型。不传则收集所有类型。").optional(),
+    include_inline: z.z.boolean().describe("是否收集内联资源（如内联 <style>、data URI 图片）。默认 false，仅收集外部 URL。").optional(),
+    limit: z.z.number().int().describe("每类资源的最大数量，默认 200。").optional()
+  })
+})
+
+export const fetchResourceTool = luminoTool({
+  name: "fetch_resource",
+  description: "通过 Service Worker 获取指定 URL 的完整资源内容。无 CORS 限制，可获取跨域 CSS、图片、字体等文件。配合 scrape_resources 使用：先用 scrape_resources 发现资源 URL，再用本工具获取具体的 CSS 文件内容。单次获取一个 URL。结果保存到内部文件系统。",
+  inputSchema: z.z.object({
+    url: z.z.string().describe("资源 URL，如 https://cdn.example.com/styles/main.css 或 /styles/main.css（相对路径）"),
+    tab_id: z.z.number().int().describe("目标标签页的 ID。用于解析相对 URL 的基础 URL。不传则使用当前活跃标签页。").optional()
+  })
+})
+
 
 // ═══════════════════════════════════════════
 // Obsidian MCP 工具
@@ -307,12 +362,19 @@ export const closeTabTool = luminoTool({
 // ═══════════════════════════════════════════
 
 export const BASE_TOOLS = [
+  // 记忆
   memoryGetTool, memorySearchTool,
+  // 文件
   lsTool, readFileTool, writeFileTool, editFileTool, globTool, grepTool, rmTool, exportTool,
+  // 浏览器系统
   currentPageTool, tabsTool, getActiveTabIdTool,
-  getPageContentTool, takeSelectionTool, inspectElementTool,
-  fillFormTool, clickElementTool, screenshotTool,
-  scrollTool, pressKeyTool, navigateTool, closeTabTool
+  // 页面阅读
+  getPageContentTool, takeSelectionTool,
+  // 浏览器交互
+  inspectElementTool, fillFormTool, clickElementTool, screenshotTool,
+  scrollTool, pressKeyTool, navigateTool, closeTabTool,
+  // 页面爬取
+  scrapeStructureTool, scrapeStylesTool, scrapeResourcesTool, fetchResourceTool
 ]
 
 function jsonSchemaToZod(schema: Record<string, unknown>): z.ZodTypeAny {

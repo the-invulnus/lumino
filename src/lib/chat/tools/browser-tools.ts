@@ -1,71 +1,41 @@
 import { getAgentWindowId } from "./agent-window"
 import { writeWorkspaceFile } from "../../fs/workspace"
-
-// ── 工具函数 ──
-
-function getActiveTab(): Promise<chrome.tabs.Tab> {
-  return getAgentWindowId().then((agentWid) => {
-    console.log('[lumino:bt] getActiveTab agentWid:', agentWid)
-    const query = agentWid != null
-      ? { active: true, windowId: agentWid }
-      : { active: true, currentWindow: true }
-    return chrome.tabs.query(query).then(([tab]) => {
-      if (!tab) throw new Error("no_active_tab")
-      return tab
-    })
-  })
-}
-
-async function resolveTabId(args: Record<string, unknown>): Promise<number> {
-  if (typeof args.tab_id === "number" && args.tab_id > 0) {
-    return args.tab_id
-  }
-  const tab = await getActiveTab()
-  if (!tab.id) throw new Error("no_tab_id")
-  return tab.id
-}
+import {
+  getActiveTab,
+  resolveTabId,
+  executeScriptWithRetry,
+  QUERY_WITH_TEXT_FN,
+  EVICT_DIR,
+  MAX_RETRIES,
+  RETRY_DELAY_MS
+} from "./browser-utils"
 
 // ── get_page_content ──
-// 提取当前页面文本内容，支持三种模式。
+// 提取当前页面文本内容，支持两种模式。
 // 完整内容始终通过 executeScript 获取，然后在 handleGetPageContent 中
-// 决定是否需要 evict 到 OPFS。full_html 模式在页面端过滤 base64 data URI。
+// 决定是否需要 evict 到 OPFS。
 
 /** get_page_content 的截断阈值（字符数） */
 const PAGE_CONTENT_MAX_CHARS = 10_000
 
-/** 驱逐文件存储目录 */
-const EVICT_DIR = "/large_tool_results"
+export async function handleGetPageContent(
+  args: Record<string, unknown>
+): Promise<string> {
+  const mode = (args.mode as string) || "text"
+  const selector = args.selector as string | undefined
 
-/** executeScript 最大重试次数（应对 tab 导航中的 race condition） */
-const MAX_RETRIES = 2
-/** 重试间隔（毫秒） */
-const RETRY_DELAY_MS = 300
+  let tabId: number
+  try {
+    tabId = await resolveTabId(args)
+  } catch {
+    return JSON.stringify({ error: "no_tab_id" })
+  }
 
-/**
- * 执行 executeScript 并注入 func，带自动重试。
- * 返回 func 的结果字符串，注入失败时返回 null。
- */
-async function executeScriptWithRetry(
-  tabId: number,
-  mode: string,
-  selector: string | null
-): Promise<string | null> {
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
-    }
-
-    const [result] = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: (m: string, sel: string | null) => {
+  try {
+    const result = await executeScriptWithRetry(
+      tabId,
+      (m: string, sel: string | null) => {
         try {
-          if (m === "full_html") {
-            return document.documentElement.outerHTML.replace(
-              /\s(src|srcset|href|poster|content)="data:[^"]*"/gi,
-              ' $1="data:...(base64 content removed)..."'
-            )
-          }
-
           if (m === "structured" && sel) {
             const el = document.querySelector(sel)
             if (!el) return JSON.stringify({ error: "selector_not_found", selector: sel })
@@ -96,44 +66,9 @@ async function executeScriptWithRetry(
           })
         }
       },
-      args: [mode, selector]
-    })
-
-    if (result && result.result) {
-      return typeof result.result === "string" ? result.result : JSON.stringify(result.result)
-    }
-
-    const lastError = chrome.runtime.lastError
-    // 有 lastError 说明是权限/CSP/受保护页面问题，重试无意义
-    if (lastError) {
-      console.error("[lumino:tool] get_page_content execute_script_failed (permanent):", lastError.message, { tabId })
-      return null
-    }
-
-    console.warn(
-      `[lumino:tool] get_page_content executeScript returned empty result (attempt ${attempt + 1}/${MAX_RETRIES + 1})`,
-      { tabId }
+      [mode, selector ?? null],
+      "get_page_content"
     )
-  }
-
-  return null
-}
-
-export async function handleGetPageContent(
-  args: Record<string, unknown>
-): Promise<string> {
-  const mode = (args.mode as string) || "text"
-  const selector = args.selector as string | undefined
-
-  let tabId: number
-  try {
-    tabId = await resolveTabId(args)
-  } catch {
-    return JSON.stringify({ error: "no_tab_id" })
-  }
-
-  try {
-    const result = await executeScriptWithRetry(tabId, mode, selector ?? null)
 
     if (!result) {
       return JSON.stringify({
@@ -152,10 +87,8 @@ export async function handleGetPageContent(
 
     // 内容超过阈值：完整内容写入 OPFS，只返回前 N 个字符 + 行号 hint
     const preview = fullContent.slice(0, PAGE_CONTENT_MAX_CHARS)
-    // 计算预览内容对应的完整行数（确保最后一行是完整的）
     const previewLines = preview.split("\n")
     const lastLine = previewLines[previewLines.length - 1]
-    // 如果截断点不在行尾，去掉不完整的最后一行
     const completePreviewLines = lastLine.length > 0 && fullContent[PAGE_CONTENT_MAX_CHARS - 1] !== "\n"
       ? previewLines.slice(0, -1)
       : previewLines
@@ -164,7 +97,7 @@ export async function handleGetPageContent(
 
     const timestamp = Date.now()
     const sanitizedMode = mode.replace(/[^a-zA-Z0-9_-]/g, "_")
-    const evictPath = `${EVICT_DIR}/page_content_${sanitizedMode}_${timestamp}.txt`
+    const evictPath = `${EVICT_DIR}/page_content_${timestamp}_${sanitizedMode}.txt`
 
     try {
       await writeWorkspaceFile(evictPath, fullContent)
@@ -175,7 +108,6 @@ export async function handleGetPageContent(
         `[Content truncated. Lines 1-${shownLineCount} shown (${completePreview.length} chars). Full content (${fullContent.length} chars) saved to ${evictPath}. Use read_file with offset=${shownLineCount} to continue.]`
       ].join("\n")
     } catch {
-      // 写入 OPFS 失败，至少返回截断后的内容
       return completePreview + `\n\n[Content truncated at ${completePreview.length} chars. Full content (${fullContent.length} chars). OPFS write failed — full content unavailable.]`
     }
   } catch (error) {
@@ -270,7 +202,7 @@ export async function handleFillForm(
 
         // 辅助函数：支持 :text("...") 选择器（jQuery/Sizzle 扩展）
         function queryWithText(sel: string): Element | null {
-          const textMatch = sel.match(/^(.+):text\(["']([^"\']*)["']\)$/);
+          const textMatch = sel.match(/^(.+):text\(["']([^"\']*)["']\)$/)
           if (textMatch) {
             const candidates = document.querySelectorAll(textMatch[1])
             for (const c of candidates) {
@@ -648,7 +580,7 @@ export async function handleInspectElement(
             const tag = el.tagName.toLowerCase()
             const attrs: Record<string, unknown> = {
               tag,
-              text: el.textContent?.trim().slice(0, 200) || null,
+              text: el.textContent?.trim().slice(0, 80) || null,
               id: el.id || null,
               class: el.className && typeof el.className === "string" ? el.className.trim() || null : null
             }

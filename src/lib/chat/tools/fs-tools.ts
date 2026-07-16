@@ -26,8 +26,12 @@ async function resolvePath(
     const dirHandle = current as FileSystemDirectoryHandle
     try {
       if (i === parts.length - 1) {
-        const fileHandle = await dirHandle.getFileHandle(parts[i])
-        current = fileHandle
+        // 最后一段：先尝试当文件查找，失败则当目录查找
+        try {
+          current = await dirHandle.getFileHandle(parts[i])
+        } catch {
+          current = await dirHandle.getDirectoryHandle(parts[i])
+        }
       } else {
         current = await dirHandle.getDirectoryHandle(parts[i])
       }
@@ -218,7 +222,7 @@ export async function handleGlob(
   const target = searchPath ? await resolvePath(root, searchPath) : root
 
   if (!target) {
-    return JSON.stringify({ error: "not_found", message: `路径不存在：/${searchPath}` })
+    return JSON.stringify({ error: "not_found", message: `路径不存在：${searchPath || "/"}` })
   }
 
   let allFiles: string[]
@@ -266,7 +270,7 @@ export async function handleGrep(
 
   const target = searchPath ? await resolvePath(root, searchPath) : root
   if (!target) {
-    return JSON.stringify({ error: "not_found", message: `路径不存在：/${searchPath}` })
+    return JSON.stringify({ error: "not_found", message: `路径不存在：${searchPath || "/"}` })
   }
 
   // 先尝试字面量匹配，失败后再尝试正则

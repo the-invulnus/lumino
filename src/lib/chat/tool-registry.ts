@@ -30,6 +30,12 @@ import {
   handleScroll,
   handlePressKey
 } from "./tools/browser-tools"
+import {
+  handleScrapeStructure,
+  handleScrapeStyles,
+  handleScrapeResources,
+  handleFetchResource
+} from "./tools/scrape-tools"
 
 let baseRegistered = false
 let mcpRegistered = false
@@ -58,18 +64,25 @@ function registerBaseTools(): void {
   registerTool("tabs", handleTabs)
   registerTool("get_active_tab_id", handleGetActiveTabId)
 
-  // 浏览器交互工具
+  // 页面阅读工具
   registerTool("get_page_content", handleGetPageContent)
   registerTool("take_selection", handleTakeSelection)
+
+  // 浏览器交互工具
   registerTool("inspect_element", handleInspectElement)
   registerTool("fill_form", handleFillForm)
   registerTool("click_element", handleClickElement)
   registerTool("screenshot", handleScreenshot)
-
   registerTool("scroll", handleScroll)
   registerTool("press_key", handlePressKey)
   registerTool("navigate", handleNavigate)
   registerTool("close_tab", handleCloseTab)
+
+  // 页面爬取工具
+  registerTool("scrape_structure", handleScrapeStructure)
+  registerTool("scrape_styles", handleScrapeStyles)
+  registerTool("scrape_resources", handleScrapeResources)
+  registerTool("fetch_resource", handleFetchResource)
 }
 
 async function registerObsidianMcpTools(): Promise<void> {
