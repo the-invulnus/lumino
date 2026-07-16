@@ -1,2 +1,4 @@
 overrides:
   zod: 3.25.76
+
+storeDir: /Users/zzbin/developer/codebase/lumino/.pnpm-store/v10

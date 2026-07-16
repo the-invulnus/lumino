@@ -435,18 +435,34 @@ export async function handleScreenshot(
   }
 
   try {
-    const dataUrl = await chrome.tabs.captureVisibleTab(tabId as unknown as number | undefined, { format, quality })
+    // captureVisibleTab 第一个参数是 windowId，不是 tabId
+    let windowId: number | undefined
+    try {
+      const tab = await chrome.tabs.get(tabId)
+      windowId = tab.windowId
+    } catch {
+      windowId = undefined
+    }
+
+    const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format, quality })
 
     if (!dataUrl) {
       return JSON.stringify({ error: "capture_failed" })
     }
 
+    // 将 base64 数据保存到 OPFS，不直接返回给 agent
+    const ext = format === "png" ? "png" : "jpg"
+    const timestamp = Date.now()
+    const savePath = `/screenshots/screenshot_${timestamp}_tab${tabId}.${ext}`
+
+    await writeWorkspaceFile(savePath, dataUrl)
+
     return JSON.stringify({
+      tab_id: tabId,
       format,
       quality: format === "jpeg" ? quality : undefined,
-      data_url_prefix: dataUrl.slice(0, 60) + "...",
       size_bytes: dataUrl.length,
-      data_url: dataUrl
+      saved_to: savePath
     })
   } catch (error) {
     return JSON.stringify({

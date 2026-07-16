@@ -1,3 +1,5 @@
+import JSZip from "jszip"
+
 const WORKSPACE_ROOT = "lumino"
 const WORKSPACE_DIR = "workspace"
 
@@ -184,34 +186,30 @@ export async function exportWorkspaceDir(
   const entries = await listWorkspaceDir(dirPath)
   if (entries.length === 0) return null
 
-  const parts: string[] = []
-  const baseDir = dirPath || "workspace"
+  const baseDir = dirPath.replace(/^\/+/, "") || "workspace"
+  const zip = new JSZip()
 
-  for (const entry of entries) {
-    const fullPath = dirPath ? `${dirPath}/${entry.name}` : entry.name
-    if (entry.kind === "directory") {
-      parts.push(`${fullPath}/`)
-      const subEntries = await listWorkspaceDir(fullPath)
-      for (const sub of subEntries) {
-        const subPath = `${fullPath}/${sub.name}`
-        parts.push(sub.kind === "directory" ? `${subPath}/` : subPath)
-      }
-    } else {
-      const content = await readWorkspaceFile(fullPath)
-      if (content !== null) {
-        parts.push(`--- ${fullPath} ---`)
-        parts.push(content)
-        parts.push("")
+  async function addToZip(zipDir: JSZip, localPath: string) {
+    const dirEntries = await listWorkspaceDir(localPath)
+    for (const entry of dirEntries) {
+      const fullPath = localPath ? `${localPath}/${entry.name}` : entry.name
+      if (entry.kind === "directory") {
+        const subDir = zipDir.folder(entry.name)!
+        await addToZip(subDir, fullPath)
+      } else {
+        const content = await readWorkspaceFile(fullPath)
+        if (content !== null) {
+          zipDir.file(entry.name, content)
+        }
       }
     }
   }
 
-  if (parts.length === 0) return null
+  await addToZip(zip, dirPath)
 
-  const text = parts.join("\n")
+  const zipBlob = await zip.generateAsync({ type: "blob" })
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)
-  const filename = `${baseDir}_${timestamp}.txt`
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" })
+  const filename = `${baseDir}_${timestamp}.zip`
 
-  return { blob, filename }
+  return { blob: zipBlob, filename }
 }

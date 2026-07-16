@@ -163,10 +163,10 @@ export const rmTool = luminoTool({
 
 export const exportTool = luminoTool({
   name: "export",
-  description: "将工作区文件导出到用户本地下载目录。用户说'导出''下载''保存到本地'时使用。",
+  description: "将工作区文件或整个目录导出到用户本地下载目录。导出目录时会打包为 zip。用户说'导出''下载''保存到本地'时使用。",
   inputSchema: z.z.object({
-    file_path: z.z.string().describe("要导出的文件路径，相对于工作区根目录，必须以 / 开头"),
-    filename: z.z.string().describe("下载时使用的文件名，不含路径").optional()
+    file_path: z.z.string().describe("要导出的文件或目录路径，相对于工作区根目录，必须以 / 开头。如 /screenshots 导出截图目录，不传则导出整个工作区。").optional(),
+    filename: z.z.string().describe("下载时使用的文件名，不含路径。目录导出时默认为目录名.zip。").optional()
   })
 })
 

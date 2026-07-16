@@ -13,6 +13,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.65",
     "ai": "^6.0.190",
+    "jszip": "^3.10.1",
     "marked": "^18.0.4",
     "plasmo": "0.90.5",
     "react": "18.2.0",
