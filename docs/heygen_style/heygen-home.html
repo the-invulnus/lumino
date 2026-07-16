@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
+<title>HeyGen - AI Spokesperson Video Creator</title>
+<link rel="icon" type="image/png" sizes="32x32" href="https://app.heygen.com/favicon-32x32.png">
+<style>
+/* ============================================================
+   CSS Custom Properties (HeyGen Design System — Light Theme)
+   ============================================================ */
+:root {
+  --brand: #00c4ff;
+  --brand-rgb: 0 196 255;
+  --transparent: transparent;
+  --textTitle: #232833;
+  --textBody: #4e5666;
+  --textSupport: #818999;
+  --textDisable: #bcc1cc;
+  --textTitleRev: #ffffff;
+  --fillGeneral: #ffffff;
+  --fillBlock: #f7f8fa;
+  --fillUpper: #ffffff;
+  --fillBackground: #f7f8fa;
+  --line: #e2e3e6;
+  --lineDarker: #cdced2;
+  --UXHover: #eaecee;
+  --UXActive: #dedfe2;
+  --UXPrimaryHover: #cff0fb;
+  --UXPrimaryActive: #bcecfb;
+  --UXPrimarySelect: #e3f4fa;
+  --UXBrandHover: #00c4ff;
+  --UXBrandActive: #0e404f;
+  --font-family-primary: "TT Norms Pro", system-ui, -apple-system, sans-serif;
+  --gradientHomePill: linear-gradient(127deg, rgb(243,166,255) 12%, rgb(0,196,255) 70%, rgb(53,200,56) 89%);
+  --gradientAvatarV: linear-gradient(106.8deg, #7a77ff 31.354%, #e68cff 127.38%, #f3a6ff 188.79%);
+  --box-shadow-elevated: 0px 2px 4px -2px rgba(0,0,0,.06), 0px 4px 8px -2px rgba(0,0,0,.1);
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; border: 0 solid #e5e7eb; margin: 0; padding: 0; }
+html { line-height: 1.5; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: var(--font-family-primary);
+  background: var(--fillGeneral);
+  color: var(--textBody);
+  height: 100dvh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 20px;
+}
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; font-family: inherit; font-size: inherit; background: transparent; }
+img, svg { display: block; vertical-align: middle; }
+img { max-width: 100%; height: auto; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #bcc1cc; border-radius: 9999px; }
+
+/* ============================================================
+   App Layout: sidebar icons → secondary nav → main content
+   ============================================================ */
+.app-root {
+  display: flex;
+  height: 100dvh;
+  width: 100%;
+  background: var(--fillGeneral);
+  overflow: hidden;
+}
+
+/* ============================================================
+   Section 1 — Icon Sidebar (78px)
+   ============================================================ */
+.icon-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 78px;
+  min-width: 78px;
+  padding: 10px 16px 16px;
+  background: var(--fillGeneral);
+  border-right: 1px solid rgba(0,0,0,0.06);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px;
+  border-radius: 16px;
+  width: 100%;
+  cursor: pointer;
+  transition: all .2s;
+  color: var(--textBody);
+  position: relative;
+}
+.nav-item:hover { background: var(--UXHover); }
+
+.nav-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  transition: all .2s;
+}
+.nav-item:hover .nav-icon-box { transform: scale(1.1); }
+
+.nav-label {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  margin-top: 4px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  color: var(--textBody);
+}
+
+.nav-item.active .nav-icon-box {
+  background: var(--gradientHomePill);
+}
+.nav-item.active .nav-icon-box svg { color: #fff; }
+.nav-item.active .nav-label {
+  background: var(--gradientHomePill);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.nav-divider {
+  width: 48px;
+  height: 1px;
+  background: var(--line);
+  margin: 4px 0;
+}
+
+.nav-item.avatar:hover .nav-icon-box { background: rgba(243,166,255,0.15); color: #f3a6ff; }
+.nav-item.brand:hover .nav-icon-box { background: rgba(243,166,255,0.15); color: #f3a6ff; }
+.nav-item.apps:hover .nav-icon-box { background: rgba(99,105,89,0.15); color: #636959; }
+.nav-item.projects:hover .nav-icon-box { background: rgba(99,105,89,0.15); color: #636959; }
+
+/* ============================================================
+   Section 2 — Secondary Nav Panel (208px, collapsible)
+   ============================================================ */
+.secondary-nav {
+  width: 208px;
+  min-width: 208px;
+  background: var(--fillGeneral);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width .2s, min-width .2s, margin .2s, opacity .2s;
+}
+.secondary-nav.collapsed {
+  width: 0;
+  min-width: 0;
+}
+
+.secondary-nav-top {
+  padding: 12px 16px;
+  contain: layout style;
+}
+.secondary-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0 8px 8px;
+}
+.secondary-nav-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--textSupport);
+  white-space: nowrap;
+}
+.btn-collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  color: var(--textSupport);
+  flex-shrink: 0;
+  transition: all .15s;
+}
+.btn-collapse:hover {
+  background: var(--fillBlock);
+  color: var(--textTitle);
+}
+
+/* Create New nav item */
+.nav-link-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  height: 32px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  cursor: pointer;
+  transition: all .15s;
+  background: var(--UXPrimarySelect);
+  color: var(--textTitle);
+}
+
+/* ============================================================
+   Onboarding Checklist Card
+   ============================================================ */
+.onboarding-card {
+  margin-top: 12px;
+  padding: 8px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--fillUpper);
+}
+
+.onboarding-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.onboarding-header .check-circle {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.onboarding-header .header-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--textTitle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.onboarding-header .count-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--fillBlock);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand);
+  flex-shrink: 0;
+}
+.onboarding-header .chevron {
+  color: var(--textSupport);
+  flex-shrink: 0;
+}
+
+.progress-bar {
+  margin-top: 6px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--fillBlock);
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--brand);
+  transition: width .3s;
+  width: 33.33%;
+}
+
+.task-list {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 16px;
+  background: var(--fillBlock);
+  cursor: pointer;
+  transition: all .15s;
+}
+.task-row:hover { background: var(--UXHover); }
+.task-row.done { cursor: default; }
+
+.task-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--textDisable);
+  flex-shrink: 0;
+  transition: all .15s;
+}
+.task-row.done .task-checkbox {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+.task-row .task-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--textTitle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-row.done .task-label {
+  color: var(--textSupport);
+  text-decoration: line-through;
+}
+
+/* ============================================================
+   Session List
+   ============================================================ */
+.secondary-nav-bottom {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px;
+}
+
+.session-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--textSupport);
+}
+.session-section-header .line {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.session-item:hover { background: var(--fillBlock); }
+.session-item .session-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--textTitle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================
+   Section 3 — Main Content
+   ============================================================ */
+.main-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #f7f8fa;
+  overflow: hidden;
+}
+
+/* Top Right Floating Bar */
+.top-right-bar {
+  position: absolute;
+  right: 24px;
+  top: 20px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-ask-ai {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background: var(--fillGeneral);
+  color: var(--textBody);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--box-shadow-elevated);
+  transition: all .15s;
+}
+.btn-ask-ai:hover { background: var(--UXHover); color: var(--textTitle); }
+
+.notification-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 9999px;
+  background: var(--fillGeneral);
+  box-shadow: var(--box-shadow-elevated);
+}
+
+.btn-icon-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  color: var(--textBody);
+  transition: all .15s;
+}
+.btn-icon-circle:hover { background: var(--UXHover); color: var(--textTitle); }
+
+/* ============================================================
+   Page Scroll
+   ============================================================ */
+.page-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
+
+/* ============================================================
+   Hero (Orb + Title)
+   ============================================================ */
+.hero-wrapper { position: relative; min-height: 100vh; padding-bottom: 40px; }
+
+.bg-orb-container { position: sticky; top: 0; z-index: 0; height: 0; }
+.bg-orb-inner { pointer-events: none; position: relative; height: 100vh; max-height: 1000px; transform: scale(1.2); overflow: hidden; }
+.bg-orb-inner img { width: 100%; height: 100%; object-fit: cover; opacity: 0.18; filter: blur(2px); }
+.bg-orb-overlay { position: absolute; inset: 0; background: rgba(247,248,250,0.85); }
+
+.hero-content {
+  position: relative; z-index: 10;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  min-height: 100vh;
+  padding: clamp(16px, 7vh, 72px) 16px 20px;
+}
+@media (min-width: 640px) { .hero-content { padding-left: 24px; padding-right: 24px; } }
+@media (min-width: 1024px) { .hero-content { padding-left: 48px; padding-right: 48px; } }
+
+.hero-headlines { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 8px; }
+.hero-title {
+  font-family: "ABC Solar Display Headline", "ABC Solar Display", sans-serif;
+  font-weight: 700; font-size: 48px; line-height: 1; color: var(--textTitle);
+  text-align: center; letter-spacing: -0.02em;
+}
+.hero-subtitle { font-size: 18px; line-height: 28px; color: var(--textTitle); text-align: center; }
+
+/* ============================================================
+   Prompt Box
+   ============================================================ */
+.prompt-box-wrapper { position: relative; z-index: 100; margin: 16px auto 0; width: 100%; max-width: 720px; }
+
+.prompt-box {
+  position: relative; display: flex; flex-direction: column; gap: 12px;
+  padding: 12px; border-radius: 32px; border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+
+.prompt-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.prompt-pill {
+  display: flex; align-items: center; gap: 7px; height: 48px;
+  padding: 0 14px 0 8px; border-radius: 16px;
+  border: 1px solid rgba(0,0,0,0.12); background: rgba(255,255,255,0.8);
+  cursor: pointer; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  transition: all .15s; white-space: nowrap;
+}
+.prompt-pill:hover { background: var(--fillGeneral); box-shadow: var(--box-shadow-elevated); }
+
+.prompt-pill-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 9999px; background: var(--fillGeneral); flex-shrink: 0;
+}
+
+.prompt-pill-text { display: flex; flex-direction: column; gap: 1px; }
+.prompt-pill-text .pill-label { font-size: 13px; font-weight: 500; color: var(--textTitle); line-height: 1.2; }
+.prompt-pill-text .pill-sub { font-size: 11px; line-height: 1.2; color: var(--textSupport); }
+
+.prompt-input { position: relative; display: flex; width: 100%; min-height: 56px; padding-top: 4px; }
+.prompt-input textarea {
+  width: 100%; resize: none; overflow-y: auto; border: none; outline: none;
+  background: transparent; font-family: var(--font-family-primary);
+  font-size: 16px; font-weight: 400; line-height: 30px;
+  color: var(--textTitle); caret-color: var(--brand); max-height: 200px; min-height: 23px;
+}
+.prompt-input textarea::placeholder { color: var(--textSupport); }
+
+.prompt-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.prompt-bottom-left { display: flex; align-items: center; gap: 12px; }
+
+.btn-prompt-action {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 9999px;
+  background: rgba(0,0,0,0.06); color: var(--textTitle); font-weight: 500;
+  cursor: pointer; transition: all .15s; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.btn-prompt-action:hover { transform: scale(1.1); background: rgba(0,0,0,0.1); }
+
+.btn-autopilot {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; padding: 0 12px; border-radius: 9999px;
+  background: rgba(0,0,0,0.05); color: var(--textTitle); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all .15s; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.btn-autopilot:hover { background: rgba(0,0,0,0.1); transform: scale(1.02); }
+
+.btn-send {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 9999px;
+  background: #19191a; color: #fff; cursor: pointer; transition: all .15s;
+}
+.btn-send:hover { background: #4e5666; transform: scale(1.05); }
+
+/* ============================================================
+   Pill Scroll
+   ============================================================ */
+.pill-scroll-row {
+  display: flex; gap: 10px; margin-top: 16px;
+  overflow-x: auto; padding: 0 20px; margin-left: -20px; margin-right: -20px;
+  mask-image: linear-gradient(to right, transparent 0, black 32px, black calc(100% - 32px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 32px, black calc(100% - 32px), transparent 100%);
+  scrollbar-width: none;
+}
+.pill-scroll-row::-webkit-scrollbar { display: none; }
+@media (min-width: 640px) {
+  .pill-scroll-row { flex-wrap: wrap; justify-content: center; overflow: visible; padding: 0; margin: 16px 0 0; mask-image: none; -webkit-mask-image: none; }
+}
+
+.pill-btn {
+  display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 16px;
+  border-radius: 9999px; border: 1px solid rgba(0,0,0,0.10);
+  background: rgba(255,255,255,0.5); color: rgba(0,0,0,0.72);
+  font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all .15s;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.pill-btn:hover { background: rgba(255,255,255,0.8); border-color: rgba(0,0,0,0.2); color: rgba(0,0,0,0.9); }
+
+/* ============================================================
+   Feature Grid
+   ============================================================ */
+.feature-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  margin: 24px auto 0; width: 100%; max-width: 1000px;
+}
+@media (min-width: 1024px) { .feature-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.feature-card {
+  position: relative; width: 100%; cursor: pointer; text-align: left;
+  font-family: inherit; border-radius: 20px; overflow: hidden;
+  background: #f7f8fa; transition: all .2s;
+}
+.feature-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.12); }
+
+.feature-card-media {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between;
+  aspect-ratio: 5/4; padding: 10px 12px 16px; overflow: hidden;
+}
+@media (min-width: 640px) { .feature-card-media { aspect-ratio: 5/3; padding: 16px; } }
+
+.feature-card-media img {
+  position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px);
+  object-fit: cover; user-select: none;
+}
+
+.feature-card-title {
+  position: relative; z-index: 10;
+  font-family: "ABC Solar Display Headline", "ABC Solar Display", sans-serif;
+  font-size: 20px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; color: var(--textTitle);
+}
+@media (min-width: 480px) { .feature-card-title { font-size: 24px; } }
+@media (min-width: 1280px) { .feature-card-title { font-size: 30px; } }
+
+.feature-card-link {
+  position: relative; z-index: 10; display: flex; align-items: center; gap: 6px;
+  font-size: 14px; font-weight: 500; color: var(--textTitle);
+}
+
+.feature-card-badge {
+  position: absolute; bottom: 12px; right: 12px; z-index: 10;
+  display: flex; align-items: center; padding: 4px 8px; border-radius: 6px;
+  background: var(--gradientAvatarV); color: #fff; font-size: 10px; font-weight: 700; line-height: 1;
+}
+
+.section-spacer { height: 40px; }
+
+/* ============================================================
+   Toggle for secondary nav
+   ============================================================ */
+.toggle-btn {
+  position: absolute;
+  left: 78px;
+  top: 14px;
+  z-index: 30;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: var(--fillGeneral);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--box-shadow-elevated);
+  transition: all .15s;
+  color: var(--textSupport);
+}
+.toggle-btn:hover { color: var(--textTitle); background: var(--UXHover); }
+.toggle-btn.collapsed { left: 78px; }
+
+/* ============================================================
+   Font Faces
+   ============================================================ */
+@font-face {
+  font-family: "TT Norms Pro";
+  src: url(https://static.heygen.ai/fonts/tt_norms_pro/TT_Norms_Pro_Regular.woff2) format("woff2");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "TT Norms Pro";
+  src: url(https://static.heygen.ai/fonts/tt_norms_pro/TT_Norms_Pro_Medium.woff2) format("woff2");
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "TT Norms Pro";
+  src: url(https://static.heygen.ai/fonts/tt_norms_pro/TT_Norms_Pro_DemiBold.woff2) format("woff2");
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "TT Norms Pro";
+  src: url(https://static.heygen.ai/fonts/tt_norms_pro/TT_Norms_Pro_Bold.woff2) format("woff2");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "TT Norms Pro";
+  src: url(https://static.heygen.ai/fonts/tt_norms_pro/TT_Norms_Pro_ExtraBold.woff2) format("woff2");
+  font-weight: 900; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "ABC Solar Display";
+  src: url(https://static.heygen.ai/fonts/solar/ABCSolarDisplay-Bold.woff2) format("woff2");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "ABC Solar Display Headline";
+  src: url(https://static.heygen.ai/fonts/solar/ABCSolarDisplay-Bold.woff2) format("woff2");
+  font-weight: 100 900; font-style: normal; font-display: swap;
+}
+
+/* ============================================================
+   Responsive: hide secondary nav on small screens
+   ============================================================ */
+@media (max-width: 1100px) {
+  .secondary-nav { display: none; }
+  .toggle-btn { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="app-root">
+
+  <!-- ===== 1. ICON SIDEBAR ===== -->
+  <nav class="icon-sidebar">
+    <a class="nav-item active" href="#">
+      <div class="nav-icon-box">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      </div>
+      <span class="nav-label">Home</span>
+    </a>
+    <a class="nav-item avatar" href="#">
+      <div class="nav-icon-box">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+        </svg>
+      </div>
+      <span class="nav-label">Avatar</span>
+    </a>
+    <a class="nav-item brand" href="#">
+      <div class="nav-icon-box">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="10" r="2"/><path d="M3 16l5-5 3 3 4-4 6 6"/>
+        </svg>
+      </div>
+      <span class="nav-label">Brand</span>
+    </a>
+    <a class="nav-item apps" href="#">
+      <div class="nav-icon-box">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+      </div>
+      <span class="nav-label">Apps</span>
+    </a>
+    <div class="nav-divider"></div>
+    <a class="nav-item projects" href="#">
+      <div class="nav-icon-box">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19H2M12 3L2 9v10h20V9l-10-6z"/>
+        </svg>
+      </div>
+      <span class="nav-label">Projects</span>
+    </a>
+  </nav>
+
+  <!-- ===== 2. SECONDARY NAV ===== -->
+  <div class="secondary-nav" id="secondaryNav">
+    <!-- Top section with contain -->
+    <div class="secondary-nav-top">
+      <!-- Header: "Home" + collapse button -->
+      <div class="secondary-nav-header">
+        <h2>Home</h2>
+        <button class="btn-collapse" onclick="toggleSecondaryNav()" aria-label="Collapse navigation">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M11 5L6 9l5 4"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Nav link -->
+      <a class="nav-link-main" href="/home">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/><circle cx="17" cy="7" r="3" fill="#00c4ff" stroke="none"/><path d="M15.15 7.8l1.1 1.1 2.5-2.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Create New</span>
+      </a>
+
+      <!-- Onboarding Checklist -->
+      <div class="onboarding-card">
+        <div class="onboarding-header">
+          <svg class="check-circle" width="22" height="22" viewBox="0 0 22 22">
+            <circle cx="11" cy="11" r="8" fill="none" stroke="var(--textDisable)" stroke-width="3"/>
+            <circle cx="11" cy="11" r="8" fill="none" stroke="var(--brand)" stroke-width="3" stroke-linecap="round"
+              stroke-dasharray="50.265" stroke-dashoffset="33.51" style="transform: rotate(-90deg); transform-origin: center;"/>
+          </svg>
+          <span class="header-title">Get started</span>
+          <span class="count-badge">1/3</span>
+          <svg class="chevron" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="10 8 7 5 4 8"/></svg>
+        </div>
+
+        <div class="progress-bar"><div class="progress-bar-fill"></div></div>
+
+        <div class="task-list">
+          <div class="task-row">
+            <div class="task-checkbox"></div>
+            <span class="task-label">Create Your Avatar</span>
+          </div>
+          <div class="task-row">
+            <div class="task-checkbox"></div>
+            <span class="task-label">Clone Your Voice</span>
+          </div>
+          <div class="task-row done">
+            <div class="task-checkbox">
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4.5L3.5 6.5L7.5 2.5"/></svg>
+            </div>
+            <span class="task-label">Create a Video</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session list -->
+    <div class="secondary-nav-bottom">
+      <div class="session-section-header">
+        <span>Today</span>
+        <div class="line"></div>
+      </div>
+      <div class="session-item">
+        <span class="session-title">开始新的创作</span>
+      </div>
+      <div class="session-item">
+        <span class="session-title">制作3D</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 3. MAIN CONTENT ===== -->
+  <main class="main-content">
+    <!-- Top Right: Ask AI -->
+    <div class="top-right-bar">
+      <button class="btn-ask-ai">Ask AI</button>
+      <div class="notification-group">
+        <button class="btn-icon-circle" aria-label="Notifications">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Scrollable Page -->
+    <div class="page-scroll">
+      <div class="hero-wrapper">
+        <!-- Background Orb -->
+        <div class="bg-orb-container">
+          <div class="bg-orb-inner">
+            <img src="https://dynamic.heygen.ai/app/branding/PRISM_ORB.png?tr=f-auto,q-50,w-100" alt="">
+            <div class="bg-orb-overlay"></div>
+          </div>
+        </div>
+
+        <!-- Foreground Content -->
+        <div class="hero-content">
+          <div class="hero-headlines">
+            <h1 class="hero-title">Say it with video</h1>
+            <p class="hero-subtitle">HeyGen's new all-in-one agent for video creation.</p>
+          </div>
+
+          <!-- Prompt Box -->
+          <div class="prompt-box-wrapper">
+            <div class="prompt-box">
+              <div class="prompt-pills">
+                <div class="prompt-pill">
+                  <div class="prompt-pill-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818999" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+                  </div>
+                  <div class="prompt-pill-text"><span class="pill-label">Auto</span><span class="pill-sub">Avatar</span></div>
+                </div>
+                <div class="prompt-pill">
+                  <div class="prompt-pill-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818999" stroke-width="1.5"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                  </div>
+                  <div class="prompt-pill-text"><span class="pill-label">Auto</span><span class="pill-sub">Voice</span></div>
+                </div>
+                <div class="prompt-pill">
+                  <div class="prompt-pill-icon" style="border-radius:12px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818999" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="10" r="2.5"/><path d="M3 16l5-5 3 3 4-4 6 6"/></svg>
+                  </div>
+                  <div class="prompt-pill-text"><span class="pill-label">Auto</span><span class="pill-sub">Brand System</span></div>
+                </div>
+              </div>
+
+              <div class="prompt-input">
+                <textarea rows="1" placeholder="Ask for a video, an avatar, or anything in between—I can get you started."></textarea>
+              </div>
+
+              <div class="prompt-bottom">
+                <div class="prompt-bottom-left">
+                  <button class="btn-prompt-action" aria-label="Add">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </button>
+                  <button class="btn-prompt-action" aria-label="Options">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  </button>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <button class="btn-autopilot">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6.4-4.8-6.4 4.8 2.4-7.2-6-4.8h7.6z"/></svg>
+                    Auto-pilot
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                  <button class="btn-send">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pill Scroll Row -->
+          <div class="pill-scroll-row">
+            <button class="pill-btn">Course Lesson</button>
+            <button class="pill-btn">Use Avatar V</button>
+            <button class="pill-btn">Use Brand System</button>
+            <button class="pill-btn">Upload Docs</button>
+            <button class="pill-btn">Script to Video</button>
+          </div>
+
+          <!-- Feature Grid -->
+          <div class="feature-grid">
+
+            <div class="feature-card">
+              <div class="feature-card-media">
+                <img src="https://dynamic.heygen.ai/SuperAgent/superagent-grid-create-avatar-01.jpg?tr=f-auto,q-70,h-420" alt="">
+                <div class="feature-card-title">Create an<br>Avatar</div>
+                <div class="feature-card-link">Go to Avatars →</div>
+                <span class="feature-card-badge">Avatar V</span>
+              </div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-media" style="background: linear-gradient(180deg, #1a1a2e 0%, #0c1321 100%);">
+                <div class="feature-card-title" style="color:#fff">Speech<br>Cleanup</div>
+                <div class="feature-card-link" style="color:rgba(255,255,255,0.7)">Create now →</div>
+              </div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-media" style="background: linear-gradient(135deg, #f3e5f5, #e1bee7);">
+                <div class="feature-card-title">Photo<br>to Video</div>
+                <div class="feature-card-link">Try it now →</div>
+              </div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-media" style="background: linear-gradient(135deg, #e8eaf6, #c5cae9);">
+                <div class="feature-card-title">Translate<br>any Video</div>
+                <div class="feature-card-link">Translate now →</div>
+              </div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-media" style="background: linear-gradient(135deg, #fff8e1, #ffecb3);">
+                <div class="feature-card-title">Course<br>Lesson Video</div>
+                <div class="feature-card-link">Create yours →</div>
+              </div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-media" style="background: linear-gradient(135deg, #fce4ec, #f8bbd0);">
+                <div class="feature-card-title">Avatar<br>Shots</div>
+                <div class="feature-card-link">Get Started →</div>
+                <span class="feature-card-badge">Seedance 2</span>
+              </div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-media" style="background: linear-gradient(135deg, #e0f2f1, #b2dfdb);">
+                <div class="feature-card-title">Start from<br>Scratch</div>
+                <div class="feature-card-link">Go to AI Studio →</div>
+              </div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-media" style="background: linear-gradient(135deg, #eceff1, #cfd8dc);">
+                <div class="feature-card-title">For agents<br>and developers</div>
+                <div class="feature-card-link">Go to API dashboard →</div>
+              </div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-media" style="background: linear-gradient(135deg, #e8f5e9, #a5d6a7);">
+                <div class="feature-card-title">AI Video<br>Generator</div>
+                <div class="feature-card-link">Create now →</div>
+              </div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-media" style="background: linear-gradient(135deg, #ffebee, #ef9a9a);">
+                <div class="feature-card-title">AI<br>Clipping</div>
+                <div class="feature-card-link">Create now →</div>
+              </div>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-card-media" style="background: linear-gradient(135deg, #e3f2fd, #90caf9);">
+                <div class="feature-card-title">Upscale<br>Video</div>
+                <div class="feature-card-link">Create now →</div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="section-spacer"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Toggle button for secondary nav (appears between icon sidebar and secondary nav) -->
+<button class="toggle-btn" id="toggleBtn" onclick="toggleSecondaryNav()" style="position:fixed; left:calc(78px + 208px); top:14px; z-index:30; width:24px; height:24px; border-radius:9999px; background:var(--fillGeneral); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:var(--box-shadow-elevated); transition:all .15s; color:var(--textSupport);">
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 4L4 7l4 3"/></svg>
+</button>
+
+<script>
+function toggleSecondaryNav() {
+  var nav = document.getElementById('secondaryNav');
+  var btn = document.getElementById('toggleBtn');
+  nav.classList.toggle('collapsed');
+  if (nav.classList.contains('collapsed')) {
+    btn.style.left = '78px';
+    btn.querySelector('svg').innerHTML = '<path d="M6 4L10 7l-4 3"/>';
+  } else {
+    btn.style.left = 'calc(78px + 208px)';
+    btn.querySelector('svg').innerHTML = '<path d="M8 4L4 7l4 3"/>';
+  }
+}
+</script>
+
+</body>
+</html>
