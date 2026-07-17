@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with all AI models (Gemini, Claude, DeepSeek...) & AI Agents | AITOPIA</title>
+    <style>
+        :root {
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --accent-green: #10b981;
+            --hover-bg: #f3f4f6;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden; /* 防止出现滚动条 */
+        }
+
+        /* --- 主聊天页面样式 --- */
+        .main-page {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease-in-out;
+        }
+
+        header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--card-bg);
+        }
+
+        .header-title {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .chat-header {
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .page-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .new-conversation-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .history-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+
+        .history-btn:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .content-area {
+            flex-grow: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .prompt-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+
+        .prompt-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .prompt-icon {
+            font-size: 1.5rem;
+        }
+
+        .prompt-text h3 {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .prompt-text p {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        .prompt-arrow {
+            margin-left: auto;
+            color: var(--accent-green);
+            font-size: 1.25rem;
+        }
+
+        .ai-response-section {
+            background-color: #f3f4f6;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .ai-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .ai-message {
+            font-size: 1rem;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+
+        /* --- 历史记录侧边栏样式 --- */
+        .history-sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 320px;
+            height: 100%;
+            background-color: var(--card-bg);
+            border-left: 1px solid var(--border-color);
+            box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+            transform: translateX(100%); /* 初始状态：隐藏在右侧 */
+            transition: transform 0.3s ease-in-out;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .history-sidebar.open {
+            transform: translateX(0); /* 展开状态 */
+        }
+
+        .sidebar-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+        }
+
+        .search-container {
+            padding: 1rem 1.5rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background-color: var(--bg-color);
+            font-size: 0.875rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-green);
+        }
+
+        .history-list {
+            flex-grow: 1;
+            padding: 0 1.5rem;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .history-item:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .history-item-title {
+            font-weight: 600;
+            font-size: 0.9375rem;
+        }
+
+        .history-item-date {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .history-item-preview {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .delete-icon {
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        /* 遮罩层，当侧边栏打开时显示 */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 90;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 主聊天页面 -->
+    <div class="main-page" id="mainPage">
+        <header>
+            <span class="header-title">Chat with all AI models (Gemini, Claude, DeepSeek...) & AI Agents | AITOPIA</span>
+        </header>
+        <div class="chat-header">
+            <div class="logo-area">
+                <div class="logo-icon">AI</div>
+                <h1 class="page-title">Chat</h1>
+            </div>
+            <div class="header-actions">
+                <button class="new-conversation-btn">
+                    <span>+</span> New Conversation
+                </button>
+                <button class="history-btn" id="openHistoryBtn" title="History">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="prompt-card">
+                <span class="prompt-icon">🤔</span>
+                <div class="prompt-text">
+                    <h3>Explain a complex thing</h3>
+                    <p>Explain Artificial Intelligence so that I can explain it to my six-year-old child.</p>
+                </div>
+                <span class="prompt-arrow">→</span>
+            </div>
+
+            <div class="prompt-card">
+                <span class="prompt-icon">💡</span>
+                <div class="prompt-text">
+                    <h3>Get suggestions and create new ideas</h3>
+                    <p>Please give me the best 10 travel ideas around the world</p>
+                </div>
+                <span class="prompt-arrow">→</span>
+            </div>
+
+            <div class="prompt-card">
+                <span class="prompt-icon">🌐</span>
+                <div class="prompt-text">
+                    <h3>Translate, summarize, fix grammar and more...</h3>
+                    <p>Translate "I love you" French</p>
+                </div>
+                <span class="prompt-arrow">→</span>
+            </div>
+
+            <div class="ai-response-section">
+                <div class="ai-logo">
+                    <div class="logo-icon" style="width: 24px; height: 24px; font-size: 0.9rem;">AI</div>
+                    <span>AITOPIA</span>
+                </div>
+                <p class="ai-message">Hello, how can I help you today?</p>
+                <div class="message-actions">
+                    <button class="action-btn" title="Copy">📋</button>
+                    <button class="action-btn" title="Read Aloud">🔊</button>
+                    <button class="action-btn" title="More options">▼</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 历史记录侧边栏 -->
+    <div class="history-sidebar" id="historySidebar">
+        <div class="sidebar-header">
+            <h2 class="sidebar-title">History (1)</h2>
+            <button class="close-btn" id="closeHistoryBtn">&times;</button>
+        </div>
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search history...">
+        </div>
+        <div class="history-list">
+            <div class="history-item">
+                <div class="history-item-header">
+                    <span class="history-item-title">jjj</span>
+                    <span class="history-item-date">12/05/2026</span>
+                </div>
+                <div class="history-item-preview">
+                    <span>It seems like you typed "jjj." How can I assist</span>
+                    <span class="delete-icon" title="Delete">🗑️</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遮罩层 -->
+    <div class="overlay" id="overlay"></div>
+
+    <script>
+        // 获取 DOM 元素
+        const openHistoryBtn = document.getElementById('openHistoryBtn');
+        const closeHistoryBtn = document.getElementById('closeHistoryBtn');
+        const historySidebar = document.getElementById('historySidebar');
+        const overlay = document.getElementById('overlay');
+        const mainPage = document.getElementById('mainPage');
+
+        // 打开历史记录侧边栏的函数
+        function openHistory() {
+            historySidebar.classList.add('open');
+            overlay.classList.add('active');
+            // 可选：给主页面一个向左移动的动画效果
+            // mainPage.style.transform = 'translateX(-100px)'; 
+        }
+
+        // 关闭历史记录侧边栏的函数
+        function closeHistory() {
+            historySidebar.classList.remove('open');
+            overlay.classList.remove('active');
+            // 可选：恢复主页面位置
+            // mainPage.style.transform = 'translateX(0)';
+        }
+
+        // 添加事件监听器
+        openHistoryBtn.addEventListener('click', openHistory);
+        closeHistoryBtn.addEventListener('click', closeHistory);
+        overlay.addEventListener('click', closeHistory); // 点击遮罩层也可以关闭
+
+    </script>
+</body>
+</html>
