@@ -1,5 +1,4 @@
 import { registerTool } from "./tool-executor"
-import { handleMemoryGet, handleMemorySearch } from "./tools/memory-tools"
 import {
   handleLs,
   handleReadFile,
@@ -44,10 +43,6 @@ function registerBaseTools(): void {
   if (baseRegistered) return
   baseRegistered = true
   console.log("[lumino:registry] 注册基础工具...")
-
-  // 记忆系统工具
-  registerTool("memory_get", handleMemoryGet)
-  registerTool("memory_search", handleMemorySearch)
 
   // 文件系统工具
   registerTool("ls", handleLs)

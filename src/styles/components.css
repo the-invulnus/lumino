@@ -28,7 +28,6 @@
 .lm-secondary-button,
 .lmi-tool-call__trigger,
 .lmi-tool-call__detail,
-.lm-memory-tag,
 .lm-bezel-outer,
 .lm-bezel-inner {
   transition:
@@ -703,81 +702,6 @@
   background: var(--lumi-surface-solid);
   box-shadow: var(--lumi-shadow-soft);
   color: var(--lumi-text);
-}
-
-/* ================================================
-   Memory Panel
-   ================================================ */
-
-.lm-memory-title {
-  color: var(--lumi-text);
-  font-family: var(--lumi-font);
-  font-size: var(--lumi-text-md);
-  font-weight: var(--lumi-weight-bold);
-  letter-spacing: var(--lumi-tracking-snug);
-  margin: 0;
-}
-
-.lm-memory-card {
-  background: rgba(45, 38, 34, 0.025);
-  border: 1px solid var(--lumi-border);
-  border-radius: var(--lumi-radius-bubble);
-}
-
-.lm-memory-row {
-  color: var(--lumi-text);
-  font-family: var(--lumi-font);
-  font-size: var(--lumi-text-base);
-  line-height: var(--lumi-leading-normal);
-}
-
-.lm-memory-label {
-  color: var(--lumi-text-soft);
-  flex-shrink: 0;
-  font-size: var(--lumi-text-sm);
-  font-weight: var(--lumi-weight-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.lm-memory-tag {
-  background: var(--lumi-border-strong);
-  color: var(--lumi-text-soft);
-  font-size: var(--lumi-text-sm);
-  font-weight: var(--lumi-weight-medium);
-}
-
-.lm-memory-tag--site {
-  background: rgba(164, 139, 250, 0.12);
-  color: var(--lumi-accent-b);
-}
-
-.lm-memory-tag--kw {
-  background: rgba(232, 160, 144, 0.12);
-  color: var(--lumi-accent-a);
-}
-
-.lm-memory-date {
-  color: var(--lumi-text-faint);
-  font-family: var(--lumi-mono);
-  font-size: var(--lumi-text-sm);
-  font-weight: var(--lumi-weight-semibold);
-}
-
-.lm-memory-summary {
-  color: var(--lumi-text);
-  font-family: var(--lumi-font);
-  font-size: var(--lumi-text-base);
-  line-height: var(--lumi-leading-relaxed);
-  margin: 0;
-}
-
-.lm-memory-hint {
-  color: var(--lumi-text-soft);
-  font-family: var(--lumi-font);
-  font-size: var(--lumi-text-base);
-  line-height: 1.6;
-  margin: 0;
 }
 
 /* ================================================

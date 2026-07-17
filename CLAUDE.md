@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-Lumino 是一款基于 Plasmo 框架构建的 Chrome 浏览器扩展，定位为「陪伴型 AI 助手」。用户通过 Side Panel 与 AI 对话，AI 通过 Agent 框架（Vercel AI SDK v6）自主调度内置工具系统，可读取网页内容、操作 DOM、管理文件、存取 Obsidian 笔记。配备完整的三层记忆系统和 OPFS 文件系统工作区。
+Lumino 是一款基于 Plasmo 框架构建的 Chrome 浏览器扩展，定位为「陪伴型 AI 助手」。用户通过 Side Panel 与 AI 对话，AI 通过 Agent 框架（Vercel AI SDK v6）自主调度内置工具系统，可读取网页内容、操作 DOM、管理文件、存取 Obsidian 笔记。配备 OPFS 文件系统工作区。
 
 （文档更新有滞后性，如果发现代码实现与本文档说明不符，一律以代码实现为准。）
 
@@ -28,12 +28,12 @@ Chrome Extension Manifest V3，**Service Worker + Side Panel + Content Script**�
 
 | 入口 | 文件 | 说明 |
 |---|---|---|
-| Service Worker | `src/background.ts` | Agent 执行引擎、消息路由、定时任务（dwell 巡检、驱逐清理） |
+| Service Worker | `src/background.ts` | Agent 执行引擎、消息路由、定时任务（驱逐清理） |
 | Side Panel | `src/sidepanel.tsx` | 核心交互界面：多会话聊天、LLM 对话 |
-| Options Page | `src/options.tsx` | LLM 配置 + Obsidian 集成配置 + 采集开关 |
+| Options Page | `src/options.tsx` | LLM 配置 + Obsidian 集成配置 + 主题切换 |
 | Content Script | `src/contents/lumino-floating-button.ts` | `<all_urls>` 注入悬浮按钮，点击唤起侧栏 |
 | Content Script（辅助） | `src/content/floating-button.ts` | 浮动按钮 DOM 创建/挂载逻辑 |
-| Content Script（已禁用） | `src/contents/lumino-input-watcher.ts` | 输入监听 & AI 自动补全 |
+| Content Script（辅助） | `src/contents/lumino-input-watcher.ts` | 基础注入，抑制 SW 上下文失效错误 |
 
 ## Agent 架构（核心）
 
@@ -92,17 +92,18 @@ OpenAiChatMessage[]  ──openAiToModelMessages()──→  ModelMessage[]
 
 ```ts
 const tool = luminoTool({
-  name: "memory_get",
-  description: "读取指定日期的日记忆全文...",
+  name: "get_page_content",
+  description: "读取当前页面的可见文本内容...",
   inputSchema: z.z.object({
-    date: z.z.string().describe("日期，格式 YYYY-MM-DD...").optional()
+    tab_id: z.z.number().int().describe("目标标签页的 ID...").optional(),
+    mode: z.z.enum(["text", "structured"]).describe("提取模式...").optional()
   })
 })
 ```
 
 - `luminoTool()` 内部包装 AI SDK `tool()`，`execute` 直接调用 `getToolHandler(name)` 从 `tool-executor.ts` 注册表获取 handler
 - Zod v4 兼容性：使用 `import * as z from "zod"` + `z.z.string()` 模式（Plasmo/Parcel CJS 打包要求）
-- 工具列表分 `BASE_TOOLS`（21个基础工具）+ `OBSIDIAN_TOOLS`（7个 Obsidian 工具），根据配置动态合并
+- 工具列表分 `BASE_TOOLS`（24个基础工具）+ Obsidian MCP 工具，根据配置动态合并
 
 ### 工具注册与执行 (tool-executor.ts)
 
@@ -111,15 +112,16 @@ const tool = luminoTool({
 - **执行流程**：`executeToolCall(call, signal)` → handler → `maybeEvictToolResult()`（大结果驱逐）
 - **对外接口**：`getToolHandler(name)` 供 tool-definitions.ts 使用
 
-### 工具清单（28个）
+### 工具清单（24个 + Obsidian MCP 动态工具）
 
 | 分类 | 工具名 | 文件 |
 |------|--------|------|
-| 记忆 | `memory_get`, `memory_search` | `tools/memory-tools.ts` |
 | 文件系统 | `ls`, `read_file`, `write_file`, `edit_file`, `glob`, `grep`, `rm`, `export` | `tools/fs-tools.ts` |
 | 浏览器系统 | `current_page`, `tabs`, `get_active_tab_id` | `tools/system-tools.ts` |
-| 浏览器交互 | `get_page_content`, `take_selection`, `inspect_element`, `fill_form`, `click_element`, `screenshot`, `scroll`, `press_key`, `navigate` | `tools/browser-tools.ts` |
-| Obsidian (MCP) | `vault_list`, `vault_read`, `vault_write`, `vault_append`, `vault_patch`, `vault_delete`, `vault_move`, `vault_get_document_map`, `active_file_get_path`, `periodic_note_get_path`, `search_query`, `search_simple`, `tag_list`, `command_list`, `command_execute`, `open_file` | `mcp/mcp-client.ts` + `tools/obsidian-mcp.ts` |
+| 页面阅读 | `get_page_content`, `take_selection` | `tools/browser-tools.ts` |
+| 浏览器交互 | `inspect_element`, `fill_form`, `click_element`, `screenshot`, `scroll`, `press_key`, `navigate`, `close_tab` | `tools/browser-tools.ts` |
+| 页面爬取 | `scrape_structure`, `scrape_styles`, `scrape_resources`, `fetch_resource` | `tools/scrape-tools.ts` |
+| Obsidian (MCP) | 运行时动态获取（`vault_list`, `vault_read`, `vault_write` 等） | `mcp/mcp-client.ts` + `tools/obsidian-mcp.ts` |
 
 ### Side Panel ↔ Service Worker 通信
 
@@ -180,54 +182,46 @@ lumino/
 ├── src/
 │   ├── background.ts                    # Service Worker — Agent 执行 & 消息路由
 │   ├── sidepanel.tsx                    # Side Panel 主聊天 UI
-│   ├── options.tsx                      # 选项页 — LLM + Obsidian + 采集配置
+│   ├── options.tsx                      # 选项页 — LLM + Obsidian 配置 + 主题切换
 │   ├── content/
 │   │   ├── floating-button.ts           # 浮动按钮 DOM 逻辑
 │   │   └── floating-button.test.ts
 │   ├── contents/
-│   │   ├── lumino-floating-button.ts    # Plasmo 内容脚本入口
-│   │   └── lumino-input-watcher.ts      # AI 补全（已禁用）
+│   │   ├── lumino-floating-button.ts    # Plasmo 内容脚本入口（悬浮按钮）
+│   │   └── lumino-input-watcher.ts      # 基础注入（抑制 SW 上下文失效错误）
 │   ├── lib/
 │   │   ├── chat/
 │   │   │   ├── active-thread-storage.ts    # 当前活跃会话（chrome.storage.local）
 │   │   │   ├── agent-loop.ts               # Agent 循环：AI SDK generateText + onStepFinish
 │   │   │   ├── openai-messages.ts          # OpenAI 消息/工具调用类型
-│   │   │   ├── system-prompt.ts            # 系统提示词组装（静态 + 半静态 + 动态画像/记忆 + Obsidian）
+│   │   │   ├── system-prompt.ts            # 系统提示词组装（静态 + 半静态 + 当前时间 + Obsidian）
 │   │   │   ├── thread-idb.ts               # IndexedDB 会话 CRUD
 │   │   │   ├── tool-definitions.ts         # AI SDK tool() 定义（luminoTool 包装 + Zod v4 schema）
 │   │   │   ├── tool-executor.ts            # 工具注册表 & 统一执行 & getToolHandler
 │   │   │   ├── tool-eviction.ts            # 大结果驱逐 & 定时清理
 │   │   │   ├── tool-registry.ts            # 工具注册入口（registerAllTools）
 │   │   │   └── tools/
-│   │   │       ├── browser-tools.ts        # 浏览器交互工具
+│   │   │       ├── agent-window.ts         # Agent 窗口 ID 管理
+│   │   │       ├── browser-utils.ts        # 浏览器工具共享函数
+│   │   │       ├── browser-tools.ts        # 页面阅读 + 浏览器交互工具
+│   │   │       ├── scrape-tools.ts         # 页面爬取工具
 │   │   │       ├── fs-tools.ts             # 文件系统工具
-│   │   │       ├── memory-tools.ts         # 记忆系统工具
 │   │   │       ├── obsidian-mcp.ts         # Obsidian MCP 工具
 │   │   │       ├── system-tools.ts         # 浏览器系统工具
-│   │   │       └── browser-tools.test.ts
+│   │   │       ├── browser-tools.test.ts
+│   │   │       └── scrape-tools.test.ts
 │   │   ├── llm/
 │   │   │   ├── types.ts                   # LLM 设置类型
 │   │   │   ├── openai.ts                  # OpenAI 兼容 API 调用（已废弃，由 AI SDK 替代）
 │   │   │   └── openai.test.ts
-│   │   ├── memory/
-│   │   │   ├── types.ts
-│   │   │   ├── memory-idb.ts
-│   │   │   ├── daily-memory.ts
-│   │   │   ├── daily-memory-md.ts
-│   │   │   ├── user-profile.ts
-│   │   │   ├── collection-config.ts
-│   │   │   ├── dwell-checker.ts
-│   │   │   ├── bookmark-watcher.ts
-│   │   │   ├── page-capture.ts
-│   │   │   └── page-visit-idb.ts
 │   │   ├── fs/
 │   │   │   ├── types.ts
 │   │   │   ├── fs-ops.ts
 │   │   │   ├── export.ts
 │   │   │   └── workspace.ts
-│   │   ├── db.ts                          # IndexedDB 实例管理
+│   │   ├── db.ts                          # IndexedDB 实例管理（threads 存储）
 │   │   ├── theme.ts                       # 主题应用
-│   │   ├── settings.ts                    # 设置读写
+│   │   ├── settings.ts                    # 设置读写（LLM + Obsidian）
 │   │   └── side-panel-bridge.ts           # SP ↔ SW 通信协议类型
 │   ├── styles/
 │   │   ├── tokens.css                     # 主题 Token 变量
@@ -258,32 +252,22 @@ lumino/
 | `lm-*` | 主题无关的通用 UI 组件 | `.lm-shell`, `.lm-chat-bubble`, `.lm-primary-button` |
 | `lumi-*` | AI 交互特有内部组件 | `.lumi-tool-call`, `.lumi-running-indicator`, `.lumi-sequence-stack` |
 
-## 记忆系统
-
-三层记忆架构：
-- **Layer 1**：页面访问事件（`page-visit-idb.ts`）
-- **Layer 2**：日记忆总结（`daily-memory.ts`，LLM 生成 summary/keywords）
-- **Layer 3**：用户画像（`user-profile.ts`，自动推断）
-
 ## 现状盘点
 
 ### 已完成
 - 多会话聊天（新建、切换、删除）
 - AI SDK v6 Agent 循环（`generateText` + `onStepFinish` 流式推送）
-- 28 个内置工具（浏览器交互、文件系统、记忆系统、Obsidian 集成）
+- 24 个内置工具（浏览器交互、文件系统、Obsidian 集成、页面爬取），加上 Obsidian MCP 动态工具
 - 前端消息合并渲染（同轮 agent 多步消息合并为一个气泡）
 - 标签页锁定机制（agent 不受用户切换 tab 影响）
 - 大结果驱逐 + 定时清理
 - Obsidian Local REST API 集成（条件激活）
 - 悬浮按钮注入 `<all_urls>`
 - 三主题切换系统（Paper/ORYZO/Fictional）
-- 三层记忆系统（事件采集运行中，主动 AI 已禁用）
-- Dwell 巡检 + 驱逐清理定时任务
-- 用户画像自动推断
+- 页面爬取工具（scrape_structure/scrape_styles/scrape_resources/fetch_resource）
 
 ### 待扩展
 - Markdown 渲染（当前助手回复为纯文本）
 - Agent 请求重试 / 错误恢复机制
-- 主动 AI 功能恢复（AI 文本补全、自动日记忆生成）
 - 工具可进一步扩展（书签管理、标签分组等浏览器能力）
-- 测试覆盖可进一步加强（memory / fs / obsidian 模块）
+- 测试覆盖可进一步加强（fs / obsidian 模块）

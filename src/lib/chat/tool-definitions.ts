@@ -72,27 +72,6 @@ function luminoTool<NAME extends string, SCHEMA extends z.ZodTypeAny>(opts: {
 }
 
 // ═══════════════════════════════════════════
-// 记忆系统工具
-// ═══════════════════════════════════════════
-
-export const memoryGetTool = luminoTool({
-  name: "memory_get",
-  description: "读取指定日期的日记忆全文。返回该日期的 summary、keywords、manualNotes、status 等。",
-  inputSchema: z.z.object({
-    date: z.z.string().describe("日期，格式 YYYY-MM-DD，不传则返回今天的记忆").optional()
-  })
-})
-
-export const memorySearchTool = luminoTool({
-  name: "memory_search",
-  description: "在历史记忆和对话洞察中搜索。支持 BM25 关键词搜索，返回相关性排序的 top-K 结果。",
-  inputSchema: z.z.object({
-    query: z.z.string().describe("搜索查询词"),
-    limit: z.z.number().describe("返回结果数量上限，默认 5").optional()
-  })
-})
-
-// ═══════════════════════════════════════════
 // 文件系统工具
 // ═══════════════════════════════════════════
 
@@ -362,8 +341,6 @@ export const fetchResourceTool = luminoTool({
 // ═══════════════════════════════════════════
 
 export const BASE_TOOLS = [
-  // 记忆
-  memoryGetTool, memorySearchTool,
   // 文件
   lsTool, readFileTool, writeFileTool, editFileTool, globTool, grepTool, rmTool, exportTool,
   // 浏览器系统

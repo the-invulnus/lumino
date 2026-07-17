@@ -3,30 +3,6 @@
 // ============================================================
 
 import {
-  TAB_OPEN_MESSAGE,
-  INPUT_EVENT_MESSAGE,
-  COPY_EVENT_MESSAGE,
-  type TabOpenMessage,
-  type InputEventMessage,
-  type CopyEventMessage
-} from "./lib/memory/types"
-import {
-  getCollectionConfig,
-  formatDateKey
-} from "./lib/memory/collection-config"
-import {
-  registerTabOpen,
-  markTabActive,
-  settleAndRemoveTabTimer,
-  runDwellCheck,
-  setupDwellAlarm,
-  isDwellCheckAlarm
-} from "./lib/memory/dwell-checker"
-import { insertInputEvent } from "./lib/memory/input-event-idb"
-import { insertCopyRecord } from "./lib/memory/copy-record-idb"
-import { insertDownloadRecord } from "./lib/memory/download-record-idb"
-import { setupBookmarkWatchers } from "./lib/memory/bookmark-watcher"
-import {
   OPEN_SIDE_PANEL_MESSAGE,
   START_AGENT_MESSAGE,
   STOP_AGENT_MESSAGE,
@@ -49,7 +25,6 @@ import { registerAllTools } from "./lib/chat/tool-registry"
 import { cleanupEvictedFiles, EVICT_CLEANUP_ALARM } from "./lib/chat/tool-eviction"
 import type { OpenAiChatMessage } from "./lib/chat/openai-messages"
 import { getThread, saveThreadMessages } from "./lib/chat/thread-idb"
-import { getStorageStats } from "./lib/memory/memory-idb"
 import { setAgentWindowId } from "./lib/chat/tools/agent-window"
 
 export {}
@@ -251,145 +226,24 @@ function setupMessageHandlers(): void {
       })
       return
     }
-
-    if (message?.type === TAB_OPEN_MESSAGE) {
-      const payload = (message as TabOpenMessage).payload
-      const tabId = sender.tab?.id
-
-      if (tabId != null && payload.url) {
-        registerTabOpen(tabId, payload.url, payload.title).catch((err) =>
-          console.warn("[Lumino] registerTabOpen 失败:", err)
-        )
-        console.log("[Lumino] tab-open:", payload.url)
-      }
-      return
-    }
-
-    if (message?.type === INPUT_EVENT_MESSAGE) {
-      const payload = (message as InputEventMessage).payload
-
-      getCollectionConfig().then((cfg) => {
-        if (!cfg.enableInputEvents) return
-
-        const now = Date.now()
-        const record = {
-          id: `ie-${now}-${Math.random().toString(36).slice(2, 7)}`,
-          dateKey: formatDateKey(now),
-          timestamp: now,
-          hostname: payload.hostname,
-          nodeType: payload.nodeType,
-          text: payload.text,
-          inputSource: payload.inputSource,
-          pastedLength: payload.pastedLength
-        }
-
-        insertInputEvent(record).catch((err) =>
-          console.warn("[Lumino] insertInputEvent 失败:", err)
-        )
-        console.log(
-          "[Lumino] input-event:",
-          payload.inputSource,
-          payload.text?.slice(0, 40)
-        )
-      })
-      return
-    }
-
-    if (message?.type === COPY_EVENT_MESSAGE) {
-      const payload = (message as CopyEventMessage).payload
-
-      getCollectionConfig().then((cfg) => {
-        if (!cfg.enableCopyRecords) return
-
-        const now = Date.now()
-        const record = {
-          id: `cr-${now}-${Math.random().toString(36).slice(2, 7)}`,
-          dateKey: formatDateKey(now),
-          timestamp: now,
-          hostname: payload.hostname,
-          text: payload.text
-        }
-
-        insertCopyRecord(record).catch((err) =>
-          console.warn("[Lumino] insertCopyRecord 失败:", err)
-        )
-        console.log("[Lumino] copy-event:", payload.text?.slice(0, 40))
-      })
-      return
-    }
   })
 }
 
 // ---- Tab 生命周期监听 ----
 
 function setupTabListeners(): void {
-  chrome.tabs.onActivated.addListener(({ tabId }) => {
-    markTabActive(tabId).catch((err) =>
-      console.warn("[Lumino] markTabActive 失败:", err)
-    )
-  })
-
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.url && tab.url) {
-      const url = tab.url
-      if (
-        url &&
-        !url.startsWith("chrome://") &&
-        !url.startsWith("chrome-extension://")
-      ) {
-        registerTabOpen(tabId, url, tab.title ?? "").catch((err) =>
-          console.warn("[Lumino] registerTabOpen 失败:", err)
-        )
-
-        // 页面刷新/导航后，重新广播运行状态给 content script
-        if (runningThreadIds.size > 0) {
-          setTimeout(() => {
-            chrome.tabs.sendMessage(tabId, {
-              type: AGENT_RUNNING_STATE_MESSAGE,
-              payload: { running: true }
-            } as AgentRunningStateMessage).catch(() => { })
-          }, 500)
-        }
+      // 页面刷新/导航后，重新广播运行状态给 content script
+      if (runningThreadIds.size > 0) {
+        setTimeout(() => {
+          chrome.tabs.sendMessage(tabId, {
+            type: AGENT_RUNNING_STATE_MESSAGE,
+            payload: { running: true }
+          } as AgentRunningStateMessage).catch(() => { })
+        }, 500)
       }
     }
-  })
-
-  chrome.tabs.onRemoved.addListener((tabId) => {
-    settleAndRemoveTabTimer(tabId).catch((err) =>
-      console.warn("[Lumino] settleAndRemoveTabTimer 失败:", err)
-    )
-  })
-}
-
-// ---- 下载事件监听 ----
-
-function setupDownloadListeners(): void {
-  if (typeof chrome === "undefined" || !chrome.downloads) {
-    console.warn("[Lumino] chrome.downloads API 不可用")
-    return
-  }
-
-  chrome.downloads.onCreated.addListener((downloadItem) => {
-    getCollectionConfig().then((cfg) => {
-      if (!cfg.enableDownloadRecords) return
-
-      const now = Date.now()
-      const record = {
-        id: `dl-${now}-${Math.random().toString(36).slice(2, 7)}`,
-        dateKey: formatDateKey(now),
-        timestamp: now,
-        fileName:
-          downloadItem.filename.split("/").pop() ?? downloadItem.filename,
-        url: downloadItem.url,
-        fileSize: downloadItem.fileSize ?? 0,
-        mime: downloadItem.mime ?? ""
-      }
-
-      insertDownloadRecord(record).catch((err) =>
-        console.warn("[Lumino] insertDownloadRecord 失败:", err)
-      )
-      console.log("[Lumino] download:", record.fileName)
-    })
   })
 }
 
@@ -397,17 +251,12 @@ function setupDownloadListeners(): void {
 
 chrome.runtime.onInstalled.addListener(async () => {
   enableOpenPanelOnActionClick()
-  setupBookmarkWatchers()
-  await setupDwellAlarm()
 })
 
 async function boot(): Promise<void> {
   enableOpenPanelOnActionClick()
   setupMessageHandlers()
   setupTabListeners()
-  setupBookmarkWatchers()
-  setupDownloadListeners()
-  await setupDwellAlarm()
 
   // 注册驱逐文件定时清理（每 30 分钟）
   chrome.alarms.create(EVICT_CLEANUP_ALARM, { periodInMinutes: 30 })
@@ -415,16 +264,6 @@ async function boot(): Promise<void> {
   cleanupEvictedFiles().catch((err) => console.warn("[Lumino] 驱逐文件清理失败:", err))
 
   console.log("[Lumino] Background SW 启动完成")
-  console.log("[Lumino] 书签监听已启动, dwell 巡检 alarm 已注册")
-
-  await runDwellCheck()
-
-  try {
-    const stats = await getStorageStats()
-    console.log("[Lumino] IDB 存储统计:", JSON.stringify(stats, null, 2))
-  } catch (e) {
-    console.warn("[Lumino] IDB 诊断失败:", e)
-  }
 
   // SW 启动后，广播当前运行状态到所有 content script
   setTimeout(() => {
@@ -433,11 +272,6 @@ async function boot(): Promise<void> {
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (isDwellCheckAlarm(alarm.name)) {
-    runDwellCheck().catch((err) => {
-      console.warn("[Lumino] Dwell 巡检失败", err)
-    })
-  }
   if (alarm.name === EVICT_CLEANUP_ALARM) {
     cleanupEvictedFiles()
       .then((deleted) => {

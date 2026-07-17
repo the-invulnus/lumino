@@ -1,11 +1,8 @@
-import { loadUserProfile } from "../memory/user-profile"
-import { loadAllDailyMemories } from "../memory/daily-memory"
 import { isObsidianConfigured, getObsidianSettings } from "../settings"
 
 export const STATIC_SYSTEM_PROMPT = `你是 Lumino，运行在用户浏览器侧栏中的智能助手。
 
 ## 核心身份
-- 你能读写用户的长期记忆，记忆存储在内部目录中
 - 你能在工作区目录中创建、读取、搜索、编辑文件
 - 你能读取用户当前页面的内容、获取选中的文本、填充表单、点击元素、截图
 - 回答简洁、温暖、中文优先
@@ -16,14 +13,7 @@ export const STATIC_SYSTEM_PROMPT = `你是 Lumino，运行在用户浏览器侧
 - 不需要告知用户你正在调用工具，静默执行
 - 涉及浏览器操作的会话，首次操作前先调用 get_active_tab_id 锁定目标页面，之后所有浏览器工具都带上 tab_id 参数`
 
-export const SEMI_STATIC_SYSTEM_PROMPT = `## 记忆管理
-- 记忆存储在内部固定路径，由系统自动管理
-- 使用 memory_get 读取特定日期的记忆
-- 使用 memory_search 搜索历史记忆和洞察
-- 日记忆由系统定时生成，你可以追加内容
-- 用户说"记住"→ 将内容保存到文件或追加到记忆
-
-## 文件系统
+export const SEMI_STATIC_SYSTEM_PROMPT = `## 文件系统
 - 工作区位于扩展内部存储中，无需用户手动选择目录
 - 使用 ls/read_file/write_file/edit_file/glob/grep/rm 操作工作区文件
 - read_file 支持 offset/limit 分页读取大文件
@@ -52,7 +42,7 @@ export const SEMI_STATIC_SYSTEM_PROMPT = `## 记忆管理
 
 ### 页面内容与交互
 - 使用 get_page_content 读取当前页面文本内容
-  - mode="text"（默认）提取正文；mode="full_html" 获取完整 HTML；mode="structured" + selector 提取结构化列表
+  - mode="text"（默认）提取正文；mode="structured" + selector 提取结构化列表
   - 通过 selector 参数可精确提取某个区域，如 selector=".article-content"
   - 通过 max_chars 控制返回长度，默认 8000 字符
 - 使用 take_selection 获取用户在页面中选中的文本
@@ -91,42 +81,6 @@ export const SEMI_STATIC_SYSTEM_PROMPT = `## 记忆管理
 记住，你不只是一个搜索工具，你是拥有自主思维的AI，用你的调研成果惊艳用户吧！
 `
 
-export async function buildDynamicSystemBlock(): Promise<string> {
-    const profile = await loadUserProfile()
-    const today = new Date().toISOString().slice(0, 10)
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-
-    const allMemories = await loadAllDailyMemories()
-    const recentMemories = allMemories
-        .filter((m) => m.date === today || m.date === yesterday)
-        .sort((a, b) => b.createdAt - a.createdAt)
-
-    const lines: string[] = []
-
-    lines.push("## 用户画像")
-    if (profile.name) lines.push(`- 名称：${profile.name}`)
-    lines.push(`- 语言：${profile.language === "zh" ? "中文" : "English"}`)
-    if (profile.interests.length > 0) lines.push(`- 关注：${profile.interests.join("、")}`)
-    if (profile.notes) lines.push(`- 备注：${profile.notes}`)
-    if (profile.frequentSites.length > 0) {
-        lines.push(`- 常用站点：${profile.frequentSites.slice(0, 5).join(", ")}`)
-    }
-
-    lines.push("\n## 近期记忆摘要")
-    if (recentMemories.length > 0) {
-        for (const m of recentMemories.slice(0, 5)) {
-            lines.push(`- [${m.date}] ${m.summary.slice(0, 200)}`)
-        }
-    } else {
-        lines.push("（暂无近期记忆）")
-    }
-
-    const now = new Date()
-    lines.push(`\n## 当前时间\n${now.toISOString()}（${now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}）`)
-
-    return lines.join("\n")
-}
-
 export async function buildAgentMessages(
     historyMessages: Array<{
         role: "system" | "user" | "assistant" | "tool"
@@ -140,7 +94,8 @@ export async function buildAgentMessages(
     tool_calls?: unknown[]
     tool_call_id?: string
 }>> {
-    const dynamicBlock = await buildDynamicSystemBlock()
+    const now = new Date()
+    const timeBlock = `## 当前时间\n${now.toISOString()}（${now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}）`
 
     const messages: Array<{
         role: "system" | "user" | "assistant" | "tool"
@@ -158,7 +113,7 @@ export async function buildAgentMessages(
             },
             {
                 role: "system",
-                content: dynamicBlock
+                content: timeBlock
             }
         ]
 

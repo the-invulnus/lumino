@@ -6,11 +6,6 @@ const DB_NAME = "lumino"
 const DB_VERSION = 4
 
 export const STORE_THREADS = "threads"
-export const STORE_PAGE_VISITS = "page_visits"
-export const STORE_BOOKMARK_CHANGES = "bookmark_changes"
-export const STORE_INPUT_EVENTS = "input_events"
-export const STORE_DOWNLOAD_RECORDS = "download_records"
-export const STORE_COPY_RECORDS = "copy_records"
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -43,35 +38,6 @@ export function openDatabase(): Promise<IDBDatabase> {
 
       // threads
       db.createObjectStore(STORE_THREADS, { keyPath: "id" })
-
-      // page_visits
-      const pv = db.createObjectStore(STORE_PAGE_VISITS, { keyPath: "id" })
-      pv.createIndex("dateKey", "dateKey", { unique: false })
-      pv.createIndex("hostname", "hostname", { unique: false })
-      pv.createIndex("timestamp", "timestamp", { unique: false })
-
-      // bookmark_changes
-      const bc = db.createObjectStore(STORE_BOOKMARK_CHANGES, { keyPath: "id" })
-      bc.createIndex("dateKey", "dateKey", { unique: false })
-      bc.createIndex("action", "action", { unique: false })
-      bc.createIndex("timestamp", "timestamp", { unique: false })
-
-      // input_events
-      const ie = db.createObjectStore(STORE_INPUT_EVENTS, { keyPath: "id" })
-      ie.createIndex("dateKey", "dateKey", { unique: false })
-      ie.createIndex("hostname", "hostname", { unique: false })
-      ie.createIndex("timestamp", "timestamp", { unique: false })
-
-      // download_records
-      const dr = db.createObjectStore(STORE_DOWNLOAD_RECORDS, { keyPath: "id" })
-      dr.createIndex("dateKey", "dateKey", { unique: false })
-      dr.createIndex("timestamp", "timestamp", { unique: false })
-
-      // copy_records
-      const cr = db.createObjectStore(STORE_COPY_RECORDS, { keyPath: "id" })
-      cr.createIndex("dateKey", "dateKey", { unique: false })
-      cr.createIndex("hostname", "hostname", { unique: false })
-      cr.createIndex("timestamp", "timestamp", { unique: false })
     }
   })
 

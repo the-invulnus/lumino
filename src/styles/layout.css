@@ -722,48 +722,6 @@ textarea {
   transition: all 240ms var(--lumi-ease-spring);
 }
 
-/* — Memory panel — */
-.lm-memory-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  overflow-y: auto;
-  padding: 4px 0;
-}
-
-.lm-memory-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.lm-memory-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
-}
-
-.lm-memory-row {
-  align-items: flex-start;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  margin: 0;
-}
-
-.lm-memory-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.lm-memory-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 /* — Tool calls — */
 .lumi-tool-call {
   display: flex;
@@ -1218,13 +1176,6 @@ textarea {
 .lm-session-strip-hint {
   flex-shrink: 0;
   padding: 6px 4px;
-}
-
-/* — Tags — */
-.lm-memory-tag {
-  border-radius: 8px;
-  padding: 2px 8px;
-  white-space: nowrap;
 }
 
 /* — Chat bubble assistant overrides — */

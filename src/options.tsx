@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react"
 
 import type { LlmSettings } from "./lib/llm/types"
-import type { CollectionConfig } from "./lib/memory/types"
-import { DEFAULT_COLLECTION_CONFIG, BUILTIN_IGNORED_PATTERNS } from "./lib/memory/types"
-import {
-  getCollectionConfig,
-  saveCollectionConfig
-} from "./lib/memory/collection-config"
 import {
   getLlmSettings,
   saveLlmSettings,
@@ -39,10 +33,6 @@ function IndexOptions() {
     apiKey: "",
     model: ""
   })
-  const [collectionConfig, setCollectionConfig] = useState<CollectionConfig>(
-    DEFAULT_COLLECTION_CONFIG
-  )
-  const [ignoredPatternsText, setIgnoredPatternsText] = useState("")
   const [obsidianSettings, setObsidianSettings] = useState<ObsidianSettings>({
     enabled: false,
     apiKey: "",
@@ -55,39 +45,18 @@ function IndexOptions() {
   useEffect(() => {
     Promise.all([
       getLlmSettings().catch(() => ({ baseUrl: "", apiKey: "", model: "" })),
-      getCollectionConfig(),
       getObsidianSettings().catch(() => ({ enabled: false, apiKey: "", baseUrl: "http://127.0.0.1:27123" })),
       getTheme()
-    ]).then(([s, c, o, t]) => {
+    ]).then(([s, o, t]) => {
       setSettings(s)
-      setCollectionConfig(c)
       setObsidianSettings(o)
       setTheme(t)
       applyTheme(t)
-      setIgnoredPatternsText(c.ignoredUrlPatterns.join("\n"))
     })
   }, [])
 
   function updateSetting(key: keyof LlmSettings, value: string) {
     setSettings((prev) => ({ ...prev, [key]: value }))
-  }
-
-  function updateCollectionConfig(
-    key: keyof CollectionConfig,
-    value: boolean | number
-  ) {
-    setCollectionConfig((prev) => ({ ...prev, [key]: value }))
-  }
-
-  function handlePatternsChange(text: string) {
-    setIgnoredPatternsText(text)
-    setCollectionConfig((prev) => ({
-      ...prev,
-      ignoredUrlPatterns: text
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean)
-    }))
   }
 
   function handleThemeChange(nextTheme: ThemeName) {
@@ -102,12 +71,8 @@ function IndexOptions() {
 
     try {
       await saveLlmSettings(settings)
-      await saveCollectionConfig(collectionConfig)
       await saveObsidianSettings(obsidianSettings)
       setSettings(await getLlmSettings())
-      const fresh = await getCollectionConfig()
-      setCollectionConfig(fresh)
-      setIgnoredPatternsText(fresh.ignoredUrlPatterns.join("\n"))
       setStatus("设置已保存。")
       setTimeout(() => window.close(), 800)
     } catch {
@@ -143,7 +108,7 @@ function IndexOptions() {
               <div>
                 <h1 className="lm-title">Lumino 配置</h1>
                 <p className="lm-subtitle">
-                  连接模型、管理数据采集偏好，所有设置会自动保存到浏览器。
+                  连接模型、管理偏好，所有设置会自动保存到浏览器。
                 </p>
               </div>
             </div>
@@ -277,150 +242,6 @@ function IndexOptions() {
               </label>
             </>
           )}
-
-          {/* === 采集开关 === */}
-          <h2 className="lm-section-title">采集开关</h2>
-
-          <p className="lm-helper">
-            控制 Lumino 采集哪些浏览行为数据。关闭后立即停止采集，已采集的数据不受影响。
-          </p>
-
-          <div className="lm-toggle-group">
-            <label className="lm-toggle">
-              <input
-                type="checkbox"
-                checked={collectionConfig.enablePageVisits}
-                onChange={(e) =>
-                  updateCollectionConfig("enablePageVisits", e.target.checked)
-                }
-              />
-              <span className="lm-toggle-label">
-                <strong>页面浏览</strong>
-                <small>长时间浏览的页面内容（保存 90 天）</small>
-              </span>
-            </label>
-
-            <label className="lm-toggle">
-              <input
-                type="checkbox"
-                checked={collectionConfig.enableInputEvents}
-                onChange={(e) =>
-                  updateCollectionConfig("enableInputEvents", e.target.checked)
-                }
-              />
-              <span className="lm-toggle-label">
-                <strong>输入框交互</strong>
-                <small>输入框内的文本输入与粘贴（保存 7 天）</small>
-              </span>
-            </label>
-
-            <label className="lm-toggle">
-              <input
-                type="checkbox"
-                checked={collectionConfig.enableCopyRecords}
-                onChange={(e) =>
-                  updateCollectionConfig("enableCopyRecords", e.target.checked)
-                }
-              />
-              <span className="lm-toggle-label">
-                <strong>复制内容</strong>
-                <small>复制到剪贴板的文本内容（保存 7 天）</small>
-              </span>
-            </label>
-
-            <label className="lm-toggle">
-              <input
-                type="checkbox"
-                checked={collectionConfig.enableBookmarkChanges}
-                onChange={(e) =>
-                  updateCollectionConfig(
-                    "enableBookmarkChanges",
-                    e.target.checked
-                  )
-                }
-              />
-              <span className="lm-toggle-label">
-                <strong>书签变更</strong>
-                <small>新增、删除、修改书签操作（保存 90 天）</small>
-              </span>
-            </label>
-
-            <label className="lm-toggle">
-              <input
-                type="checkbox"
-                checked={collectionConfig.enableDownloadRecords}
-                onChange={(e) =>
-                  updateCollectionConfig(
-                    "enableDownloadRecords",
-                    e.target.checked
-                  )
-                }
-              />
-              <span className="lm-toggle-label">
-                <strong>下载记录</strong>
-                <small>文件下载记录（保存 90 天）</small>
-              </span>
-            </label>
-          </div>
-
-          {/* === 采集参数 === */}
-          <h2 className="lm-section-title">采集参数</h2>
-
-          <label className="lm-field">
-            <span className="lm-label">最小停留时长（秒）</span>
-            <input
-              className="lm-input"
-              type="number"
-              min={1}
-              max={600}
-              value={Math.round(collectionConfig.minDwellMs / 1000)}
-              onChange={(e) =>
-                updateCollectionConfig(
-                  "minDwellMs",
-                  Math.max(1000, Number(e.target.value) * 1000)
-                )
-              }
-            />
-            <span className="lm-helper">
-              页面停留超过此时间才会采集内容，默认 5 秒
-            </span>
-          </label>
-
-          <label className="lm-field">
-            <span className="lm-label">巡检间隔（分钟）</span>
-            <input
-              className="lm-input"
-              type="number"
-              min={0.1}
-              max={60}
-              step={0.5}
-              value={collectionConfig.dwellCheckIntervalMs / 60000}
-              onChange={(e) =>
-                updateCollectionConfig(
-                  "dwellCheckIntervalMs",
-                  Math.max(6000, Number(e.target.value) * 60000)
-                )
-              }
-            />
-            <span className="lm-helper">
-              页面停留达标的检查频率，默认 1 分钟
-            </span>
-          </label>
-
-          <label className="lm-field">
-            <span className="lm-label">忽略 URL 正则（每行一个，可删改）</span>
-            <textarea
-              className="lm-input"
-              rows={12}
-              spellCheck={false}
-              value={ignoredPatternsText}
-              onChange={(e) => handlePatternsChange(e.target.value)}
-            />
-            <span className="lm-helper">
-              匹配这些正则的页面不会采集（含页面内容/输入框/复制）。内置了
-              chrome://、localhost、内网 IP、银行、政府、医疗、成人等站点规则，可自由修改或删除。
-            </span>
-          </label>
 
           <div className="lm-actions">
             <button

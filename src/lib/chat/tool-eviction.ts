@@ -2,8 +2,6 @@ import { writeWorkspaceFile, listWorkspaceDir, deleteWorkspaceFile } from "../fs
 
 /** 不需要驱逐的工具列表（这些工具的结果对 Agent 上下文至关重要） */
 export const TOOLS_EXCLUDED_FROM_EVICTION = new Set([
-  "memory_get",
-  "memory_search",
   "current_page",
   "tabs",
   "ls",
