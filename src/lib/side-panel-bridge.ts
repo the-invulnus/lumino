@@ -16,6 +16,13 @@ export type StartAgentMessage = {
     userInput: string
     /** Side Panel 所在窗口的 ID，agent 所有浏览器操作锚定到此窗口 */
     windowId?: number
+    /** Agent 模式 id，如 "chat" / "research" / custom-uuid */
+    mode?: string
+    /** 自定义 Agent 完整配置（内置模式则为 undefined） */
+    agentConfig?: {
+      systemPrompt: string
+      tools: string[]
+    }
   }
 }
 

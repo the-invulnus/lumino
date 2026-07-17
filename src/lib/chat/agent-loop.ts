@@ -189,23 +189,33 @@ export type AgentLoopInput = {
   userInput: string
   onMessagesUpdate?: (messages: OpenAiChatMessage[]) => Promise<void>
   signal?: AbortSignal
+  /** Agent 模式 id + 配置 */
+  mode?: string
+  agentConfig?: {
+    systemPrompt: string
+    tools: string[]
+  }
 }
 
 export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMessage[]> {
-  const { settings, historyMessages, userInput, onMessagesUpdate, signal } = input
+  const { settings, historyMessages, userInput, onMessagesUpdate, signal, agentConfig } = input
   const startTime = Date.now()
 
   // 系统提示词
   const systemMessages = await buildAgentMessages(
-    historyMessages.filter((m) => m.role !== "system") as any
+    historyMessages.filter((m) => m.role !== "system") as any,
+    { systemPromptOverride: agentConfig?.systemPrompt }
   )
   const systemPrompt = systemMessages
     .filter((m) => m.role === "system")
     .map((m) => m.content)
     .join("\n\n")
 
-  // 工具列表
-  const tools = await getLuminoAgentTools() as unknown as ToolSet
+  // 工具列表（按模式过滤）
+  const toolFilter = agentConfig?.tools && agentConfig.tools.length > 0
+    ? agentConfig.tools
+    : undefined
+  const tools = await getLuminoAgentTools(toolFilter) as unknown as ToolSet
 
   // OpenAI provider（强制 Chat API）
   const openai = createOpenAI({

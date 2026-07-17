@@ -1,0 +1,747 @@
+/**
+ * 聊天界面 — Agent 对话的主视图
+ *
+ * 从 sidepanel.tsx 拆分出的核心聊天逻辑。
+ */
+
+import {
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react"
+import { cloneMessages, type OpenAiChatMessage } from "../lib/chat/openai-messages"
+import {
+  createEmptyThread,
+  deleteThread,
+  getThread,
+  putThread,
+  listThreads,
+  saveThreadMessages,
+  suggestTitleFromMessages,
+  generateThreadTitle,
+  type ChatThreadRecord
+} from "../lib/chat/thread-idb"
+import type { AgentConfig } from "../lib/chat/mode-config"
+import type { LlmSettings } from "../lib/llm/types"
+import { getLlmSettings, hasCompleteLlmSettings } from "../lib/settings"
+import {
+  START_AGENT_MESSAGE,
+  STOP_AGENT_MESSAGE,
+  AGENT_PROGRESS_MESSAGE,
+  AGENT_COMPLETE_MESSAGE,
+  AGENT_ERROR_MESSAGE,
+  type StartAgentMessage,
+  type StopAgentMessage,
+  type AgentProgressMessage,
+  type AgentCompleteMessage,
+  type AgentErrorMessage
+} from "../lib/side-panel-bridge"
+import { ChatMessageBlock, formatMessagePreview } from "./components/ChatMessageBlock"
+import { HistoryPanel } from "./HistoryPanel"
+import blackCatGif from "data-base64:~black_cat.gif"
+
+function SendArrowIcon() {
+  return (
+    <svg
+      aria-hidden
+      className="lm-primary-icon"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.25"
+      viewBox="0 0 24 24">
+      <path d="M5 12h14" />
+      <path d="m13 6 6 6-6 6" />
+    </svg>
+  )
+}
+
+function formatSessionTime(updatedAt: number): string {
+  const diff = Date.now() - updatedAt
+  if (diff < 60_000) return "刚刚"
+  if (diff < 3600_000) return `${Math.floor(diff / 60_000)} 分钟前`
+  if (diff < 86400_000) return `${Math.floor(diff / 3600_000)} 小时前`
+  return new Date(updatedAt).toLocaleDateString("zh-CN", {
+    month: "numeric",
+    day: "numeric"
+  })
+}
+
+function threadLabel(record: ChatThreadRecord): string {
+  return (
+    record.title ??
+    suggestTitleFromMessages(record.messages) ??
+    (record.messages.length ? "会话" : "新会话")
+  )
+}
+
+export function ChatView({
+  agent,
+  onBack,
+  settings
+}: {
+  agent: AgentConfig
+  onBack: () => void
+  settings: LlmSettings
+}) {
+  const [threads, setThreads] = useState<ChatThreadRecord[]>([])
+  const [activeThreadId, setActiveThreadIdState] = useState<string>("")
+  const [messages, setMessages] = useState<OpenAiChatMessage[]>([])
+  const [draft, setDraft] = useState("")
+  const draftRef = useRef(draft)
+  const [error, setError] = useState("")
+  const [loadingThreadIds, setLoadingThreadIds] = useState<Set<string>>(new Set())
+  const [isHydrating, setIsHydrating] = useState(true)
+  const [editingIndex, setEditingIndex] = useState<number>(-1)
+  const [editingText, setEditingText] = useState("")
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState("")
+  const scrollAnchorRef = useRef<HTMLDivElement>(null)
+  const activeThreadIdRef = useRef("")
+  const sendInFlightMapRef = useRef<Record<string, boolean>>({})
+  const draftMapRef = useRef<Record<string, string>>({})
+
+  useEffect(() => {
+    activeThreadIdRef.current = activeThreadId
+  }, [activeThreadId])
+
+  useEffect(() => {
+    draftRef.current = draft
+    if (!draft) {
+      const ta = document.querySelector('.lm-input--composer') as HTMLTextAreaElement | null
+      if (ta) {
+        ta.style.height = ''
+      }
+    }
+  }, [draft])
+
+  const refreshThreadList = useCallback(async () => {
+    const rows = await listThreads(agent.id)
+    setThreads(rows)
+    return rows
+  }, [agent.id])
+
+  // 首次加载（不自动创建空会话）
+  useEffect(() => {
+    let cancelled = false
+    async function hydrate() {
+      try {
+        const rows = await listThreads(agent.id)
+        if (cancelled) return
+        setThreads(rows)
+
+        // 查询 SW 中正在运行的会话，恢复 loading 状态
+        try {
+          const resp = await chrome.runtime.sendMessage({ type: "lumino/query-running-state" })
+          if (resp?.runningThreadIds && !cancelled) {
+            const runningSet = new Set<string>()
+            for (const tid of resp.runningThreadIds) {
+              if (rows.some((r) => r.id === tid)) {
+                runningSet.add(tid)
+              }
+            }
+            if (runningSet.size > 0) {
+              setLoadingThreadIds(runningSet)
+              for (const tid of runningSet) {
+                sendInFlightMapRef.current[tid] = true
+              }
+            }
+          }
+        } catch {
+          // SW 未响应，忽略
+        }
+
+        // 有会话就选第一个，否则展示空状态等待用户发送消息
+        if (rows.length > 0) {
+          const thread = await getThread(rows[0].id)
+          if (!cancelled) {
+            setActiveThreadIdState(rows[0].id)
+            setMessages(cloneMessages(thread?.messages ?? []))
+          }
+        }
+      } catch {
+        if (!cancelled) setError("读取会话失败。")
+      } finally {
+        if (!cancelled) setIsHydrating(false)
+      }
+    }
+    void hydrate()
+    return () => { cancelled = true }
+  }, [agent.id])
+
+  useEffect(() => {
+    scrollAnchorRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "end" })
+  }, [messages, loadingThreadIds, activeThreadId])
+
+  const persistMessages = useCallback(
+    async (threadId: string, next: OpenAiChatMessage[]) => {
+      await saveThreadMessages(threadId, next)
+      if (threadId === activeThreadIdRef.current) {
+        setMessages(cloneMessages(next))
+      }
+      await refreshThreadList()
+    },
+    [refreshThreadList]
+  )
+
+  const selectThread = useCallback(
+    async (threadId: string) => {
+      if (threadId === activeThreadIdRef.current) return
+      setError("")
+      draftMapRef.current[activeThreadIdRef.current] = draftRef.current
+      setActiveThreadIdState(threadId)
+      const thread = await getThread(threadId)
+      setMessages(cloneMessages(thread?.messages ?? []))
+      setDraft(draftMapRef.current[threadId] ?? "")
+    },
+    []
+  )
+
+  const handleNewThread = useCallback(async () => {
+    setError("")
+    // 保存当前草稿
+    if (activeThreadIdRef.current) {
+      draftMapRef.current[activeThreadIdRef.current] = draftRef.current
+    }
+    setActiveThreadIdState("")
+    setMessages([])
+    setDraft("")
+  }, [])
+
+  const handleDeleteThread = useCallback(
+    async (threadId: string) => {
+      const wasActive = threadId === activeThreadIdRef.current
+      await deleteThread(threadId)
+      delete draftMapRef.current[threadId]
+      const rows = await listThreads(agent.id)
+      setThreads(rows)
+      if (rows.length === 0) {
+        setActiveThreadIdState("")
+        setMessages([])
+        return
+      }
+      if (wasActive) {
+        const nextId = rows[0].id
+        setActiveThreadIdState(nextId)
+        const nextThread = await getThread(nextId)
+        setMessages(cloneMessages(nextThread?.messages ?? []))
+      }
+    },
+    [agent]
+  )
+
+  async function doSend(historyMessages: OpenAiChatMessage[], userInput: string) {
+    const threadId = activeThreadIdRef.current
+    if (!threadId) return
+    sendInFlightMapRef.current[threadId] = true
+    setLoadingThreadIds((prev) => new Set(prev).add(threadId))
+    setError("")
+    setEditingIndex(-1)
+    setEditingText("")
+
+    const userMsg: OpenAiChatMessage = { role: "user", content: userInput }
+    const baseMessages = [...historyMessages, userMsg]
+    setMessages(cloneMessages(baseMessages))
+    saveThreadMessages(threadId, baseMessages).catch(() => {})
+
+    const win = await chrome.windows.getCurrent()
+
+    // 构建 agentConfig（传递给 SW 用于系统提示词和工具过滤）
+    const agentConfigPayload = {
+      systemPrompt: agent.systemPrompt,
+      tools: agent.tools
+    }
+
+    const startPayload = {
+      type: START_AGENT_MESSAGE,
+      payload: { threadId, historyMessages, userInput, windowId: win.id, mode: agent.id, agentConfig: agentConfigPayload }
+    } as StartAgentMessage
+
+    async function sendStartWithRetry(): Promise<void> {
+      try {
+        await chrome.runtime.sendMessage(startPayload)
+      } catch {
+        await new Promise((r) => setTimeout(r, 500))
+        try {
+          await chrome.runtime.sendMessage(startPayload)
+        } catch {
+          console.warn("[lumino:sidepanel]", "启动 agent 失败")
+          setError("启动失败，请重试。")
+        }
+      }
+    }
+    sendStartWithRetry()
+  }
+
+  async function sendUserMessage() {
+    const trimmed = draft.trim()
+    if (!trimmed) { setError("请输入内容。"); return }
+    if (!hasCompleteLlmSettings(settings)) { setError("请先在设置页配置 Base URL、API Key 和模型。"); return }
+
+    // 没有活跃会话：创建新的
+    if (!activeThreadIdRef.current) {
+      const created = await createEmptyThread()
+      created.mode = agent.id
+      created.agentName = agent.isBuiltin ? undefined : agent.name
+      // 直接 put 整个 record，确保 mode 被写入
+      await putThread(created)
+      setActiveThreadIdState(created.id)
+      setThreads((prev) => [created, ...prev])
+      activeThreadIdRef.current = created.id
+    }
+
+    if (sendInFlightMapRef.current[activeThreadIdRef.current]) return
+    setDraft("")
+
+    // 如果是新会话，生成标题
+    const isNewThread = messages.length === 0
+    if (isNewThread) {
+      const tid = activeThreadIdRef.current
+      generateThreadTitle(trimmed, settings).then(async (title) => {
+        const record = await getThread(tid)
+        if (record) {
+          record.title = title
+          await putThread(record)
+          // 更新 threads state 让 header 立即反映新标题
+          setThreads((prev) => prev.map((t) => (t.id === tid ? { ...t, title } : t)))
+        }
+      }).catch(() => {})
+    }
+
+    await doSend(cloneMessages(messages), trimmed)
+  }
+
+  const handleStop = useCallback(() => {
+    const threadId = activeThreadIdRef.current
+    chrome.runtime.sendMessage({
+      type: STOP_AGENT_MESSAGE,
+      payload: { threadId }
+    } as StopAgentMessage).catch(() => {})
+  }, [])
+
+  // 监听 agent 进度/完成/错误消息
+  useEffect(() => {
+    function handleAgentProgress(message: unknown) {
+      if (!message || typeof message !== "object") return
+      const msg = message as AgentProgressMessage
+      if (msg.type === AGENT_PROGRESS_MESSAGE) {
+        const { threadId, messages: msgs } = msg.payload
+        if (threadId === activeThreadIdRef.current) {
+          setMessages(cloneMessages(msgs as OpenAiChatMessage[]))
+        }
+        saveThreadMessages(threadId, msgs as OpenAiChatMessage[]).catch(() => {})
+        return
+      }
+      const completeMsg = message as AgentCompleteMessage
+      if (completeMsg.type === AGENT_COMPLETE_MESSAGE) {
+        const { threadId, messages: msgs } = completeMsg.payload
+        delete sendInFlightMapRef.current[threadId]
+        setLoadingThreadIds((prev) => {
+          const next = new Set(prev)
+          next.delete(threadId)
+          return next
+        })
+        if (threadId === activeThreadIdRef.current) {
+          setMessages(cloneMessages(msgs as OpenAiChatMessage[]))
+          refreshThreadList().catch(() => {})
+        }
+        saveThreadMessages(threadId, msgs as OpenAiChatMessage[]).catch(() => {})
+        return
+      }
+      const errorMsg = message as AgentErrorMessage
+      if (errorMsg.type === AGENT_ERROR_MESSAGE) {
+        const { threadId, error: errMsg } = errorMsg.payload
+        if (!sendInFlightMapRef.current[threadId]) return
+        delete sendInFlightMapRef.current[threadId]
+        setLoadingThreadIds((prev) => {
+          const next = new Set(prev)
+          next.delete(threadId)
+          return next
+        })
+        if (threadId === activeThreadIdRef.current) {
+          setError(errMsg)
+        }
+      }
+    }
+    chrome.runtime.onMessage.addListener(handleAgentProgress)
+    return () => { chrome.runtime.onMessage.removeListener(handleAgentProgress) }
+  }, [refreshThreadList])
+
+  const visibleMessages = messages.filter((message) => message.role !== "system")
+  const mergedMessages = useMemo(() => {
+    const out: Array<OpenAiChatMessage | OpenAiChatMessage[]> = []
+    let i = 0
+    while (i < visibleMessages.length) {
+      const msg = visibleMessages[i]
+      if (msg.role === "user") { out.push(msg); i++; continue }
+      const group: OpenAiChatMessage[] = []
+      while (i < visibleMessages.length && visibleMessages[i].role !== "user") {
+        group.push(visibleMessages[i]); i++
+      }
+      out.push(group)
+    }
+    return out
+  }, [visibleMessages])
+
+  const isConfigured = hasCompleteLlmSettings(settings)
+  const isLoading = loadingThreadIds.has(activeThreadId)
+  const currentThread = threads.find((t) => t.id === activeThreadId)
+  const displayTitle = currentThread?.title || "新会话"
+
+  async function saveThreadTitle(newTitle: string) {
+    if (!activeThreadId || !newTitle.trim()) return
+    const record = await getThread(activeThreadId)
+    if (record) {
+      record.title = newTitle.trim()
+      await putThread(record)
+      await refreshThreadList()
+    }
+  }
+
+  function startEditTitle() {
+    setTitleDraft(displayTitle)
+    setEditingTitle(true)
+  }
+
+  function commitTitle() {
+    setEditingTitle(false)
+    if (titleDraft.trim() && titleDraft.trim() !== displayTitle) {
+      saveThreadTitle(titleDraft.trim())
+    }
+  }
+
+  return (
+    <div className="lm-chat-view">
+      {/* Header */}
+      <div className="lm-chat-view-header">
+        <div className="lm-chat-view-header-left">
+          <img
+            aria-hidden
+            className="lm-logo-cat lm-logo-cat--sm"
+            src={blackCatGif}
+            alt="Lumi"
+          />
+          {editingTitle ? (
+            <input
+              className="lm-chat-view-title-input"
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={commitTitle}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitTitle()
+                if (e.key === "Escape") setEditingTitle(false)
+              }}
+              autoFocus
+            />
+          ) : (
+            <span
+              className="lm-chat-view-mode-name"
+              title="点击修改会话名称"
+              onClick={startEditTitle}
+            >
+              {displayTitle}
+            </span>
+          )}
+        </div>
+        <div className="lm-chat-view-header-actions">
+          <button
+            className="lm-chat-view-new-btn"
+            title="新建会话"
+            onClick={() => void handleNewThread()}
+            type="button"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+          <button
+            className="lm-chat-view-history-btn"
+            title="历史会话"
+            onClick={() => setHistoryOpen(true)}
+            type="button"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Chat Panel */}
+      <section className="lm-chat-panel" aria-busy={isLoading}>
+        {!isConfigured ? (
+          <div className="lm-note lm-note--compact">
+            <p>请先在设置中填写 Base URL、API Key 与模型。</p>
+            <button
+              className="lm-secondary-button lm-secondary-button--sm"
+              onClick={() => chrome.runtime.openOptionsPage()}
+              type="button">
+              打开设置
+            </button>
+          </div>
+        ) : null}
+
+        <div className="lm-chat-scroll" role="log" aria-relevant="additions">
+          {isHydrating ? (
+            <p className="lm-chat-hint">正在加载…</p>
+          ) : !activeThreadId ? (
+            <p className="lm-chat-hint">
+              在下方输入消息，开始新的对话。
+            </p>
+          ) : visibleMessages.length === 0 ? (
+            <p className="lm-chat-hint">
+              在下方输入后发送即可。
+            </p>
+          ) : (
+            mergedMessages.map((item, gIdx) => {
+              if (Array.isArray(item)) {
+                const group = item as OpenAiChatMessage[]
+                const groupText = group
+                  .map(m => typeof m.content === 'string' ? m.content : '')
+                  .filter(Boolean)
+                  .join('\n\n')
+                return (
+                  <div
+                    key={`${activeThreadId}-group-${gIdx}`}
+                    className="lm-chat-row-wrapper lm-chat-row-wrapper--assistant"
+                    style={{ "--lumi-msg-index": gIdx } as React.CSSProperties}
+                  >
+                    <div className="lm-chat-row lm-chat-row--assistant">
+                      <div className="lm-chat-bubble lm-chat-bubble--assistant">
+                        <div className="lumi-sequence-stack">
+                          {group.map((msg, si) => (
+                            <ChatMessageBlock
+                              key={si}
+                              message={msg}
+                              allMessages={visibleMessages}
+                              index={visibleMessages.indexOf(msg)}
+                              inGroup
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="lm-chat-actions">
+                      <button aria-label="重新生成" className="lm-chat-action-btn"
+                        disabled={sendInFlightMapRef.current[activeThreadId]}
+                        onClick={() => {
+                          const groupStart = messages.indexOf(group[0])
+                          if (groupStart < 0) return
+                          let prevUserIdx = groupStart - 1
+                          while (prevUserIdx >= 0 && messages[prevUserIdx].role !== "user") prevUserIdx--
+                          if (prevUserIdx < 0) return
+                          const prevUser = messages[prevUserIdx]
+                          const newHistory = messages.slice(0, prevUserIdx)
+                          saveThreadMessages(activeThreadId, newHistory).catch(() => {})
+                          doSend(newHistory, formatMessagePreview(prevUser))
+                        }}
+                        title="重新生成" type="button"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="23 4 23 10 17 10" />
+                          <polyline points="1 20 1 14 7 14" />
+                          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                        </svg>
+                      </button>
+                      <button aria-label="复制消息内容" className="lm-chat-action-btn"
+                        onClick={() => { navigator.clipboard.writeText(groupText).catch(() => {}) }}
+                        title="复制" type="button"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                      </button>
+                      <button aria-label="删除此消息" className="lm-chat-action-btn"
+                        onClick={() => {
+                          setMessages((prev) => {
+                            const next = [...prev]
+                            const delStart = prev.indexOf(group[0])
+                            const delEnd = prev.indexOf(group[group.length - 1])
+                            if (delStart >= 0 && delEnd >= delStart) {
+                              next.splice(delStart, delEnd - delStart + 1)
+                            }
+                            saveThreadMessages(activeThreadId, next).catch(() => {})
+                            return next
+                          })
+                        }}
+                        title="删除" type="button"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          <line x1="10" y1="11" x2="10" y2="17" />
+                          <line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )
+              }
+              const msg = item as OpenAiChatMessage
+              const msgIndex = visibleMessages.indexOf(msg)
+              const isEditingThis = msg.role === "user" && editingIndex === msgIndex
+              return (
+                <div
+                  key={`${activeThreadId}-${gIdx}-${msg.role}`}
+                  className={`lm-chat-row-wrapper lm-chat-row-wrapper--${msg.role === "user" ? "user" : "assistant"}`}
+                  style={{ "--lumi-msg-index": gIdx } as React.CSSProperties}
+                >
+                  {isEditingThis ? (
+                    <div className="lm-chat-row lm-chat-row--user" style={{ width: "100%" }}>
+                      <div className="lm-chat-bubble lm-chat-bubble--user lm-edit-bubble">
+                        <textarea
+                          className="lm-edit-textarea"
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault()
+                              const trimmed = editingText.trim()
+                              if (!trimmed) return
+                              if (sendInFlightMapRef.current[activeThreadId]) return
+                              const newHistory = messages.slice(0, msgIndex)
+                              saveThreadMessages(activeThreadId, newHistory).catch(() => {})
+                              doSend(newHistory, trimmed)
+                            }
+                            if (e.key === "Escape") { setEditingIndex(-1); setEditingText("") }
+                          }}
+                          autoFocus
+                          rows={3}
+                        />
+                        <div className="lm-edit-hint">Enter 发送 · Shift+Enter 换行 · Esc 取消</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <ChatMessageBlock message={msg} allMessages={visibleMessages} index={msgIndex} />
+                  )}
+                  <div className="lm-chat-actions">
+                    {msg.role === "user" && !isEditingThis ? (
+                      <button aria-label="编辑消息" className="lm-chat-action-btn"
+                        disabled={sendInFlightMapRef.current[activeThreadId]}
+                        onClick={() => { setEditingIndex(msgIndex); setEditingText(formatMessagePreview(msg)) }}
+                        title="编辑" type="button"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                    ) : null}
+                    <button aria-label="复制消息内容" className="lm-chat-action-btn"
+                      onClick={() => {
+                        const text = typeof msg.content === "string" ? msg.content : ""
+                        navigator.clipboard.writeText(text).catch(() => {})
+                      }}
+                      title="复制" type="button"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                    </button>
+                    <button aria-label="删除此消息" className="lm-chat-action-btn"
+                      onClick={() => {
+                        setMessages((prev) => {
+                          const next = [...prev]
+                          const target = next[msgIndex]
+                          if (target.role === "assistant" && target.tool_calls) {
+                            let i2 = msgIndex + 1
+                            while (i2 < next.length && next[i2].role === "tool") i2++
+                            next.splice(msgIndex, i2 - msgIndex)
+                          } else {
+                            next.splice(msgIndex, 1)
+                          }
+                          saveThreadMessages(activeThreadId, next).catch(() => {})
+                          return next
+                        })
+                      }}
+                      title="删除" type="button"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )
+            })
+          )}
+          <div ref={scrollAnchorRef} />
+        </div>
+
+        {isLoading && (
+          <div className="lumi-running-indicator">
+            <span className="lumi-running-dot" />
+            <span className="lumi-running-dot" />
+            <span className="lumi-running-dot" />
+          </div>
+        )}
+
+        <div className="lm-composer">
+          <textarea
+            aria-label="对话输入"
+            className="lm-input lm-input--composer"
+            disabled={isHydrating}
+            onChange={(event) => {
+              setDraft(event.target.value)
+              const el = event.target
+              el.style.height = "auto"
+              el.style.height = el.scrollHeight + "px"
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault()
+                void sendUserMessage()
+              }
+            }}
+            placeholder="Enter 发送，Shift+Enter 换行"
+            rows={1}
+            value={draft}
+          />
+          <button
+            aria-busy={isLoading}
+            aria-label={isLoading ? "停止生成" : "发送"}
+            className={`lm-composer-send${isLoading ? " lm-composer-send--stop" : ""}`}
+            disabled={isHydrating}
+            onClick={() => { isLoading ? handleStop() : void sendUserMessage() }}
+            type="button">
+            {isLoading ? (
+              <svg aria-hidden className="lm-stop-icon" fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" rx="1.5" />
+              </svg>
+            ) : (
+              <SendArrowIcon />
+            )}
+          </button>
+          {error ? (
+            <p className="lm-error lm-error--tight" role="alert">{error}</p>
+          ) : null}
+        </div>
+      </section>
+
+      {/* History Panel */}
+      <HistoryPanel
+        open={historyOpen}
+        onSelect={(threadId) => {
+          void selectThread(threadId)
+          setHistoryOpen(false)
+        }}
+        onDelete={(threadId) => {
+          void handleDeleteThread(threadId)
+        }}
+        onClose={() => setHistoryOpen(false)}
+      />
+    </div>
+  )
+}

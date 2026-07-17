@@ -397,14 +397,19 @@ function jsonSchemaToZod(schema: Record<string, unknown>): z.ZodTypeAny {
  *
  * Obsidian 工具从 MCP client.listTools() 动态获取 schema 和 description，
  * 不再是静态定义。只有 MCP 已连接且 handler 已注册时才暴露。
+ *
+ * @param toolFilter - 可选，工具名称白名单。传入后只返回匹配的工具（用于模式过滤）。
+ *                     不传则返回全部工具。
  */
-export async function getLuminoAgentTools(): Promise<Record<string, any>> {
+export async function getLuminoAgentTools(toolFilter?: string[]): Promise<Record<string, any>> {
   const tools: Record<string, any> = {}
 
-  // 基础工具始终可用
+  // 基础工具始终可用（可按 toolFilter 过滤）
   for (const t of BASE_TOOLS) {
     const name = (t as any).luminoName as string
-    if (name) tools[name] = t
+    if (!name) continue
+    if (toolFilter && toolFilter.length > 0 && !toolFilter.includes(name)) continue
+    tools[name] = t
   }
 
   // Obsidian MCP 工具：从客户端动态获取
@@ -414,6 +419,9 @@ export async function getLuminoAgentTools(): Promise<Record<string, any>> {
       const serverTools = await client.listTools()
       console.log(`[lumino:tools] MCP 动态获取到 ${serverTools.length} 个工具:`, serverTools.map(t => t.name))
       for (const st of serverTools) {
+        // 如果指定了 toolFilter，MCP 工具也需要过滤
+        if (toolFilter && toolFilter.length > 0 && !toolFilter.includes(st.name)) continue
+
         try {
           const zodSchema = jsonSchemaToZod(st.inputSchema as Record<string, unknown>)
           tools[st.name] = tool({

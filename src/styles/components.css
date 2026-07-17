@@ -4,7 +4,7 @@
    All values reference --lumi-* tokens. Zero hardcoded numbers.
    ═══════════════════════════════════════════════ */
 
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Figtree:wght@400;500&family=DM+Sans:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&family=Figtree:wght@400;500&family=DM+Sans:wght@400;500&display=swap");
 
 @import "./tokens.css";
 @import "./layout.css";
@@ -13,13 +13,8 @@
    Global Interaction Transitions
    ================================================ */
 
-.lm-session-chip,
-.lm-session-chip-main,
-.lm-session-chip-del,
-.lm-session-add,
 .lm-chat-bubble,
 .lm-chat-action-btn,
-.lm-side-nav-btn,
 .lm-composer-send,
 .lm-input,
 .lm-textarea,
@@ -42,8 +37,7 @@
 /* Active/press feedback */
 .lm-composer-send:active:not(:disabled),
 .lm-primary-button:active:not(:disabled),
-.lm-secondary-button:active:not(:disabled),
-.lm-session-add:active:not(:disabled) {
+.lm-secondary-button:active:not(:disabled) {
   transform: scale(0.96);
 }
 
@@ -90,33 +84,12 @@
 }
 
 .lm-options .lm-blob {
-  filter: blur(56px);
-  opacity: 0.08;
+  filter: blur(64px);
+  opacity: 0.06;
 }
 
 .lm-options .lm-blob--a { background: radial-gradient(circle, var(--lumi-accent-a) 0%, transparent 70%); }
 .lm-options .lm-blob--b { background: radial-gradient(circle, var(--lumi-accent-b) 0%, transparent 68%); }
-.lm-options .lm-blob--c {
-  background: radial-gradient(circle, var(--lumi-accent-mist) 0%, transparent 65%);
-  opacity: 0.06;
-}
-
-/* ================================================
-   Bezel Cards
-   ================================================ */
-
-.lm-options .lm-bezel-outer {
-  background: var(--lumi-surface);
-  border: 1px solid var(--lumi-border);
-  border-radius: var(--lumi-radius-input);
-  box-shadow: var(--lumi-shadow-card);
-}
-
-.lm-options .lm-bezel-inner {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-}
 
 
 /* ================================================
@@ -166,42 +139,6 @@
 /* ================================================
    Session Chips
    ================================================ */
-
-.lm-session-strip-hint {
-  color: var(--lumi-text-faint);
-  font-size: var(--lumi-text-sm);
-}
-
-.lm-session-chip--active .lm-session-chip-main { color: var(--lumi-text); }
-
-.lm-session-chip--active::after {
-  background: var(--lumi-chip-active-bar);
-}
-
-.lm-session-chip-main {
-  color: var(--lumi-text-soft);
-  font-size: var(--lumi-text-sm);
-  font-weight: var(--lumi-weight-medium);
-  line-height: 1.2;
-}
-
-.lm-session-chip-main:hover { color: var(--lumi-text); }
-
-.lm-session-chip-del {
-  color: var(--lumi-text-faint);
-  font-size: var(--lumi-text-sm);
-}
-
-.lm-session-add {
-  border-radius: var(--lumi-radius-chip);
-  color: var(--lumi-text-faint);
-  font-size: 18px;
-}
-
-.lm-session-add:hover:not(:disabled) {
-  background: var(--lumi-border);
-  color: var(--lumi-text);
-}
 
 /* ================================================
    Chat Bubbles
@@ -816,37 +753,202 @@
 }
 
 /* ================================================
-   Side Nav
+   Side Nav (HeyGen 风格)
    ================================================ */
 
-.lm-side-nav { border-left: 1px solid var(--lumi-border); }
+.lm-icon-sidebar {
+  border-left: 1px solid var(--lumi-border);
+  background: var(--lumi-surface);
+}
 
-.lm-side-nav-btn {
+.lm-nav-item {
+  color: var(--lumi-text-soft);
+}
+
+.lm-nav-item:hover {
+  background: var(--lumi-surface-solid);
+}
+
+.lm-nav-item:hover .lm-nav-icon-box {
+  transform: scale(1.1);
+}
+
+.lm-nav-item--active .lm-nav-icon-box {
+  background: var(--lumi-gradient-home-pill, linear-gradient(127deg, #f3a6ff 12%, #00c4ff 70%, #35c838 89%));
+}
+
+.lm-nav-item--active .lm-nav-icon-box svg {
+  color: #fff;
+}
+
+.lm-nav-item--active .lm-nav-label {
+  background: var(--lumi-gradient-home-pill, linear-gradient(127deg, #f3a6ff 12%, #00c4ff 70%, #35c838 89%));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.lm-nav-item--active:hover {
+  background: transparent;
+}
+
+.lm-nav-label {
+  color: var(--lumi-text-soft);
+}
+
+/* ================================================
+   Home Page
+   ================================================ */
+
+.lm-home-hero-title {
+  color: var(--lumi-text-primary);
+}
+
+.lm-home-hero-sub {
   color: var(--lumi-text-faint);
 }
 
-.lm-side-nav-btn:hover {
+.lm-home-section-title {
+  color: var(--lumi-text-faint);
+}
+
+.lm-home-card {
+  background: var(--lumi-surface);
+  border: 1px solid var(--lumi-border);
+  box-shadow: var(--lumi-shadow-card);
+}
+
+.lm-home-card:hover {
+  box-shadow: var(--lumi-shadow-elevated, 0 8px 30px rgba(0, 0, 0, 0.12));
+}
+
+.lm-home-card-icon {
+  background: var(--lumi-surface-solid);
+  color: var(--lumi-text-soft);
+}
+
+.lm-home-card-name {
+  color: var(--lumi-text-primary);
+}
+
+.lm-home-card-desc {
+  color: var(--lumi-text-faint);
+}
+
+.lm-home-prompt-chip {
+  color: var(--lumi-text-soft);
+}
+
+.lm-home-prompt-chip:hover {
   color: var(--lumi-text);
+}
+
+.lm-home-recent-title {
+  color: var(--lumi-text-soft);
+}
+
+.lm-home-recent-time {
+  color: var(--lumi-text-faint);
+}
+
+/* ================================================
+   ChatView Header
+   ================================================ */
+
+.lm-chat-view-header {
+  border-bottom: 1px solid var(--lumi-border);
+}
+
+.lm-chat-view-mode-name {
+  color: var(--lumi-text-primary);
+}
+
+.lm-chat-view-new-btn {
+  color: var(--lumi-text-faint);
+}
+
+.lm-chat-view-new-btn:hover {
   background: var(--lumi-surface-solid);
-  box-shadow: none;
+  color: var(--lumi-text-primary);
 }
 
-.lm-side-nav-btn--active {
-  color: var(--lumi-accent-a);
+.lm-chat-view-history-btn {
+  color: var(--lumi-text-faint);
+}
+
+.lm-chat-view-history-btn:hover {
   background: var(--lumi-surface-solid);
-  box-shadow: none;
+  color: var(--lumi-text-primary);
 }
 
-.lm-side-nav-btn--active:hover {
-  color: var(--lumi-accent-a);
+/* ================================================
+   History Panel
+   ================================================ */
+
+.lm-history-panel {
+  background: var(--lumi-surface);
+  border-left: 1px solid var(--lumi-border);
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
 }
 
-.lm-side-nav-btn-label {
-  font-size: var(--lumi-text-2xs);
-  font-weight: var(--lumi-weight-semibold);
-  letter-spacing: var(--lumi-tracking-wide);
-  line-height: var(--lumi-leading-tight);
+.lm-history-panel-header {
+  background: var(--lumi-surface);
 }
+
+.lm-history-panel-title {
+  color: var(--lumi-text-primary);
+}
+
+.lm-history-panel-close {
+  color: var(--lumi-text-faint);
+}
+
+.lm-history-search-input {
+  background: var(--lumi-surface-solid);
+  color: var(--lumi-text-primary);
+}
+
+.lm-history-search-input:focus {
+  border-color: var(--lumi-accent);
+}
+
+.lm-history-panel-empty {
+  color: var(--lumi-text-faint);
+}
+
+.lm-history-item {
+  background: var(--lumi-surface-solid);
+}
+
+.lm-history-item:hover {
+  background: var(--lumi-surface-solid);
+}
+
+.lm-history-item-title {
+  color: var(--lumi-text-primary);
+}
+
+.lm-history-item-agent {
+  color: var(--lumi-text-soft);
+  background: var(--lumi-bg-deep);
+}
+
+.lm-history-item-agent-label {
+  color: var(--lumi-text-soft);
+}
+
+.lm-history-item-date,
+.lm-history-item-preview {
+  color: var(--lumi-text-faint);
+}
+
+.lm-history-item-delete {
+  color: var(--lumi-text-faint);
+}
+
+/* ================================================
+   Legacy side-nav (removed, replaced by icon-sidebar)
+   ================================================ */
 
 /* ================================================
    Error / chat error
@@ -859,6 +961,39 @@
   border: 1px solid var(--lumi-danger-border);
   border-radius: var(--lumi-radius-code);
   padding: var(--lumi-space-4) var(--lumi-space-6);
+}
+
+/* ================================================
+   Options page — visual tokens
+   ================================================ */
+
+.lm-options-nav {
+  background: var(--lumi-surface-solid);
+}
+
+.lm-options-nav-brand {
+  color: var(--lumi-text-faint);
+}
+
+.lm-options-nav-item {
+  color: var(--lumi-text-soft);
+}
+
+.lm-options-nav-item:hover {
+  color: var(--lumi-text-primary);
+}
+
+.lm-options-nav-item--active {
+  color: var(--lumi-accent-a);
+}
+
+.lm-options-save-btn {
+  background: var(--lumi-accent-a);
+  color: #fff;
+}
+
+.lm-agent-card-btn {
+  color: var(--lumi-text-soft);
 }
 
 /* ================================================

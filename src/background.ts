@@ -72,7 +72,9 @@ function broadcastSidepanelState(open: boolean) {
 async function executeAgentInBackground(
   threadId: string,
   historyMessages: OpenAiChatMessage[],
-  userInput: string
+  userInput: string,
+  mode?: string,
+  agentConfig?: { systemPrompt: string; tools: string[] }
 ) {
   const abortController = new AbortController()
   await registerAllTools()
@@ -89,6 +91,8 @@ async function executeAgentInBackground(
       historyMessages,
       userInput,
       signal: abortController.signal,
+      mode,
+      agentConfig,
       onMessagesUpdate: async (msgs) => {
         if (abortController.signal.aborted) return
         await saveThreadMessages(threadId, msgs)
@@ -167,7 +171,7 @@ function setupMessageHandlers(): void {
 
     // ---- Side Panel → SW：启动 agent ----
     if (message?.type === START_AGENT_MESSAGE) {
-      const { threadId, historyMessages, userInput, windowId } = (message as StartAgentMessage).payload
+      const { threadId, historyMessages, userInput, windowId, mode, agentConfig } = (message as StartAgentMessage).payload
 
       if (windowId != null) {
         void setAgentWindowId(windowId)
@@ -179,13 +183,15 @@ function setupMessageHandlers(): void {
         return
       }
 
-      console.log("[lumino:bg]", "启动 agent, threadId:", threadId)
+      console.log("[lumino:bg]", "启动 agent, threadId:", threadId, "mode:", mode)
       // 立即确认消息已收到，避免 SW 休眠后 sendMessage 的 Promise 被 reject
       sendResponse({ received: true })
       void executeAgentInBackground(
         threadId,
         historyMessages as OpenAiChatMessage[],
-        userInput
+        userInput,
+        mode,
+        agentConfig
       )
       return
     }

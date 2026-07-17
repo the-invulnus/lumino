@@ -87,7 +87,11 @@ export async function buildAgentMessages(
         content: string | null
         tool_calls?: unknown[]
         tool_call_id?: string
-    }>
+    }>,
+    opts?: {
+        /** 覆盖默认系统提示词（可选，如自定义 Agent 用） */
+        systemPromptOverride?: string
+    }
 ): Promise<Array<{
     role: "system" | "user" | "assistant" | "tool"
     content: string | null
@@ -102,20 +106,30 @@ export async function buildAgentMessages(
         content: string | null
         tool_calls?: unknown[]
         tool_call_id?: string
-    }> = [
-            {
-                role: "system",
-                content: STATIC_SYSTEM_PROMPT
-            },
-            {
-                role: "system",
-                content: SEMI_STATIC_SYSTEM_PROMPT
-            },
-            {
-                role: "system",
-                content: timeBlock
-            }
-        ]
+    }> = []
+
+    if (opts?.systemPromptOverride) {
+        // 自定义 Agent：使用用户提供的完整提示词 + 时间
+        messages.push({
+            role: "system",
+            content: opts.systemPromptOverride
+        })
+    } else {
+        // 默认：静态 + 半静态系统提示词
+        messages.push({
+            role: "system",
+            content: STATIC_SYSTEM_PROMPT
+        })
+        messages.push({
+            role: "system",
+            content: SEMI_STATIC_SYSTEM_PROMPT
+        })
+    }
+
+    messages.push({
+        role: "system",
+        content: timeBlock
+    })
 
     // 仅在 Obsidian 已配置时注入指引
     const obsidianSettings = await getObsidianSettings()

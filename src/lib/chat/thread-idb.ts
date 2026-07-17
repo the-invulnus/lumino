@@ -8,6 +8,10 @@ export type ChatThreadRecord = {
   updatedAt: number
   title?: string
   messages: OpenAiChatMessage[]
+  /** Agent 模式 id（"chat" | "research" | "replicate" | "automate" | custom-uuid） */
+  mode?: string
+  /** 自定义 Agent 名称（内置模式为 undefined） */
+  agentName?: string
 }
 
 export function suggestTitleFromMessages(
@@ -51,7 +55,7 @@ export async function putThread(record: ChatThreadRecord): Promise<void> {
   })
 }
 
-export async function listThreads(): Promise<ChatThreadRecord[]> {
+export async function listThreads(modeFilter?: string): Promise<ChatThreadRecord[]> {
   const db = await openDatabase()
 
   return new Promise<ChatThreadRecord[]>((resolve, reject) => {
@@ -59,7 +63,10 @@ export async function listThreads(): Promise<ChatThreadRecord[]> {
     const req = tx.objectStore(STORE_THREADS).getAll()
 
     req.onsuccess = () => {
-      const rows = (req.result as ChatThreadRecord[]) ?? []
+      let rows = (req.result as ChatThreadRecord[]) ?? []
+      if (modeFilter) {
+        rows = rows.filter((r) => r.mode === modeFilter || (!r.mode && modeFilter === "chat"))
+      }
       rows.sort((a, b) => b.updatedAt - a.updatedAt)
       resolve(rows)
     }
@@ -94,19 +101,77 @@ export async function createEmptyThread(): Promise<ChatThreadRecord> {
   return record
 }
 
+/**
+ * 用 LLM 根据第一条用户消息生成简短会话标题。
+ * 失败时兜底截取用户输入前 20 字符。
+ */
+export async function generateThreadTitle(
+  userInput: string,
+  llmSettings: { baseUrl: string; apiKey: string; model: string }
+): Promise<string> {
+  const text = userInput.trim().replace(/\s+/g, " ")
+  if (!text) return "新会话"
+
+  const prompt = `用户问题：${text.slice(0, 200)}\n\n为这个对话起一个简短标题（10个字以内），只输出标题本身。`
+
+  const url = `${llmSettings.baseUrl}/chat/completions`
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${llmSettings.apiKey}`
+      },
+      body: JSON.stringify({
+        model: llmSettings.model,
+        messages: [
+          { role: "system", content: "你是一个标题生成器。根据用户的问题，生成一个简短的会话标题。只输出标题内容，不要引号、标点或任何其他文字。10个字以内。" },
+          { role: "user", content: prompt }
+        ],
+        max_tokens: 30,
+        temperature: 0.3,
+        thinking: { type: "disabled" }
+      })
+    })
+
+    if (!res.ok) {
+      console.warn("[lumino:title] HTTP", res.status)
+      return text.slice(0, 20)
+    }
+
+    const data = await res.json() as { choices?: { message?: { content?: string } }[] }
+    const raw = (data.choices?.[0]?.message?.content ?? "").trim()
+    const title = raw.replace(/^["'「『]|["'」』]$/g, "").replace(/[。，、！？,.!?]/g, "").trim()
+    console.log("[lumino:title] 生成:", title || "(空)")
+    return title.slice(0, 20) || text.slice(0, 20)
+  } catch (err) {
+    console.warn("[lumino:title] 异常:", err)
+    return text.slice(0, 20)
+  }
+}
+
 export async function saveThreadMessages(
   threadId: string,
   messages: OpenAiChatMessage[]
 ): Promise<void> {
   const existing = await getThread(threadId)
-  const derived = suggestTitleFromMessages(messages)
+  // 如果已有有意义的标题（非默认），保留它，不被 suggestTitleFromMessages 覆盖
+  const hasTitle = existing?.title && existing.title !== "新会话"
+  const derived = hasTitle ? undefined : suggestTitleFromMessages(messages)
   const title =
-    derived ?? existing?.title ?? (threadId === DEFAULT_THREAD_ID ? "默认" : "新会话")
+    existing?.title === "新会话" && derived
+      ? derived
+      : hasTitle
+        ? existing!.title
+        : (derived ?? existing?.title ?? (threadId === DEFAULT_THREAD_ID ? "默认" : "新会话"))
 
   await putThread({
     id: threadId,
     updatedAt: Date.now(),
     title,
-    messages
+    messages,
+    mode: existing?.mode,
+    agentName: existing?.agentName
   })
 }

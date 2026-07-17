@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-Lumino 是一款基于 Plasmo 框架构建的 Chrome 浏览器扩展，定位为「陪伴型 AI 助手」。用户通过 Side Panel 与 AI 对话，AI 通过 Agent 框架（Vercel AI SDK v6）自主调度内置工具系统，可读取网页内容、操作 DOM、管理文件、存取 Obsidian 笔记。配备 OPFS 文件系统工作区。
+Lumino 是一款基于 Plasmo 框架构建的 Chrome 浏览器扩展，定位为「多模式 AI 助手」。用户通过 Side Panel 从首页选择功能模式，进入对应的 Agent 对话界面。每个 Agent 模式有不同的系统提示词和工具子集，适应搜索调研、设计复刻、页面操控等场景。用户可在 Options 页创建自定义 Agent。AI 通过 Agent 框架（Vercel AI SDK v6）自主调度内置工具系统，可读取网页内容、操作 DOM、管理文件、存取 Obsidian 笔记。配备 OPFS 文件系统工作区。
 
 （文档更新有滞后性，如果发现代码实现与本文档说明不符，一律以代码实现为准。）
 
@@ -29,11 +29,43 @@ Chrome Extension Manifest V3，**Service Worker + Side Panel + Content Script**�
 | 入口 | 文件 | 说明 |
 |---|---|---|
 | Service Worker | `src/background.ts` | Agent 执行引擎、消息路由、定时任务（驱逐清理） |
-| Side Panel | `src/sidepanel.tsx` | 核心交互界面：多会话聊天、LLM 对话 |
-| Options Page | `src/options.tsx` | LLM 配置 + Obsidian 集成配置 + 主题切换 |
+| Side Panel | `src/sidepanel.tsx` | 薄入口，实际逻辑在 `src/sidepanel/App.tsx` — 首页/聊天路由、导航栏、历史面板 |
+| Options Page | `src/options.tsx` | LLM 配置 + Obsidian 集成配置 + 主题切换 + 自定义 Agent 管理 |
 | Content Script | `src/contents/lumino-floating-button.ts` | `<all_urls>` 注入悬浮按钮，点击唤起侧栏 |
 | Content Script（辅助） | `src/content/floating-button.ts` | 浮动按钮 DOM 创建/挂载逻辑 |
 | Content Script（辅助） | `src/contents/lumino-input-watcher.ts` | 基础注入，抑制 SW 上下文失效错误 |
+
+## Agent 多模式系统
+
+Lumino 支持多 Agent 模式，内置和用户自定义 Agent 使用统一的 `AgentConfig` 类型。
+
+### 配置架构
+
+```
+BUILTIN_AGENTS (builtin-agents.ts)  +  customAgents (chrome.storage.sync)
+         │                                    │
+         └─────────── getAllAgents() ──────────┘
+                           │
+         ┌─────────────────┼─────────────────┐
+         ▼                 ▼                  ▼
+   IconSidebar         HomePage           ChatView
+  (导航栏渲染)       (首页卡片)         (send 时读取
+                                     systemPrompt + tools)
+```
+
+- **内置 Agent** 定义在 `src/lib/chat/builtin-agents.ts`，一个 `AgentConfig[]` 数组。新增内置 Agent 只需在数组中添加一个条目
+- **自定义 Agent** 存在 `chrome.storage.sync`（随 Chrome 账号同步），由 `src/lib/chat/mode-config.ts` 的 `loadCustomAgents()` / `saveCustomAgents()` 读写
+- **统一加载**：`builtin-agents.ts` 的 `getAllAgents()` 将内置和自定义 Agent 合并，统一排序后提供给前端
+- **工具过滤**：`getLuminoAgentTools(toolFilter?)` 接受可选工具名数组，`AgentConfig.tools` 空数组 = 全部工具
+
+### 内置 Agent 列表
+
+| id | 名称 | 工具子集 | 说明 |
+|---|---|---|---|
+| `chat` | 通用 | 全部工具 | 全能助手 |
+| `research` | 深度调研 | navigate, get_page_content, screenshot, scroll, etc. | 浏览网页、深度搜索 |
+| `replicate` | 设计复刻 | scrape_structure, scrape_styles, scrape_resources, fetch_resource, etc. | DOM/CSS 提取、资源收集 |
+| `automate` | 页面操控 | fill_form, click_element, press_key, inspect_element, etc. | 表单填充、元素操作 |
 
 ## Agent 架构（核心）
 
@@ -139,7 +171,46 @@ const tool = luminoTool({
 
 ## 前端 UI 架构
 
-### 消息渲染 (sidepanel.tsx)
+### Side Panel 组件层级
+
+```
+SidePanel (sidepanel.tsx — 薄入口)
+└── App (sidepanel/App.tsx — 顶层路由 + 状态管理)
+    ├── HomePage (sidepanel/HomePage.tsx — 功能卡片网格)
+    ├── ChatView (sidepanel/ChatView.tsx — 聊天界面核心)
+    │   ├── ChatMessageBlock (sidepanel/components/)
+    │   │   └── LumiToolCall (sidepanel/components/)
+    │   └── HistoryPanel (sidepanel/HistoryPanel.tsx — 右侧滑出历史面板)
+    └── IconSidebar (sidepanel/IconSidebar.tsx — 右侧导航栏)
+```
+
+**路由逻辑**：
+- `currentAgent === null` → 渲染 `HomePage`（功能卡片首页）
+- `currentAgent !== null` → 渲染 `ChatView`（对应 Agent 的聊天界面）
+
+**多模式支持**：
+- `START_AGENT_MESSAGE.payload` 携带 `mode` 和 `agentConfig`（systemPrompt + tools 数组）
+- SW 透传给 `runAgentLoop()`，用于系统提示词覆盖和工具过滤
+- 导航栏和首页都通过 `getAllAgents()` 获取统一 Agent 列表，一个循环渲染
+
+### 右侧导航栏（IconSidebar）
+
+HeyGen 风格的 78px 宽图标+文字导航栏：
+- 首页按钮（🏠）→ 返回功能卡片页
+- 内置 Agent 按钮（按 order 排序，图标在上 + 名称在下）
+- 分割线
+- 用户自定义 Agent 按钮
+- spacer → 设置按钮（打开 Options Page）
+- 运行中指示器：绿色圆点脉冲动画
+
+### 历史面板（HistoryPanel）
+
+右上角历史按钮 → 遮罩层 + 从右侧滑入 300px 面板：
+- 搜索框：按标题/内容过滤
+- 全局会话列表：标题 + 日期 + 内容预览 + 删除
+- 点击卡片：切换到对应会话
+
+### 消息渲染 (ChatView)
 
 **消息合并逻辑**（`mergedMessages` useMemo）：
 - 将 `visibleMessages` 中的连续非-user 消息（assistant + tool）合并成一个数组分组
@@ -181,8 +252,20 @@ lm-chat-scroll
 lumino/
 ├── src/
 │   ├── background.ts                    # Service Worker — Agent 执行 & 消息路由
-│   ├── sidepanel.tsx                    # Side Panel 主聊天 UI
-│   ├── options.tsx                      # 选项页 — LLM + Obsidian 配置 + 主题切换
+│   ├── sidepanel.tsx                    # Side Panel 薄入口 → App.tsx
+│   ├── options.tsx                      # 选项页 — LLM + Obsidian + 主题 + 自定义 Agent 管理
+│   ├── sidepanel/
+│   │   ├── App.tsx                      # 顶层路由（首页 / 聊天分发）+ 状态管理
+│   │   ├── HomePage.tsx                 # 功能卡片网格首页
+│   │   ├── ChatView.tsx                 # 聊天界面核心（消息、composer、session strip）
+│   │   ├── IconSidebar.tsx              # 右侧导航栏（HeyGen 风格）
+│   │   ├── HistoryPanel.tsx             # 右侧滑出历史面板
+│   │   ├── components/
+│   │   │   ├── ChatMessageBlock.tsx      # 消息气泡渲染
+│   │   │   └── LumiToolCall.tsx          # 工具调用卡片
+│   │   └── hooks/
+│   │       ├── useAgentBridge.ts        # Agent 通信 hook
+│   │       └── useThreads.ts            # 会话管理 hook
 │   ├── content/
 │   │   ├── floating-button.ts           # 浮动按钮 DOM 逻辑
 │   │   └── floating-button.test.ts
@@ -191,12 +274,14 @@ lumino/
 │   │   └── lumino-input-watcher.ts      # 基础注入（抑制 SW 上下文失效错误）
 │   ├── lib/
 │   │   ├── chat/
+│   │   │   ├── builtin-agents.ts           # 内置 Agent 配置（新增内置 Agent 只需编辑此文件）
+│   │   │   ├── mode-config.ts              # AgentConfig 类型 + 自定义 Agent 加载/保存
 │   │   │   ├── active-thread-storage.ts    # 当前活跃会话（chrome.storage.local）
 │   │   │   ├── agent-loop.ts               # Agent 循环：AI SDK generateText + onStepFinish
 │   │   │   ├── openai-messages.ts          # OpenAI 消息/工具调用类型
-│   │   │   ├── system-prompt.ts            # 系统提示词组装（静态 + 半静态 + 当前时间 + Obsidian）
-│   │   │   ├── thread-idb.ts               # IndexedDB 会话 CRUD
-│   │   │   ├── tool-definitions.ts         # AI SDK tool() 定义（luminoTool 包装 + Zod v4 schema）
+│   │   │   ├── system-prompt.ts            # 系统提示词组装（支持 override + 当前时间 + Obsidian）
+│   │   │   ├── thread-idb.ts               # IndexedDB 会话 CRUD（ChatThreadRecord 含 mode 字段）
+│   │   │   ├── tool-definitions.ts         # AI SDK tool() 定义 + getLuminoAgentTools(toolFilter?)
 │   │   │   ├── tool-executor.ts            # 工具注册表 & 统一执行 & getToolHandler
 │   │   │   ├── tool-eviction.ts            # 大结果驱逐 & 定时清理
 │   │   │   ├── tool-registry.ts            # 工具注册入口（registerAllTools）
@@ -222,10 +307,10 @@ lumino/
 │   │   ├── db.ts                          # IndexedDB 实例管理（threads 存储）
 │   │   ├── theme.ts                       # 主题应用
 │   │   ├── settings.ts                    # 设置读写（LLM + Obsidian）
-│   │   └── side-panel-bridge.ts           # SP ↔ SW 通信协议类型
+│   │   └── side-panel-bridge.ts           # SP ↔ SW 通信协议类型（含 mode/agentConfig）
 │   ├── styles/
 │   │   ├── tokens.css                     # 主题 Token 变量
-│   │   ├── layout.css                     # 纯布局层
+│   │   ├── layout.css                     # 纯布局层（含导航栏、首页、历史面板）
 │   │   └── components.css                 # 视觉表现层
 │   └── assets/
 │       └── black_cat.gif
