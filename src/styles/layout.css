@@ -25,6 +25,7 @@ textarea {
 .lm-shell {
   box-sizing: border-box;
   min-height: 100%;
+  /* 最外层裁剪边界：防止任何内容溢出 panel 视口。保留。 */
   overflow: hidden;
   position: relative;
 }
@@ -36,6 +37,7 @@ textarea {
   height: 100vh;
   max-width: 100%;
   min-width: 340px;
+  /* 次外层裁剪边界。保留：配合 padding 限定内容区，blob 装饰由 .lm-ambient 自管。 */
   overflow: hidden;
   padding: 8px 0 10px;
   width: 100%;
@@ -48,6 +50,7 @@ textarea {
 /* — Ambient blobs — */
 .lm-ambient {
   inset: 0;
+  /* 必需：裁剪 blob 装饰圆，防止溢出铺满视口。保留。 */
   overflow: hidden;
   pointer-events: none;
   position: absolute;
@@ -210,7 +213,8 @@ textarea {
   flex: 1;
   min-height: 0;
   min-width: 0;
-  overflow: hidden;
+  /* 不设 overflow: hidden — 悬浮导航栏/输入框的阴影需向外扩散。
+     flex 子项溢出由各子项自管的 min-* 与内部滚动控制。 */
 }
 
 .lm-sidepanel-layout {
@@ -220,8 +224,8 @@ textarea {
   gap: 8px;
   min-height: 0;
   min-width: 0;
-  overflow: hidden;
-  padding: 0 10px;
+  /* 不设 overflow: hidden — 输入框/composer 的浮起阴影需向下扩散，裁剪会产生硬边「假角」。 */
+  padding: 8px 10px;
 }
 
 /* — Sidepanel header — */
@@ -504,13 +508,8 @@ textarea {
   /* absolute within .lm-composer (positioning context) */
 }
 
-.lm-composer-send:disabled {
-  cursor: not-allowed;
-  opacity: 0.52;
-}
-
 /* — Side nav — */
-/* — 右侧图标导航栏 — */
+/* — 右侧图标导航栏（悬浮样式） — */
 .lm-icon-sidebar {
   align-items: center;
   display: flex;
@@ -518,9 +517,11 @@ textarea {
   flex-shrink: 0;
   gap: 1px;
   overflow-y: auto;
-  padding: 8px 8px 12px;
+  /* 悬浮：上下右留出间距，加大圆角 */
+  margin: 8px 8px 8px 0;
+  padding: 10px 6px;
   scrollbar-width: none;
-  width: 56px;
+  width: 52px;
 }
 
 .lm-icon-sidebar::-webkit-scrollbar {
@@ -533,7 +534,7 @@ textarea {
   align-items: center;
   justify-content: center;
   padding: 5px 2px;
-  border-radius: 10px;
+  border-radius: var(--lumi-radius-control);
   width: 100%;
   cursor: pointer;
   background: none;
@@ -550,7 +551,7 @@ textarea {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 10px;
+  border-radius: var(--lumi-radius-control);
   transition: all 0.2s;
 }
 
@@ -592,6 +593,11 @@ textarea {
   min-height: 0;
   overflow-y: auto;
   padding: 4px 0 16px;
+  scrollbar-width: none;
+}
+
+.lm-home-page::-webkit-scrollbar {
+  display: none;
 }
 
 .lm-home-hero {
@@ -638,6 +644,39 @@ textarea {
   margin: 0 0 8px 4px;
 }
 
+.lm-home-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 0 4px;
+  margin-bottom: 8px;
+}
+
+.lm-home-section-head .lm-home-section-title {
+  margin: 0;
+}
+
+.lm-home-history-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--lumi-radius-control);
+  border: none;
+  background: var(--lumi-surface);
+  box-shadow: var(--lumi-shadow-panel);
+  cursor: pointer;
+  color: var(--lumi-text-soft);
+  transition: background-color 0.15s, color 0.15s, transform 0.15s var(--lumi-motion-ease-bounce);
+}
+
+.lm-home-history-btn:hover {
+  background: var(--lumi-tile-hover);
+  color: var(--lumi-text-primary);
+  transform: translateY(-1px);
+}
+
 .lm-home-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -649,7 +688,7 @@ textarea {
   flex-direction: column;
   gap: 8px;
   padding: 14px 12px;
-  border-radius: 14px;
+  border-radius: var(--lumi-radius-card);
   border: none;
   cursor: pointer;
   text-align: left;
@@ -669,7 +708,7 @@ textarea {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: var(--lumi-radius-control);
 }
 
 .lm-home-card-body {
@@ -700,9 +739,10 @@ textarea {
   display: flex;
   align-items: center;
   padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--lumi-border);
-  background: none;
+  border-radius: var(--lumi-radius-control);
+  border: none;
+  background: var(--lumi-surface);
+  box-shadow: var(--lumi-shadow-panel);
   cursor: pointer;
   font: inherit;
   font-size: 13px;
@@ -712,8 +752,7 @@ textarea {
 }
 
 .lm-home-prompt-chip:hover {
-  border-color: var(--lumi-border-strong);
-  background: var(--lumi-surface-solid);
+  background: var(--lumi-tile-hover);
 }
 
 /* Recent threads */
@@ -725,10 +764,10 @@ textarea {
 
 .lm-home-recent-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 10px;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--lumi-radius-control);
   border: none;
   background: none;
   cursor: pointer;
@@ -738,15 +777,34 @@ textarea {
 }
 
 .lm-home-recent-item:hover {
-  background: var(--lumi-surface-solid);
+  background: var(--lumi-tile-hover);
+}
+
+.lm-home-recent-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--lumi-radius-control);
+  background: var(--lumi-well);
+  color: var(--lumi-text-soft);
+}
+
+.lm-home-recent-icon svg {
+  width: 15px;
+  height: 15px;
 }
 
 .lm-home-recent-title {
+  flex: 1;
+  min-width: 0;
   font-size: 13px;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 180px;
 }
 
 .lm-home-recent-time {
@@ -761,7 +819,7 @@ textarea {
   flex: 1;
   min-height: 0;
   min-width: 0;
-  overflow: hidden;
+  /* 不设 overflow: hidden — composer 底部阴影需向下扩散。滚动由 .lm-chat-scroll 自管。 */
 }
 
 .lm-chat-view-header {
@@ -787,20 +845,20 @@ textarea {
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: var(--lumi-radius-control);
   padding: 2px 6px;
   transition: background-color 0.15s;
 }
 
 .lm-chat-view-mode-name:hover {
-  background: var(--lumi-surface-solid);
+  background: var(--lumi-tile-hover);
 }
 
 .lm-chat-view-title-input {
   font-size: 15px;
   font-weight: 700;
   border: 1px solid var(--lumi-accent-a);
-  border-radius: 6px;
+  border-radius: var(--lumi-radius-control);
   padding: 2px 6px;
   background: var(--lumi-surface);
   color: var(--lumi-text-primary);
@@ -815,32 +873,32 @@ textarea {
   gap: 4px;
 }
 
-.lm-chat-view-new-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9999px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: inherit;
-  transition: background-color 0.2s;
-}
-
+.lm-chat-view-new-btn,
 .lm-chat-view-history-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9999px;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--lumi-radius-control);
   border: none;
-  background: none;
+  background: var(--lumi-surface);
+  box-shadow: var(--lumi-shadow-panel);
   cursor: pointer;
-  color: inherit;
-  transition: background-color 0.2s;
+  color: var(--lumi-text-soft);
+  transition: background-color 0.15s, color 0.15s, transform 0.15s var(--lumi-motion-ease-bounce);
+}
+
+.lm-chat-view-new-btn:hover,
+.lm-chat-view-history-btn:hover {
+  background: var(--lumi-tile-hover);
+  color: var(--lumi-text-primary);
+  transform: translateY(-1px);
+}
+
+.lm-chat-view-new-btn:active,
+.lm-chat-view-history-btn:active {
+  transform: translateY(0);
 }
 
 /* — History Panel — */
@@ -850,11 +908,13 @@ textarea {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(45, 38, 34, 0.18);
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.3s ease-in-out, visibility 0.3s;
+  transition: opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry),
+              visibility var(--lumi-motion-duration-short);
   z-index: 90;
+  backdrop-filter: blur(2px);
 }
 
 .lm-history-overlay--active {
@@ -872,7 +932,7 @@ textarea {
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
-  transition: transform 0.3s ease-in-out;
+  transition: transform var(--lumi-motion-duration-short) var(--lumi-motion-ease-spring);
 }
 
 .lm-history-panel--open {
@@ -912,7 +972,7 @@ textarea {
 }
 
 .lm-history-panel-search {
-  padding: 10px 16px;
+  padding: 10px 16px 14px;
   flex-shrink: 0;
 }
 
@@ -920,10 +980,11 @@ textarea {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid var(--lumi-border-strong);
-  border-radius: 8px;
+  border-radius: var(--lumi-radius-card);
   font-size: 13px;
   outline: none;
   box-sizing: border-box;
+  transition: border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
 }
 
 .lm-history-panel-list {
@@ -942,15 +1003,26 @@ textarea {
   display: flex;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--lumi-radius-card);
   cursor: pointer;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   border: 1px solid var(--lumi-border);
-  transition: background-color 0.15s;
+  background: var(--lumi-tile);
+  box-shadow: 0 1px 2px rgba(45, 38, 34, 0.04), 0 4px 14px -6px rgba(45, 38, 34, 0.08);
+  transition: background-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              box-shadow var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              transform var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
 }
 
 .lm-history-item:hover {
-  background: var(--lumi-surface-solid);
+  background: var(--lumi-tile);
+  box-shadow: var(--lumi-shadow-elevated);
+  transform: translateY(-1px);
+}
+
+.lm-history-item--active {
+  background: var(--lumi-tile-hover);
+  box-shadow: var(--lumi-shadow-elevated);
 }
 
 .lm-history-item-left {
@@ -968,7 +1040,7 @@ textarea {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--lumi-radius-control);
 }
 
 .lm-history-item-agent svg {
@@ -1052,11 +1124,7 @@ textarea {
 }
 
 .lm-history-item-delete:hover {
-  color: #c03e3e;
-}
-
-.lm-history-item-delete:hover {
-  color: #c03e3e;
+  color: var(--lumi-danger-text);
 }
 
 /* — Options: two-column layout — */
@@ -1093,7 +1161,7 @@ textarea {
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
-  border-radius: 8px;
+  border-radius: var(--lumi-radius-control);
   border: none;
   background: none;
   cursor: pointer;
@@ -1105,7 +1173,7 @@ textarea {
 }
 
 .lm-options-nav-item:hover {
-  background: var(--lumi-surface);
+  background: var(--lumi-tile-hover);
   color: var(--lumi-text-primary);
 }
 
@@ -1122,7 +1190,7 @@ textarea {
 .lm-options-save-btn {
   margin-top: 8px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: var(--lumi-radius-control);
   border: none;
   background: var(--lumi-accent-a, #a78bfa);
   color: #fff;
@@ -1178,29 +1246,29 @@ textarea {
 /* — Agent cards — */
 .lm-custom-agents-list { display: flex; flex-direction: column; gap: 6px; }
 
-.lm-agent-card { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--lumi-border); }
+.lm-agent-card { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: var(--lumi-radius-control); border: 1px solid var(--lumi-border); background: var(--lumi-tile); }
 .lm-agent-card-body { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .lm-agent-card-body strong { font-size: 14px; display: block; }
 .lm-agent-card-body small { font-size: 11px; color: var(--lumi-text-faint); }
-.lm-agent-card-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--lumi-surface); color: var(--lumi-text-soft); flex-shrink: 0; }
+.lm-agent-card-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--lumi-radius-control); background: var(--lumi-well); color: var(--lumi-text-soft); flex-shrink: 0; }
 .lm-agent-card-icon svg { width: 16px; height: 16px; }
 .lm-agent-card-actions { display: flex; gap: 6px; flex-shrink: 0; }
-.lm-agent-card-btn { padding: 5px 12px; border-radius: 6px; border: 1px solid var(--lumi-border); background: none; cursor: pointer; font-size: 12px; color: var(--lumi-text-soft); transition: all 0.15s; }
+.lm-agent-card-btn { padding: 5px 12px; border-radius: var(--lumi-radius-control); border: 1px solid var(--lumi-border); background: var(--lumi-well); cursor: pointer; font-size: 12px; color: var(--lumi-text-soft); transition: all 0.15s; }
 .lm-agent-card-btn:hover { border-color: var(--lumi-border-strong); color: var(--lumi-text); }
 .lm-agent-card-btn--danger:hover { border-color: #e5484d; color: #e5484d; }
-.lm-agent-add-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; border: 1px dashed var(--lumi-border-strong); background: none; cursor: pointer; font-size: 13px; color: var(--lumi-text-soft); width: fit-content; transition: all 0.15s; }
+.lm-agent-add-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--lumi-radius-control); border: 1px dashed var(--lumi-border-strong); background: none; cursor: pointer; font-size: 13px; color: var(--lumi-text-soft); width: fit-content; transition: all 0.15s; }
 .lm-agent-add-btn:hover { border-color: var(--lumi-accent-a); color: var(--lumi-accent-a); }
 
 /* — Agent form — */
-.lm-agent-form { display: flex; flex-direction: column; gap: 16px; padding: 18px; border: 1px solid var(--lumi-border); border-radius: 12px; background: var(--lumi-surface); }
+.lm-agent-form { display: flex; flex-direction: column; gap: 16px; padding: 18px; border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-card); background: var(--lumi-tile); }
 .lm-agent-form-title { font-size: 14px; font-weight: 700; margin: 0; color: var(--lumi-text-primary); }
 .lm-agent-form-actions { display: flex; gap: 8px; }
 
 /* — Icon picker — */
 .lm-icon-picker { display: flex; gap: 4px; flex-wrap: wrap; }
-.lm-icon-picker-btn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid var(--lumi-border); border-radius: 8px; background: none; cursor: pointer; transition: all 0.15s; color: var(--lumi-text-soft); }
+.lm-icon-picker-btn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-control); background: var(--lumi-tile); cursor: pointer; transition: all 0.15s; color: var(--lumi-text-soft); }
 .lm-icon-picker-btn svg { width: 16px; height: 16px; }
-.lm-icon-picker-btn:hover { border-color: var(--lumi-border-strong); background: var(--lumi-surface); }
+.lm-icon-picker-btn:hover { border-color: var(--lumi-border-strong); background: var(--lumi-tile-hover); }
 .lm-icon-picker-btn--active { border-color: var(--lumi-accent-a); background: rgba(167,139,250,0.1); color: var(--lumi-accent-a); }
 
 /* — Tool selector — */
@@ -1208,7 +1276,7 @@ textarea {
 .lm-tool-group { display: flex; flex-direction: column; gap: 4px; }
 .lm-tool-group-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--lumi-text-faint); }
 .lm-tool-group-items { display: flex; flex-wrap: wrap; gap: 4px; }
-.lm-tool-checkbox { display: flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1px solid var(--lumi-border); border-radius: 6px; font-size: 11px; cursor: pointer; transition: all 0.15s; color: var(--lumi-text-soft); background: var(--lumi-surface-solid); }
+.lm-tool-checkbox { display: flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-control); font-size: 11px; cursor: pointer; transition: all 0.15s; color: var(--lumi-text-soft); background: var(--lumi-well); }
 .lm-tool-checkbox:hover { border-color: var(--lumi-border-strong); color: var(--lumi-text); }
 .lm-tool-checkbox input[type="checkbox"] { width: 12px; height: 12px; flex-shrink: 0; margin: 0; }
 .lm-tool-checkbox-name { font-family: "SF Mono", "Fira Code", "Menlo", monospace; font-size: 11px; }

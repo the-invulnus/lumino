@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>悬浮设计语言 — 聊天界面重构</title>
+<style>
+:root {
+  --lumi-surface: rgba(255,253,249,0.94);
+  --lumi-surface-solid: #fffaf5;
+  --lumi-bg: #fdfbf7;
+  --lumi-bg-deep: #f6f2eb;
+  --lumi-text: #2d2622;
+  --lumi-text-faint: rgba(45,38,34,0.35);
+  --lumi-text-soft: rgba(45,38,34,0.58);
+  --lumi-text-primary: #1f1a16;
+  --lumi-border: rgba(45,38,34,0.06);
+  --lumi-border-strong: rgba(45,38,34,0.1);
+  --lumi-accent: #a78bfa;
+  --lumi-radius-panel: 16px;
+  --lumi-radius-card: 12px;
+  --lumi-radius-control: 8px;
+  --lumi-shadow-panel: 0 4px 18px -4px rgba(45,38,34,0.08);
+  --lumi-shadow-card: 0 0.5px 2px rgba(45,38,34,0.04);
+  --lumi-gradient-accent: linear-gradient(118deg, #e5988e 0%, #c4b0f5 48%, #a8d4ea 100%);
+  --lumi-font: "Plus Jakarta Sans", -apple-system, system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--lumi-font); background: var(--lumi-bg); color: var(--lumi-text); padding: 28px 20px; min-height: 100vh; }
+h1 { font-size: 18px; color: var(--lumi-text-primary); margin-bottom: 4px; }
+.sub { font-size: 13px; color: var(--lumi-text-faint); margin-bottom: 24px; }
+.row { display: flex; gap: 24px; flex-wrap: wrap; }
+.col { display: flex; flex-direction: column; gap: 10px; }
+.col h2 { font-size: 13px; font-weight: 600; color: var(--lumi-text-primary); }
+.col p { font-size: 11px; color: var(--lumi-text-faint); max-width: 320px; line-height: 1.5; }
+
+/* stage: 模拟整个 sidepanel */
+.stage {
+  display: flex;
+  width: 380px;
+  height: 480px;
+  background: var(--lumi-bg);
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--lumi-border);
+}
+.stage-inner {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0 10px;
+}
+.nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  margin: 8px 6px 8px 0;
+  width: 50px;
+  border: 1px solid var(--lumi-border);
+  border-radius: var(--lumi-radius-panel);
+  background: var(--lumi-surface);
+  box-shadow: var(--lumi-shadow-panel);
+  flex-shrink: 0;
+}
+.nav .nitem {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  border-radius: var(--lumi-radius-control);
+  color: var(--lumi-text-soft);
+}
+.nav .nitem.active { background: var(--lumi-gradient-accent); color: #fff; }
+.nav .nitem svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.nav .spacer { flex: 1; }
+
+/* ============ 当前（平面嵌入式） ============ */
+.cur-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 4px 4px; flex-shrink: 0;
+}
+.cur-header-left { display: flex; align-items: center; gap: 8px; }
+.cur-cat { width: 26px; height: 26px; border-radius: 50%; background: var(--lumi-bg-deep); }
+.cur-title { font-size: 15px; font-weight: 700; color: var(--lumi-text-primary); }
+.cur-actions { display: flex; gap: 4px; }
+.cur-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 9999px;
+  border: none; background: none; color: var(--lumi-text-soft);
+}
+.cur-btn:hover { background: var(--lumi-surface-solid); }
+.cur-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.cur-body { flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 10px 2px; overflow: hidden; }
+.cur-bubble {
+  align-self: flex-start; max-width: 80%;
+  background: var(--lumi-surface-solid); border: 1px solid var(--lumi-border);
+  border-radius: var(--lumi-radius-card); padding: 10px 14px; font-size: 13px; color: var(--lumi-text);
+}
+.cur-bubble.user { align-self: flex-end; background: var(--lumi-gradient-accent); color: #fff; border: none; }
+.cur-composer { flex-shrink: 0; padding-top: 10px; position: relative; }
+.cur-ta {
+  width: 100%; box-sizing: border-box; min-height: 44px;
+  background: var(--lumi-surface); border: 1px solid var(--lumi-border);
+  border-radius: var(--lumi-radius-card);
+  padding: 12px 48px 12px 16px; font-size: 13px; color: var(--lumi-text);
+  font-family: inherit; resize: none; outline: none;
+}
+
+/* ============ 重构（悬浮胶囊语言） ============ */
+.new-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 2px 6px; flex-shrink: 0;
+}
+.new-header-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.new-cat { width: 28px; height: 28px; border-radius: 50%; background: var(--lumi-bg-deep); flex-shrink: 0; }
+.new-title { font-size: 15px; font-weight: 700; color: var(--lumi-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.new-actions { display: flex; gap: 6px; }
+/* 浮起胶囊按钮：浅底 + 边框 + 微阴影，和导航栏同一语言 */
+.new-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: var(--lumi-radius-control);
+  border: 1px solid var(--lumi-border);
+  background: var(--lumi-surface-solid);
+  box-shadow: var(--lumi-shadow-card);
+  color: var(--lumi-text-soft);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.new-btn:hover { background: var(--lumi-bg-deep); color: var(--lumi-text-primary); transform: translateY(-1px); }
+.new-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.new-body { flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 12px 2px; overflow: hidden; }
+.new-bubble {
+  align-self: flex-start; max-width: 80%;
+  background: var(--lumi-surface-solid); border: 1px solid var(--lumi-border);
+  border-radius: var(--lumi-radius-card); padding: 10px 14px; font-size: 13px; color: var(--lumi-text);
+}
+.new-bubble.user { align-self: flex-end; background: var(--lumi-gradient-accent); color: #fff; border: none; box-shadow: var(--lumi-shadow-card); }
+/* composer 浮起卡片：panel 圆角 + 阴影 + 内嵌发送键 */
+.new-composer { flex-shrink: 0; padding: 8px 0 10px; }
+.new-composer-wrap {
+  position: relative;
+  background: var(--lumi-surface-solid);
+  border: 1px solid var(--lumi-border);
+  border-radius: var(--lumi-radius-panel);
+  box-shadow: var(--lumi-shadow-panel);
+  padding: 12px 52px 12px 16px;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.new-composer-wrap:focus-within { border-color: var(--lumi-accent); box-shadow: var(--lumi-shadow-panel), 0 0 0 3px rgba(167,139,250,0.1); }
+.new-ta {
+  width: 100%; box-sizing: border-box; min-height: 24px;
+  background: transparent; border: none; outline: none; resize: none;
+  font-size: 13px; color: var(--lumi-text); font-family: inherit; line-height: 1.55;
+}
+.new-send {
+  position: absolute; right: 8px; bottom: 8px;
+  width: 30px; height: 30px; border-radius: 50%;
+  border: none; background: var(--lumi-gradient-accent); color: #fff;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  box-shadow: 0 2px 8px -2px rgba(180,120,140,0.3);
+}
+.new-send svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+</head>
+<body>
+
+<h1>悬浮设计语言重构对比</h1>
+<p class="sub">左：当前（平面嵌入式按钮 + 贴边输入框）　右：重构（浮起胶囊按钮 + 浮起 composer 卡片）</p>
+
+<div class="row">
+
+  <!-- 当前 -->
+  <div class="col">
+    <h2>当前 · 平面嵌入式</h2>
+    <div class="stage">
+      <div class="stage-inner">
+        <div class="cur-header">
+          <div class="cur-header-left">
+            <div class="cur-cat"></div>
+            <span class="cur-title">深度调研</span>
+          </div>
+          <div class="cur-actions">
+            <div class="cur-btn"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+            <div class="cur-btn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          </div>
+        </div>
+        <div class="cur-body">
+          <div class="cur-bubble user">帮我调研 AI 芯片市场</div>
+          <div class="cur-bubble">好的，我来为你进行深度调研。首先从市场规模、主要玩家和技术趋势三个维度展开...</div>
+        </div>
+        <div class="cur-composer">
+          <textarea class="cur-ta" rows="1" placeholder="Enter 发送，Shift+Enter 换行"></textarea>
+        </div>
+      </div>
+      <nav class="nav">
+        <div class="nitem"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+        <div class="nitem active"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+        <div class="nitem"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/></svg></div>
+        <div class="nitem"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/></svg></div>
+        <div class="spacer"></div>
+        <div class="nitem"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg></div>
+      </nav>
+    </div>
+    <p>按钮透明贴边、composer 仅 border 无阴影——与右侧悬浮导航栏语言割裂。</p>
+  </div>
+
+  <!-- 重构 -->
+  <div class="col">
+    <h2>重构 · 悬浮胶囊语言</h2>
+    <div class="stage">
+      <div class="stage-inner">
+        <div class="new-header">
+          <div class="new-header-left">
+            <div class="new-cat"></div>
+            <span class="new-title">深度调研</span>
+          </div>
+          <div class="new-actions">
+            <div class="new-btn"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+            <div class="new-btn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          </div>
+        </div>
+        <div class="new-body">
+          <div class="new-bubble user">帮我调研 AI 芯片市场</div>
+          <div class="new-bubble">好的，我来为你进行深度调研。首先从市场规模、主要玩家和技术趋势三个维度展开...</div>
+        </div>
+        <div class="new-composer">
+          <div class="new-composer-wrap">
+            <textarea class="new-ta" rows="1" placeholder="Enter 发送，Shift+Enter 换行"></textarea>
+            <div class="new-send"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+          </div>
+        </div>
+      </div>
+      <nav class="nav">
+        <div class="nitem"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+        <div class="nitem active"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+        <div class="nitem"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/></svg></div>
+        <div class="nitem"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/></svg></div>
+        <div class="spacer"></div>
+        <div class="nitem"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg></div>
+      </nav>
+    </div>
+    <p>按钮变浮起胶囊（浅底+边框+微阴影+hover 抬升），composer 变 panel 圆角浮起卡片——与导航栏同一套语言，整体 macOS/移动端 dock 感。</p>
+  </div>
+
+</div>
+
+</body>
+</html>

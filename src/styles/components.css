@@ -4,8 +4,6 @@
    All values reference --lumi-* tokens. Zero hardcoded numbers.
    ═══════════════════════════════════════════════ */
 
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&family=Figtree:wght@400;500&family=DM+Sans:wght@400;500&display=swap");
-
 @import "./tokens.css";
 @import "./layout.css";
 
@@ -166,8 +164,11 @@
 }
 
 .lm-chat-bubble--user {
-  background: var(--lumi-gradient-accent-subtle);
-  border: 1px solid rgba(167, 139, 250, 0.22);
+  background: var(--lumi-gradient-accent);
+  background-size: 140% 140%;
+  border: none;
+  color: var(--lumi-btn-primary-color);
+  box-shadow: var(--lumi-btn-primary-shadow);
 }
 
 .lm-chat-bubble--assistant {
@@ -189,7 +190,7 @@
 
 .lm-chat-md pre {
   border-radius: var(--lumi-radius-code);
-  background: var(--lumi-bg-deep);
+  background: var(--lumi-well);
   line-height: 1.45;
 }
 
@@ -198,7 +199,7 @@
 .lm-chat-md code {
   font-family: var(--lumi-mono);
   font-size: 0.92em;
-  background: var(--lumi-bg-deep);
+  background: var(--lumi-well);
   padding: 1px 5px;
   border-radius: var(--lumi-radius-code-sm);
 }
@@ -209,7 +210,7 @@
 }
 
 .lm-chat-md a { color: var(--lumi-accent-b); }
-.lm-chat-md th { background: var(--lumi-bg-deep); }
+.lm-chat-md th { background: var(--lumi-well); }
 .lm-chat-tools { border-top: 1px solid var(--lumi-border); }
 
 .lm-chat-json {
@@ -316,14 +317,15 @@
 }
 
 /* Textarea itself is the rounded container. Send button overlays inside, bottom-right. */
-.lm-input--composer {
+.lm-input.lm-input--composer {
   display: block;
   width: 100%;
   box-sizing: border-box;
   position: relative;
-  background: var(--lumi-surface);
-  border: 1px solid var(--lumi-border);
-  border-radius: var(--lumi-radius-bubble);
+  background: #ffffff;
+  border: 1px solid var(--lumi-border-strong);
+  border-radius: var(--lumi-radius-card);
+  box-shadow: var(--lumi-shadow-panel-strong);
   color: var(--lumi-text);
   font-family: inherit;
   font-size: var(--lumi-text-base);
@@ -334,16 +336,14 @@
   padding: 12px 48px 12px 16px;
   resize: none;
   outline: none;
-  scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
   transition: border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
               box-shadow var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
 }
 
-.lm-input--composer:focus {
+.lm-input.lm-input--composer:focus {
   border-color: var(--lumi-accent-b);
-  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
 }
 
 .lm-input--composer::placeholder {
@@ -385,6 +385,13 @@
 
 .lm-composer-send:active:not(:disabled) {
   transform: scale(0.92);
+}
+
+/* 置灰态：输入为空或 hydrating 时不可点击，弱化渐变与阴影 */
+.lm-composer-send:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
 }
 
 /* Send button in stop mode: gentle breathing on the stop icon */
@@ -486,13 +493,12 @@
 
 .lm-textarea { line-height: 1.58; }
 
-.lm-input:hover:not(:disabled),
-.lm-textarea:hover:not(:disabled) { border-color: rgba(45, 38, 34, 0.14); }
+.lm-input:hover:not(:disabled):not(:focus),
+.lm-textarea:hover:not(:disabled):not(:focus) { border-color: rgba(45, 38, 34, 0.14); }
 
 .lm-input:focus,
 .lm-textarea:focus {
   border-color: rgba(167, 139, 250, 0.4);
-  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.08);
 }
 
 .lm-input::placeholder,
@@ -679,7 +685,7 @@
 .lumi-tool-call__chevron { color: var(--lumi-text-faint); }
 
 .lumi-tool-call__detail {
-  background: var(--lumi-bg-deep);
+  background: var(--lumi-well);
   border: 1px solid var(--lumi-border-strong);
   border-radius: var(--lumi-radius-input);
 }
@@ -757,8 +763,10 @@
    ================================================ */
 
 .lm-icon-sidebar {
-  border-left: 1px solid var(--lumi-border);
+  border: none;
+  border-radius: var(--lumi-radius-panel);
   background: var(--lumi-surface);
+  box-shadow: var(--lumi-shadow-panel);
 }
 
 .lm-nav-item {
@@ -766,7 +774,7 @@
 }
 
 .lm-nav-item:hover {
-  background: var(--lumi-surface-solid);
+  background: var(--lumi-tile-hover);
 }
 
 .lm-nav-item:hover .lm-nav-icon-box {
@@ -814,16 +822,16 @@
 
 .lm-home-card {
   background: var(--lumi-surface);
-  border: 1px solid var(--lumi-border);
-  box-shadow: var(--lumi-shadow-card);
+  border: none;
+  box-shadow: var(--lumi-shadow-panel);
 }
 
 .lm-home-card:hover {
-  box-shadow: var(--lumi-shadow-elevated, 0 8px 30px rgba(0, 0, 0, 0.12));
+  box-shadow: var(--lumi-shadow-elevated);
 }
 
 .lm-home-card-icon {
-  background: var(--lumi-surface-solid);
+  background: var(--lumi-well);
   color: var(--lumi-text-soft);
 }
 
@@ -886,30 +894,40 @@
    ================================================ */
 
 .lm-history-panel {
-  background: var(--lumi-surface);
-  border-left: 1px solid var(--lumi-border);
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  background: var(--lumi-glass);
+  border: none;
+  box-shadow: var(--lumi-shadow-panel-strong);
 }
 
 .lm-history-panel-header {
-  background: var(--lumi-surface);
+  background: transparent;
 }
 
 .lm-history-panel-title {
-  color: var(--lumi-text-primary);
+  color: var(--lumi-text);
 }
 
 .lm-history-panel-close {
   color: var(--lumi-text-faint);
 }
 
+.lm-history-panel-close:hover {
+  background: var(--lumi-tile-hover);
+  color: var(--lumi-text);
+}
+
 .lm-history-search-input {
-  background: var(--lumi-surface-solid);
-  color: var(--lumi-text-primary);
+  background: #ffffff;
+  color: var(--lumi-text);
+  box-shadow: var(--lumi-shadow-soft);
+}
+
+.lm-history-search-input::placeholder {
+  color: var(--lumi-text-faint);
 }
 
 .lm-history-search-input:focus {
-  border-color: var(--lumi-accent);
+  border-color: var(--lumi-accent-b);
 }
 
 .lm-history-panel-empty {
@@ -917,20 +935,24 @@
 }
 
 .lm-history-item {
-  background: var(--lumi-surface-solid);
+  background: #ffffff;
 }
 
 .lm-history-item:hover {
-  background: var(--lumi-surface-solid);
+  background: #ffffff;
+}
+
+.lm-history-item--active {
+  background: var(--lumi-tile-hover);
 }
 
 .lm-history-item-title {
-  color: var(--lumi-text-primary);
+  color: var(--lumi-text);
 }
 
 .lm-history-item-agent {
   color: var(--lumi-text-soft);
-  background: var(--lumi-bg-deep);
+  background: var(--lumi-well);
 }
 
 .lm-history-item-agent-label {
@@ -1021,6 +1043,26 @@
 
   :root[data-theme="paper"] .lm-note {
     background: linear-gradient(135deg, rgba(60, 48, 28, 0.65), rgba(55, 38, 48, 0.55));
+  }
+
+  :root[data-theme="paper"] .lm-input.lm-input--composer {
+    background: #2a2522;
+  }
+
+  :root[data-theme="paper"] .lm-history-search-input {
+    background: #2a2522;
+  }
+
+  :root[data-theme="paper"] .lm-history-item {
+    background: #322c29;
+  }
+
+  :root[data-theme="paper"] .lm-history-item:hover {
+    background: #322c29;
+  }
+
+  :root[data-theme="paper"] .lm-history-item--active {
+    background: #3a3330;
   }
 }
 

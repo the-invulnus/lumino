@@ -6,8 +6,10 @@
 
 import {
   type MouseEvent,
+  forwardRef,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState
@@ -40,7 +42,6 @@ import {
   type AgentErrorMessage
 } from "../lib/side-panel-bridge"
 import { ChatMessageBlock, formatMessagePreview } from "./components/ChatMessageBlock"
-import { HistoryPanel } from "./HistoryPanel"
 import blackCatGif from "data-base64:~black_cat.gif"
 
 function SendArrowIcon() {
@@ -79,15 +80,25 @@ function threadLabel(record: ChatThreadRecord): string {
   )
 }
 
-export function ChatView({
-  agent,
-  onBack,
-  settings
-}: {
+export type ChatViewHandle = {
+  selectThread: (threadId: string) => Promise<void>
+  deleteThread: (threadId: string) => Promise<void>
+  openHistory: () => void
+}
+
+export const ChatView = forwardRef<ChatViewHandle, {
   agent: AgentConfig
   onBack: () => void
   settings: LlmSettings
-}) {
+  initialThreadId?: string
+  onOpenHistory: () => void
+}>(function ChatView({
+  agent,
+  onBack,
+  settings,
+  initialThreadId,
+  onOpenHistory
+}, ref) {
   const [threads, setThreads] = useState<ChatThreadRecord[]>([])
   const [activeThreadId, setActiveThreadIdState] = useState<string>("")
   const [messages, setMessages] = useState<OpenAiChatMessage[]>([])
@@ -98,13 +109,23 @@ export function ChatView({
   const [isHydrating, setIsHydrating] = useState(true)
   const [editingIndex, setEditingIndex] = useState<number>(-1)
   const [editingText, setEditingText] = useState("")
-  const [historyOpen, setHistoryOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState("")
   const scrollAnchorRef = useRef<HTMLDivElement>(null)
+  const composerRef = useRef<HTMLTextAreaElement>(null)
   const activeThreadIdRef = useRef("")
   const sendInFlightMapRef = useRef<Record<string, boolean>>({})
   const draftMapRef = useRef<Record<string, string>>({})
+
+  // 自动增高：重置为 auto 再取 scrollHeight，受 min/max-height 约束。
+  // 抽成函数 + layoutEffect 在 draft 变化时统一调用，保证首屏、输入、
+  // 切换会话、发送清空等所有路径下高度一致，避免「输入瞬间上边缘抖动」。
+  const autoSizeComposer = useCallback(() => {
+    const el = composerRef.current
+    if (!el) return
+    el.style.height = "auto"
+    el.style.height = `${el.scrollHeight}px`
+  }, [])
 
   useEffect(() => {
     activeThreadIdRef.current = activeThreadId
@@ -112,13 +133,10 @@ export function ChatView({
 
   useEffect(() => {
     draftRef.current = draft
-    if (!draft) {
-      const ta = document.querySelector('.lm-input--composer') as HTMLTextAreaElement | null
-      if (ta) {
-        ta.style.height = ''
-      }
-    }
-  }, [draft])
+    // draft 变化（含清空）统一走 autoSize，保证空态/有内容态高度算法一致，
+    // 避免「清空用默认高度、输入用 scrollHeight」造成的高度跳变。
+    autoSizeComposer()
+  }, [draft, autoSizeComposer])
 
   const refreshThreadList = useCallback(async () => {
     const rows = await listThreads(agent.id)
@@ -156,11 +174,14 @@ export function ChatView({
           // SW 未响应，忽略
         }
 
-        // 有会话就选第一个，否则展示空状态等待用户发送消息
+        // 有会话就选（优先 initialThreadId），否则展示空状态等待用户发送消息
         if (rows.length > 0) {
-          const thread = await getThread(rows[0].id)
+          const targetId = initialThreadId && rows.some((r) => r.id === initialThreadId)
+            ? initialThreadId
+            : rows[0].id
+          const thread = await getThread(targetId)
           if (!cancelled) {
-            setActiveThreadIdState(rows[0].id)
+            setActiveThreadIdState(targetId)
             setMessages(cloneMessages(thread?.messages ?? []))
           }
         }
@@ -235,6 +256,13 @@ export function ChatView({
     [agent]
   )
 
+  // 暴露给父组件（App 层 HistoryPanel 操作）
+  useImperativeHandle(ref, () => ({
+    selectThread: (threadId: string) => selectThread(threadId),
+    deleteThread: (threadId: string) => handleDeleteThread(threadId),
+    openHistory: () => onOpenHistory()
+  }), [selectThread, handleDeleteThread, onOpenHistory])
+
   async function doSend(historyMessages: OpenAiChatMessage[], userInput: string) {
     const threadId = activeThreadIdRef.current
     if (!threadId) return
@@ -280,7 +308,7 @@ export function ChatView({
 
   async function sendUserMessage() {
     const trimmed = draft.trim()
-    if (!trimmed) { setError("请输入内容。"); return }
+    if (!trimmed) return  // 空内容静默忽略；按钮已置灰，此处为防御
     if (!hasCompleteLlmSettings(settings)) { setError("请先在设置页配置 Base URL、API Key 和模型。"); return }
 
     // 没有活跃会话：创建新的
@@ -463,7 +491,7 @@ export function ChatView({
           <button
             className="lm-chat-view-history-btn"
             title="历史会话"
-            onClick={() => setHistoryOpen(true)}
+            onClick={onOpenHistory}
             type="button"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -690,14 +718,12 @@ export function ChatView({
 
         <div className="lm-composer">
           <textarea
+            ref={composerRef}
             aria-label="对话输入"
             className="lm-input lm-input--composer"
             disabled={isHydrating}
             onChange={(event) => {
               setDraft(event.target.value)
-              const el = event.target
-              el.style.height = "auto"
-              el.style.height = el.scrollHeight + "px"
             }}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -713,7 +739,7 @@ export function ChatView({
             aria-busy={isLoading}
             aria-label={isLoading ? "停止生成" : "发送"}
             className={`lm-composer-send${isLoading ? " lm-composer-send--stop" : ""}`}
-            disabled={isHydrating}
+            disabled={isHydrating || (!isLoading && !draft.trim())}
             onClick={() => { isLoading ? handleStop() : void sendUserMessage() }}
             type="button">
             {isLoading ? (
@@ -729,19 +755,6 @@ export function ChatView({
           ) : null}
         </div>
       </section>
-
-      {/* History Panel */}
-      <HistoryPanel
-        open={historyOpen}
-        onSelect={(threadId) => {
-          void selectThread(threadId)
-          setHistoryOpen(false)
-        }}
-        onDelete={(threadId) => {
-          void handleDeleteThread(threadId)
-        }}
-        onClose={() => setHistoryOpen(false)}
-      />
     </div>
   )
-}
+})

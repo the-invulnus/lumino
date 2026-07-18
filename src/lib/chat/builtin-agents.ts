@@ -6,7 +6,7 @@
  * 运行时由 mode-config.ts 的 getAllAgents() 统一合并加载。
  */
 
-import type { AgentConfig } from "./mode-config"
+import { type AgentConfig, loadCustomAgents } from "./mode-config"
 
 // ═══════════════════════════════════════════
 // 内置 Agent 的独立系统提示词
@@ -194,7 +194,6 @@ export const BUILTIN_AGENTS: AgentConfig[] = [
  * 获取所有可用的 Agent（内置 + 用户自定义），统一排序
  */
 export async function getAllAgents(): Promise<AgentConfig[]> {
-  const { loadCustomAgents } = await import("./mode-config")
   const customAgents = await loadCustomAgents()
   return [...BUILTIN_AGENTS, ...customAgents].sort((a, b) => {
     if (a.isBuiltin && b.isBuiltin) return a.order - b.order
@@ -210,7 +209,6 @@ export async function getAgentById(id: string): Promise<AgentConfig | undefined>
   const builtin = BUILTIN_AGENTS.find(a => a.id === id)
   if (builtin) return builtin
 
-  const { loadCustomAgents } = await import("./mode-config")
   const customAgents = await loadCustomAgents()
   return customAgents.find(a => a.id === id)
 }

@@ -11,11 +11,26 @@
   color-scheme: light;
 
   /* — Colors — */
-  --lumi-bg: #fdfbf7;
-  --lumi-bg-deep: #f6f2eb;
-  --lumi-surface: rgba(255, 253, 249, 0.94);
-  --lumi-surface-raised: #fffaf5;
-  --lumi-surface-solid: #fffaf5;
+  /* 语义化色板：按用途命名，同类色块共享同一 token，保证层级一致。
+     使用规则：
+       - 浮起容器（卡片/面板/按钮底）   → --lumi-tile
+       - 控件 hover / 激活态            → --lumi-tile-hover
+       - 凹陷内嵌色块（图标盒/表头/代码块） → --lumi-well
+       - 半透明玻璃容器（滑出面板）      → --lumi-glass
+     层级关系：app-bg < tile < tile-hover < well（逐级加深）。
+     有 border 的元素，背景必须与父背景有可见落差，否则「框了等于没框」。 */
+  --lumi-app-bg: #fdfbf7;            /* 应用最底层背景 */
+  --lumi-tile: #fffaf5;              /* 浮起卡片/面板/控件底色（不透明） */
+  --lumi-tile-hover: #f6f2eb;        /* 控件 hover / 激活态底色 */
+  --lumi-well: #f3eee6;              /* 凹陷内嵌色块（图标盒、表头、代码块）— 比 tile 深一档 */
+  --lumi-glass: rgba(255, 253, 249, 0.94); /* 半透明玻璃容器（滑出面板） */
+  --lumi-hover-bg: var(--lumi-tile-hover);  /* 控件 hover 底色别名 */
+  /* 旧 token 保留作别名，指向语义色板 */
+  --lumi-bg: var(--lumi-app-bg);
+  --lumi-bg-deep: var(--lumi-tile-hover);
+  --lumi-surface: var(--lumi-glass);
+  --lumi-surface-raised: var(--lumi-tile);
+  --lumi-surface-solid: var(--lumi-tile);
   --lumi-text: #2d2622;
   --lumi-text-soft: rgba(45, 38, 34, 0.58);
   --lumi-text-faint: rgba(45, 38, 34, 0.35);
@@ -89,23 +104,44 @@
   --lumi-space-10: 28px;
 
   /* — Component shape tokens: radii — */
+  /* 三级圆角体系：panel(顶层容器) > card(卡片/气泡/输入框) > control(控件元素)。
+     使用规则：
+       - 悬浮大容器（导航栏/历史面板/composer 卡片） → --lumi-radius-panel
+       - 卡片/聊天气泡/输入框/表单                 → --lumi-radius-card
+       - 图标盒/列表项/按钮/chip                  → --lumi-radius-control
+     同层级同类元素必须用同一圆角，避免「同层不同弧」的割裂感。 */
+  --lumi-radius-panel: 16px;    /* 悬浮面板、大容器 */
+  --lumi-radius-card: 12px;     /* 卡片、聊天气泡、输入框、表单 */
+  --lumi-radius-control: 8px;   /* 图标盒、列表项、按钮、chip */
   --lumi-radius-btn: 9999px;
   --lumi-radius-btn-sm: 999px;
   --lumi-radius-send-btn: 50%;
-  --lumi-radius-bubble: 14px;
-  --lumi-radius-input: 12px;
-  --lumi-radius-chip: 8px;
-  --lumi-radius-tag: 8px;
+  --lumi-radius-bubble: var(--lumi-radius-card);
+  --lumi-radius-input: var(--lumi-radius-card);
+  --lumi-radius-chip: var(--lumi-radius-control);
+  --lumi-radius-tag: var(--lumi-radius-control);
   --lumi-radius-badge: 999px;
   --lumi-radius-logo: 20px;
-  --lumi-radius-tab: 14px;
+  --lumi-radius-tab: var(--lumi-radius-card);
   --lumi-radius-code: 10px;
   --lumi-radius-code-sm: 4px;
 
   /* — Component shape tokens: shadows — */
+  /* 四级阴影体系（按浮起强度递增）。
+     ⚠️ 重要：box-shadow 会被祖先的 overflow: hidden 裁剪。
+     使用大扩散阴影（panel-strong/elevated）前，确认该元素到祖先裁剪边界
+     有足够扩散空间，否则底部圆角处会出现硬切「假角」。
+     使用规则：
+       - 普通卡片                       → --lumi-shadow-card
+       - 悬浮面板/导航栏/按钮             → --lumi-shadow-panel
+       - 需强调浮起（输入框）            → --lumi-shadow-panel-strong
+       - hover 抬升态                   → --lumi-shadow-elevated */
   --lumi-shadow-card: 0 0.5px 2px rgba(45, 38, 34, 0.03);
   --lumi-shadow-soft: 0 4px 12px -6px rgba(45, 38, 34, 0.05);
   --lumi-shadow-bubble: 0 2px 8px -4px rgba(45, 38, 34, 0.06);
+  --lumi-shadow-panel: 0 4px 18px -4px rgba(45, 38, 34, 0.08);
+  --lumi-shadow-panel-strong: 0 8px 28px -6px rgba(45, 38, 34, 0.16);
+  --lumi-shadow-elevated: 0 8px 30px -8px rgba(45, 38, 34, 0.12);
 
   /* — Component colors — */
   --lumi-btn-primary-bg: var(--lumi-gradient-accent);
@@ -144,11 +180,16 @@
 @media (prefers-color-scheme: dark) {
   :root[data-theme="paper"] {
     color-scheme: dark;
-    --lumi-bg: #1a1614;
-    --lumi-bg-deep: #12100e;
-    --lumi-surface: rgba(34, 30, 28, 0.92);
-    --lumi-surface-raised: #221e1c;
-    --lumi-surface-solid: #221e1c;
+    --lumi-app-bg: #1a1614;
+    --lumi-tile: #221e1c;
+    --lumi-tile-hover: #2c2724;
+    --lumi-well: #16120f;
+    --lumi-glass: rgba(34, 30, 28, 0.92);
+    --lumi-bg: var(--lumi-app-bg);
+    --lumi-bg-deep: var(--lumi-tile-hover);
+    --lumi-surface: var(--lumi-glass);
+    --lumi-surface-raised: var(--lumi-tile);
+    --lumi-surface-solid: var(--lumi-tile);
     --lumi-text: #faf6f1;
     --lumi-text-soft: rgba(250, 246, 241, 0.68);
     --lumi-text-faint: rgba(250, 246, 241, 0.4);
@@ -168,6 +209,9 @@
     --lumi-danger-text: #fecaca;
     --lumi-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.14), 0 8px 28px -12px rgba(0, 0, 0, 0.28);
     --lumi-shadow-soft: 0 16px 40px -20px rgba(0, 0, 0, 0.3);
+    --lumi-shadow-panel: 0 8px 28px -10px rgba(0, 0, 0, 0.4);
+    --lumi-shadow-panel-strong: 0 12px 36px -10px rgba(0, 0, 0, 0.55);
+    --lumi-shadow-elevated: 0 16px 40px -14px rgba(0, 0, 0, 0.5);
     --lumi-gradient-bezel: linear-gradient(165deg, rgba(48, 42, 38, 0.55), rgba(26, 22, 20, 0.35));
 
   /* — Motion — */

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>输入框圆角排查</title>
+<style>
+:root {
+  --lumi-bg: #fdfbf7;
+  --lumi-border-strong: rgba(45,38,34,0.1);
+  --lumi-radius-card: 12px;
+  --lumi-shadow-panel-strong: 0 8px 28px -6px rgba(45,38,34,0.16);
+  --lumi-gradient-accent: linear-gradient(118deg, #e5988e 0%, #c4b0f5 48%, #a8d4ea 100%);
+  --lumi-font: "PingFang SC", system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--lumi-font); background: var(--lumi-bg); padding: 40px; }
+.wrap { max-width: 420px; }
+.label { font-size: 12px; color: #888; margin: 20px 0 8px; }
+
+/* 当前 composer 样式 */
+.composer { position: relative; }
+.ta {
+  display: block; width: 100%; box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid var(--lumi-border-strong);
+  border-radius: var(--lumi-radius-card);
+  box-shadow: var(--lumi-shadow-panel-strong);
+  font-family: inherit; font-size: 13px; line-height: 1.55;
+  min-height: 44px; padding: 12px 48px 12px 16px;
+  resize: none; outline: none;
+}
+.send {
+  position: absolute; right: 8px; bottom: 8px;
+  width: 30px; height: 30px; border: none; border-radius: 50%;
+  background: var(--lumi-gradient-accent); color: #fff;
+  box-shadow: 0 2px 8px -2px rgba(180,120,140,0.3);
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="label">当前样式 — 观察左下右下是否有"多余的角"</div>
+  <div class="composer">
+    <textarea class="ta" rows="1" placeholder="Enter 发送"></textarea>
+    <button class="send">➤</button>
+  </div>
+</div>
+</body>
+</html>

@@ -4,20 +4,20 @@
  * 顶层路由：首页 / 聊天界面分发
  */
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { AgentConfig } from "../lib/chat/mode-config"
 import { getAllAgents, BUILTIN_AGENTS } from "../lib/chat/builtin-agents"
 import { getLastActiveMode, setLastActiveMode } from "../lib/chat/mode-config"
-import { registerAllTools } from "../lib/chat/tool-registry"
-import { getThread } from "../lib/chat/thread-idb"
+import { getThread, deleteThread } from "../lib/chat/thread-idb"
 import type { LlmSettings } from "../lib/llm/types"
 import { getLlmSettings } from "../lib/settings"
 import { applyTheme, getTheme } from "../lib/theme"
 import { HomePage } from "./HomePage"
-import { ChatView } from "./ChatView"
+import { ChatView, type ChatViewHandle } from "./ChatView"
 import { IconSidebar } from "./IconSidebar"
+import { HistoryPanel } from "./HistoryPanel"
 
-registerAllTools().catch(() => {})
+// 注：工具注册在 Service Worker 侧完成（background.ts），Side Panel 无需注册
 
 export function App() {
   const [agents, setAgents] = useState<AgentConfig[]>([])
@@ -26,6 +26,9 @@ export function App() {
   const [settings, setSettings] = useState<LlmSettings>({ baseUrl: "", apiKey: "", model: "" })
   const [runningAgentIds, setRunningAgentIds] = useState<Set<string>>(new Set())
   const [isReady, setIsReady] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [pendingThreadId, setPendingThreadId] = useState<string | undefined>(undefined)
+  const chatViewRef = useRef<ChatViewHandle>(null)
 
   // 初始化
   useEffect(() => {
@@ -110,6 +113,7 @@ export function App() {
     setCurrentAgentId(agent.id)
     setCurrentAgent(agent)
     setLastActiveMode(agent.id)
+    setPendingThreadId(undefined)
     // 清除该模式的运行状态通知
     setRunningAgentIds((prev) => {
       const next = new Set(prev)
@@ -117,6 +121,48 @@ export function App() {
       return next
     })
   }, [])
+
+  // 从首页最近会话 / 历史面板选中某个具体会话
+  const handleSelectThread = useCallback(async (threadId: string) => {
+    const record = await getThread(threadId).catch(() => null)
+    const mode = record?.mode
+    const agent = mode ? agents.find((a) => a.id === mode) : null
+    setHistoryOpen(false)
+    if (!agent) return
+    // 同一 agent：直接委托 ChatView 切换会话（无需重挂载）
+    if (currentAgentId === agent.id && chatViewRef.current) {
+      await chatViewRef.current.selectThread(threadId)
+      return
+    }
+    // 跨 agent：切 agent + 用 initialThreadId 在重挂载时加载
+    setCurrentAgentId(agent.id)
+    setCurrentAgent(agent)
+    setLastActiveMode(agent.id)
+    setPendingThreadId(threadId)
+    // 同一 agent：直接委托 ChatView 切换会话（无需重挂载）
+    if (currentAgentId === agent.id && chatViewRef.current) {
+      await chatViewRef.current.selectThread(threadId)
+      return
+    }
+    // 跨 agent：切 agent + 用 initialThreadId 在重挂载时加载
+    setCurrentAgentId(agent.id)
+    setCurrentAgent(agent)
+    setLastActiveMode(agent.id)
+    setPendingThreadId(threadId)
+    setRunningAgentIds((prev) => {
+      const next = new Set(prev)
+      next.delete(agent.id)
+      return next
+    })
+  }, [agents, currentAgentId])
+
+  const handleDeleteThread = useCallback(async (threadId: string) => {
+    await deleteThread(threadId).catch(() => {})
+    // 委托给挂载的 ChatView 同步内部状态
+    chatViewRef.current?.deleteThread(threadId)
+  }, [])
+
+  const handleOpenHistory = useCallback(() => setHistoryOpen(true), [])
 
   const handleGoHome = useCallback(() => {
     setCurrentAgentId(null)
@@ -147,12 +193,20 @@ export function App() {
               {currentAgent ? (
                 <ChatView
                   key={currentAgent.id}
+                  ref={chatViewRef}
                   agent={currentAgent}
                   onBack={handleGoHome}
                   settings={settings}
+                  initialThreadId={pendingThreadId}
+                  onOpenHistory={handleOpenHistory}
                 />
               ) : (
-                <HomePage agents={agents} onSelectAgent={handleSelectAgent} />
+                <HomePage
+                  agents={agents}
+                  onSelectAgent={handleSelectAgent}
+                  onSelectThread={handleSelectThread}
+                  onOpenHistory={handleOpenHistory}
+                />
               )}
             </div>
 
@@ -168,6 +222,14 @@ export function App() {
           </div>
         </div>
       </div>
+
+      {/* 全局历史会话面板（首页 / 聊天页均可打开） */}
+      <HistoryPanel
+        open={historyOpen}
+        onSelect={(threadId) => { void handleSelectThread(threadId) }}
+        onDelete={(threadId) => { void handleDeleteThread(threadId) }}
+        onClose={() => setHistoryOpen(false)}
+      />
     </div>
   )
 }

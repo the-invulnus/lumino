@@ -7,6 +7,7 @@ import type { AgentConfig } from "../lib/chat/mode-config"
 import type { ChatThreadRecord } from "../lib/chat/thread-idb"
 import { listThreads } from "../lib/chat/thread-idb"
 import { suggestTitleFromMessages } from "../lib/chat/thread-idb"
+import { NavIcon } from "./IconSidebar"
 import blackCatGif from "data-base64:~black_cat.gif"
 
 function CardIcon({ icon }: { icon: string }) {
@@ -20,20 +21,32 @@ function CardIcon({ icon }: { icon: string }) {
   }
 }
 
+// 与历史面板 formatHistoryDate 统一的时间格式
 function formatTime(ts: number): string {
-  const diff = Date.now() - ts
-  if (diff < 60000) return "刚刚"
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
-  return new Date(ts).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" })
+  const d = new Date(ts)
+  const now = new Date()
+  const hours = String(d.getHours()).padStart(2, "0")
+  const mins = String(d.getMinutes()).padStart(2, "0")
+  const timeStr = `${hours}:${mins}`
+  if (d.toDateString() === now.toDateString()) return timeStr
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (d.toDateString() === yesterday.toDateString()) return `昨天 ${timeStr}`
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${d.getFullYear()}/${month}/${day} ${timeStr}`
 }
 
 export function HomePage({
   agents,
-  onSelectAgent
+  onSelectAgent,
+  onSelectThread,
+  onOpenHistory
 }: {
   agents: AgentConfig[]
   onSelectAgent: (agent: AgentConfig) => void
+  onSelectThread: (threadId: string) => void
+  onOpenHistory: () => void
 }) {
   const [recentThreads, setRecentThreads] = useState<ChatThreadRecord[]>([])
 
@@ -79,58 +92,45 @@ export function HomePage({
         </div>
       </div>
 
-      {/* Quick prompts */}
-      <div className="lm-home-section">
-        <h3 className="lm-home-section-title">试试这些</h3>
-        <div className="lm-home-prompts">
-          <button className="lm-home-prompt-chip" onClick={() => {
-            const chat = agents.find(a => a.id === "chat")
-            if (chat) onSelectAgent(chat)
-          }}>
-            总结当前网页的主要内容
-          </button>
-          <button className="lm-home-prompt-chip" onClick={() => {
-            const research = agents.find(a => a.id === "research")
-            if (research) onSelectAgent(research)
-          }}>
-            搜索最近AI领域的新进展
-          </button>
-          <button className="lm-home-prompt-chip" onClick={() => {
-            const replicate = agents.find(a => a.id === "replicate")
-            if (replicate) onSelectAgent(replicate)
-          }}>
-            帮我分析这个页面的设计风格
-          </button>
-          <button className="lm-home-prompt-chip" onClick={() => {
-            const automate = agents.find(a => a.id === "automate")
-            if (automate) onSelectAgent(automate)
-          }}>
-            自动填写当前页面的表单
-          </button>
-        </div>
-      </div>
-
       {/* Recent threads */}
       {recentThreads.length > 0 && (
         <div className="lm-home-section">
-          <h3 className="lm-home-section-title">最近会话</h3>
+          <div className="lm-home-section-head">
+            <h3 className="lm-home-section-title">最近会话</h3>
+            <button
+              className="lm-home-history-btn"
+              title="历史会话"
+              onClick={onOpenHistory}
+              type="button"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </button>
+          </div>
           <div className="lm-home-recent">
-            {recentThreads.map((t) => (
-              <button
-                key={t.id}
-                className="lm-home-recent-item"
-                onClick={() => {
-                  const agent = agents.find(a => a.id === t.mode)
-                  if (agent) onSelectAgent(agent)
-                }}
-                type="button"
-              >
-                <span className="lm-home-recent-title">
-                  {t.title || suggestTitleFromMessages(t.messages) || "会话"}
-                </span>
-                <span className="lm-home-recent-time">{formatTime(t.updatedAt)}</span>
-              </button>
-            ))}
+            {recentThreads.map((t) => {
+              const agent = agents.find(a => a.id === t.mode)
+              return (
+                <button
+                  key={t.id}
+                  className="lm-home-recent-item"
+                  onClick={() => onSelectThread(t.id)}
+                  type="button"
+                >
+                  {agent && (
+                    <span className="lm-home-recent-icon" title={agent.name}>
+                      <NavIcon icon={agent.isBuiltin ? agent.icon : "custom"} />
+                    </span>
+                  )}
+                  <span className="lm-home-recent-title">
+                    {t.title || suggestTitleFromMessages(t.messages) || "会话"}
+                  </span>
+                  <span className="lm-home-recent-time">{formatTime(t.updatedAt)}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
