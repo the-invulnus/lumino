@@ -132,8 +132,8 @@ const ALL_TOOLS = [
 export const BUILTIN_AGENTS: AgentConfig[] = [
   {
     id: "chat",
-    name: "通用",
-    description: "全能助手，可读写文件、操控页面、爬取资源",
+    name: "agent.chat.name",
+    description: "agent.chat.desc",
     icon: "chat",
     isBuiltin: true,
     systemPrompt: CHAT_SYSTEM_PROMPT,
@@ -142,8 +142,8 @@ export const BUILTIN_AGENTS: AgentConfig[] = [
   },
   {
     id: "research",
-    name: "深度调研",
-    description: "浏览网页、深度搜索、多源交叉验证",
+    name: "agent.research.name",
+    description: "agent.research.desc",
     icon: "research",
     isBuiltin: true,
     systemPrompt: RESEARCH_SYSTEM_PROMPT,
@@ -158,8 +158,8 @@ export const BUILTIN_AGENTS: AgentConfig[] = [
   },
   {
     id: "replicate",
-    name: "设计复刻",
-    description: "提取DOM结构、计算样式、收集静态资源",
+    name: "agent.replicate.name",
+    description: "agent.replicate.desc",
     icon: "replicate",
     isBuiltin: true,
     systemPrompt: REPLICATE_SYSTEM_PROMPT,
@@ -175,8 +175,8 @@ export const BUILTIN_AGENTS: AgentConfig[] = [
   },
   {
     id: "automate",
-    name: "页面操控",
-    description: "自动填充表单、点击元素、模拟按键操作",
+    name: "agent.automate.name",
+    description: "agent.automate.desc",
     icon: "automate",
     isBuiltin: true,
     systemPrompt: AUTOMATE_SYSTEM_PROMPT,

@@ -8,6 +8,8 @@ import type { ChatThreadRecord } from "../lib/chat/thread-idb"
 import { listThreads } from "../lib/chat/thread-idb"
 import { suggestTitleFromMessages } from "../lib/chat/thread-idb"
 import { NavIcon } from "./IconSidebar"
+import { useT } from "../lib/i18n"
+import { formatHistoryDate } from "../lib/format-time"
 import blackCatGif from "data-base64:~black_cat.gif"
 
 function CardIcon({ icon }: { icon: string }) {
@@ -19,22 +21,6 @@ function CardIcon({ icon }: { icon: string }) {
     case "automate": return (<svg {...props}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>)
     default: return (<svg {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /><path d="M8 10h.01M12 10h.01M16 10h.01" /></svg>)
   }
-}
-
-// 与历史面板 formatHistoryDate 统一的时间格式
-function formatTime(ts: number): string {
-  const d = new Date(ts)
-  const now = new Date()
-  const hours = String(d.getHours()).padStart(2, "0")
-  const mins = String(d.getMinutes()).padStart(2, "0")
-  const timeStr = `${hours}:${mins}`
-  if (d.toDateString() === now.toDateString()) return timeStr
-  const yesterday = new Date(now)
-  yesterday.setDate(yesterday.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return `昨天 ${timeStr}`
-  const month = String(d.getMonth() + 1).padStart(2, "0")
-  const day = String(d.getDate()).padStart(2, "0")
-  return `${d.getFullYear()}/${month}/${day} ${timeStr}`
 }
 
 export function HomePage({
@@ -50,9 +36,11 @@ export function HomePage({
 }) {
   const [recentThreads, setRecentThreads] = useState<ChatThreadRecord[]>([])
 
+  const t = useT()
+
   useEffect(() => {
     listThreads().then((rows) => {
-      setRecentThreads(rows.filter(r => r.messages.length > 0).slice(0, 3))
+      setRecentThreads(rows.filter(r => r.messages.length > 0).slice(0, 6))
     }).catch(() => {})
   }, [])
 
@@ -67,7 +55,7 @@ export function HomePage({
           alt="Lumi"
         />
         <h1 className="lm-home-hero-title">Lumi Knows</h1>
-        <p className="lm-home-hero-sub">你的浏览器智能助手</p>
+        <p className="lm-home-hero-tagline">{t("home.tagline")}</p>
       </div>
 
       {/* Agent cards */}
@@ -84,8 +72,8 @@ export function HomePage({
                 <CardIcon icon={agent.isBuiltin ? agent.icon : "custom"} />
               </div>
               <div className="lm-home-card-body">
-                <span className="lm-home-card-name">{agent.name}</span>
-                <span className="lm-home-card-desc">{agent.description}</span>
+                <span className="lm-home-card-name">{t(agent.name)}</span>
+                <span className="lm-home-card-desc">{t(agent.description)}</span>
               </div>
             </button>
           ))}
@@ -96,10 +84,10 @@ export function HomePage({
       {recentThreads.length > 0 && (
         <div className="lm-home-section">
           <div className="lm-home-section-head">
-            <h3 className="lm-home-section-title">最近会话</h3>
+            <h3 className="lm-home-section-title">{t("home.recent")}</h3>
             <button
               className="lm-home-history-btn"
-              title="历史会话"
+              title={t("home.historyTooltip")}
               onClick={onOpenHistory}
               type="button"
             >
@@ -110,24 +98,24 @@ export function HomePage({
             </button>
           </div>
           <div className="lm-home-recent">
-            {recentThreads.map((t) => {
-              const agent = agents.find(a => a.id === t.mode)
+            {recentThreads.map((thread) => {
+              const agent = agents.find(a => a.id === thread.mode)
               return (
                 <button
-                  key={t.id}
+                  key={thread.id}
                   className="lm-home-recent-item"
-                  onClick={() => onSelectThread(t.id)}
+                  onClick={() => onSelectThread(thread.id)}
                   type="button"
                 >
                   {agent && (
-                    <span className="lm-home-recent-icon" title={agent.name}>
+                    <span className="lm-home-recent-icon" title={t(agent.name)}>
                       <NavIcon icon={agent.isBuiltin ? agent.icon : "custom"} />
                     </span>
                   )}
                   <span className="lm-home-recent-title">
-                    {t.title || suggestTitleFromMessages(t.messages) || "会话"}
+                    {thread.title || suggestTitleFromMessages(thread.messages) || t("thread.placeholder")}
                   </span>
-                  <span className="lm-home-recent-time">{formatTime(t.updatedAt)}</span>
+                  <span className="lm-home-recent-time">{formatHistoryDate(thread.updatedAt)}</span>
                 </button>
               )
             })}

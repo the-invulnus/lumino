@@ -21,6 +21,24 @@ Lumino 是一款基于 Plasmo 框架构建的 Chrome 浏览器扩展，定位为
 | 包管理 | pnpm |
 | 测试 | Vitest + jsdom |
 | 存储 | Chrome Storage API + IndexedDB + OPFS |
+| 国际化 | 自建轻量 i18n（`src/lib/i18n.ts` + en/zh 字典），默认英文，运行时切换 |
+
+## 国际化（i18n）
+
+零依赖自建方案，支持中英文运行时切换、默认英文：
+
+- **核心** `src/lib/i18n.ts` — `t(key, params?)` 翻译函数（`{name}` 占位符插值），`getLocale()`，`setStoredLocale()` / `applyLocale()`，`initLocaleFromStorage()`（启动恢复），`useT()` React hook（监听 `lumino-locale-change` 事件，切换语言时重渲染）
+- **字典** `src/lib/i18n/en.ts` + `zh.ts` — 扁平点分 key，两文件 key 必须同步
+- **locale 存储** `chrome.storage.local`（键 `lumino_locale`）— 不随 Google 账号同步
+- **启动恢复**：Side Panel（`App.tsx`）、Options（`options.tsx`）、Background SW（`boot()`）、content script（`floating-button.ts`）各自调用 `initLocaleFromStorage()`；非 React 上下文直接用模块级 `t()`，React 组件用 `useT()`
+- **内置 Agent 名称/描述**：`builtin-agents.ts` 的 `name`/`description` 存的是 i18n key（如 `agent.chat.name`），前端渲染处用 `t(agent.name)` 解析
+- **语言切换 UI**：Options 页 General 分区，EN/中文 toggle
+- **后台系统提示词和工具 description（发给 LLM 的）不做双语**，保持现有中文；但**会话命名提示词**（`thread-idb.ts` 的 `generateThreadTitle`）用英文指令并要求标题语言跟随用户输入 query 的语言
+- **时间格式化**统一抽到 `src/lib/format-time.ts`（`formatRelativeTime` / `formatHistoryDate`），消除 ChatView/HomePage/HistoryPanel 三处重复
+
+## 存储安全
+
+LLM API Key 与 Obsidian token 存 `chrome.storage.local`（`settings.ts` 的 `getStorageArea` 默认 local），**不随 Google 账号同步到云端**，降低账号被入侵时的凭证泄露面。自定义 Agent 配置（`mode-config.ts`）不含密钥，仍存 `chrome.storage.sync` 以支持跨设备同步。
 
 ## 运行模式
 

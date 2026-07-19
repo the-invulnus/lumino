@@ -1,8 +1,8 @@
 {
   "name": "lumino",
   "displayName": "Lumino",
-  "version": "0.0.1",
-  "description": "A Chrome extension built with Plasmo.",
+  "version": "1.0.0",
+  "description": "A multi-mode AI assistant in your browser side panel — research, replicate designs, and automate pages.",
   "author": "",
   "scripts": {
     "dev": "NODE_OPTIONS='--no-deprecation' plasmo dev",
@@ -13,19 +13,18 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.65",
     "ai": "^6.0.190",
+    "dompurify": "^3.2.4",
     "jszip": "^3.10.1",
     "marked": "^18.0.4",
     "plasmo": "0.90.5",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "turndown": "^7.2.4",
-    "zod": "^4.4.3"
+    "zod": "3.25.76"
   },
   "manifest": {
     "permissions": [
       "storage",
-      "history",
-      "bookmarks",
       "sidePanel",
       "alarms",
       "tabs",
@@ -39,6 +38,7 @@
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "4.1.1",
     "@types/chrome": "0.0.258",
+    "@types/dompurify": "^3.2.0",
     "@types/node": "20.11.5",
     "@types/react": "18.2.48",
     "@types/react-dom": "18.2.18",
@@ -46,10 +46,5 @@
     "prettier": "3.2.4",
     "typescript": "5.3.3",
     "vitest": "^4.1.5"
-  },
-  "pnpm": {
-    "overrides": {
-      "zod": "3.25.76"
-    }
   }
 }

@@ -417,7 +417,6 @@ export async function getLuminoAgentTools(toolFilter?: string[]): Promise<Record
     const client = getObsidianMcpClient()
     if (client?.isConnected) {
       const serverTools = await client.listTools()
-      console.log(`[lumino:tools] MCP 动态获取到 ${serverTools.length} 个工具:`, serverTools.map(t => t.name))
       for (const st of serverTools) {
         // 如果指定了 toolFilter，MCP 工具也需要过滤
         if (toolFilter && toolFilter.length > 0 && !toolFilter.includes(st.name)) continue

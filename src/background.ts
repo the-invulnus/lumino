@@ -26,6 +26,7 @@ import { cleanupEvictedFiles, EVICT_CLEANUP_ALARM } from "./lib/chat/tool-evicti
 import type { OpenAiChatMessage } from "./lib/chat/openai-messages"
 import { getThread, saveThreadMessages } from "./lib/chat/thread-idb"
 import { setAgentWindowId } from "./lib/chat/tools/agent-window"
+import { t, initLocaleFromStorage } from "./lib/i18n"
 
 export {}
 
@@ -133,7 +134,7 @@ async function executeAgentInBackground(
       return
     }
 
-    const errorMsg = err instanceof Error ? err.message : "请求模型失败，请检查配置后重试。"
+    const errorMsg = err instanceof Error ? err.message : t("chat.error.modelRequest")
 
     chrome.runtime.sendMessage({
       type: AGENT_ERROR_MESSAGE,
@@ -183,7 +184,6 @@ function setupMessageHandlers(): void {
         return
       }
 
-      console.log("[lumino:bg]", "启动 agent, threadId:", threadId, "mode:", mode)
       // 立即确认消息已收到，避免 SW 休眠后 sendMessage 的 Promise 被 reject
       sendResponse({ received: true })
       void executeAgentInBackground(
@@ -201,7 +201,6 @@ function setupMessageHandlers(): void {
       const { threadId } = (message as StopAgentMessage).payload
       const controller = runningAgents.get(threadId)
       if (controller) {
-        console.log("[lumino:bg]", "中止 agent, threadId:", threadId)
         controller.abort()
         runningAgents.delete(threadId)
         runningThreadIds.delete(threadId)
@@ -260,6 +259,8 @@ chrome.runtime.onInstalled.addListener(async () => {
 })
 
 async function boot(): Promise<void> {
+  // 恢复 locale（错误消息等用 t() 渲染，默认 en）
+  void initLocaleFromStorage()
   enableOpenPanelOnActionClick()
   setupMessageHandlers()
   setupTabListeners()
@@ -268,8 +269,6 @@ async function boot(): Promise<void> {
   chrome.alarms.create(EVICT_CLEANUP_ALARM, { periodInMinutes: 30 })
   // 启动时立即清理一次
   cleanupEvictedFiles().catch((err) => console.warn("[Lumino] 驱逐文件清理失败:", err))
-
-  console.log("[Lumino] Background SW 启动完成")
 
   // SW 启动后，广播当前运行状态到所有 content script
   setTimeout(() => {
@@ -280,9 +279,6 @@ async function boot(): Promise<void> {
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === EVICT_CLEANUP_ALARM) {
     cleanupEvictedFiles()
-      .then((deleted) => {
-        if (deleted > 0) console.log(`[Lumino] 清理了 ${deleted} 个过期驱逐文件`)
-      })
       .catch((err) => console.warn("[Lumino] 驱逐文件清理失败:", err))
   }
 })

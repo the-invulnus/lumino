@@ -16,5 +16,3 @@ window.addEventListener("error", (event) => {
     return false
   }
 })
-
-console.log("[Lumino CS] 已注入:", location.href)

@@ -4,8 +4,10 @@ type StorageArea = Pick<typeof chrome.storage.sync, "get" | "set">
 
 const SETTINGS_KEYS = ["baseUrl", "apiKey", "model"] as const
 
+// 敏感凭证（LLM API Key、Obsidian token）默认存 local：不随 Google 账号同步到云端，
+// 降低账号被入侵时的凭证泄露面。
 function getStorageArea(storageArea?: StorageArea) {
-  return storageArea ?? chrome.storage.sync
+  return storageArea ?? chrome.storage.local
 }
 
 function normalizeSettings(settings: LlmSettings): LlmSettings {

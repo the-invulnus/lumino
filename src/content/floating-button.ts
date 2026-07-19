@@ -4,8 +4,12 @@ import {
   type OpenSidePanelMessage,
   type AgentRunningStateMessage
 } from "../lib/side-panel-bridge"
+import { t, initLocaleFromStorage } from "../lib/i18n"
 
 export const FLOATING_BUTTON_ID = "lumino-floating-button"
+
+// content script 启动时恢复 locale（异步，不阻塞按钮创建；默认 en 兜底）
+void initLocaleFromStorage()
 
 function requestOpenSidePanel() {
   if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
@@ -115,7 +119,7 @@ export function createFloatingButton(ownerDocument: Document) {
   button.id = FLOATING_BUTTON_ID
   button.type = "button"
   button.className = "lumino-fab"
-  button.setAttribute("aria-label", "打开 Lumino 侧边栏")
+  button.setAttribute("aria-label", t("floatButton.ariaLabel"))
 
   const img = ownerDocument.createElement("img")
   img.className = "lumino-fab__img"

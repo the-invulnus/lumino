@@ -606,7 +606,7 @@ textarea {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .lm-home-hero-avatar {
@@ -628,6 +628,26 @@ textarea {
 
 .lm-home-hero-sub {
   font-size: 14px;
+  margin: 0;
+}
+
+.lm-home-hero-tagline {
+  font-size: 17px;
+  font-weight: var(--lumi-weight-semibold);
+  line-height: var(--lumi-leading-snug);
+  margin: 0;
+}
+
+.lm-home-hero-desc {
+  font-size: 12.5px;
+  line-height: var(--lumi-leading-relaxed);
+  margin: 0;
+  margin-bottom: 4px;
+  max-width: 340px;
+}
+
+.lm-home-hero-cta {
+  font-size: 12px;
   margin: 0;
 }
 
@@ -685,8 +705,9 @@ textarea {
 
 .lm-home-card {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
   padding: 14px 12px;
   border-radius: var(--lumi-radius-card);
   border: none;
@@ -706,8 +727,9 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
   border-radius: var(--lumi-radius-control);
 }
 
@@ -715,6 +737,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .lm-home-card-name {
@@ -911,8 +934,8 @@ textarea {
   background-color: rgba(45, 38, 34, 0.18);
   opacity: 0;
   visibility: hidden;
-  transition: opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry),
-              visibility var(--lumi-motion-duration-short);
+  transition: opacity var(--lumi-motion-duration-medium) var(--lumi-motion-ease-entry),
+              visibility 0s linear var(--lumi-motion-duration-medium);
   z-index: 90;
   backdrop-filter: blur(2px);
 }
@@ -920,6 +943,8 @@ textarea {
 .lm-history-overlay--active {
   opacity: 1;
   visibility: visible;
+  transition: opacity var(--lumi-motion-duration-medium) var(--lumi-motion-ease-entry),
+              visibility 0s;
 }
 
 .lm-history-panel {
@@ -932,11 +957,20 @@ textarea {
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
-  transition: transform var(--lumi-motion-duration-short) var(--lumi-motion-ease-spring);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform var(--lumi-motion-duration-medium) var(--lumi-motion-ease-entry),
+              opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry),
+              visibility 0s linear var(--lumi-motion-duration-medium);
 }
 
 .lm-history-panel--open {
   transform: translateX(0);
+  opacity: 1;
+  visibility: visible;
+  transition: transform var(--lumi-motion-duration-medium) var(--lumi-motion-ease-entry),
+              opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry),
+              visibility 0s;
 }
 
 .lm-history-panel-header {
@@ -990,6 +1024,7 @@ textarea {
 .lm-history-panel-list {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0 16px 16px;
 }
 
@@ -1263,6 +1298,8 @@ textarea {
 .lm-agent-form { display: flex; flex-direction: column; gap: 16px; padding: 18px; border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-card); background: var(--lumi-tile); }
 .lm-agent-form-title { font-size: 14px; font-weight: 700; margin: 0; color: var(--lumi-text-primary); }
 .lm-agent-form-actions { display: flex; gap: 8px; }
+/* 表单内创建/取消按钮共用尺寸类（具体视觉在 components.css 的组合选择器里覆盖基类） */
+.lm-agent-form-btn { display: inline-flex; align-items: center; justify-content: center; }
 
 /* — Icon picker — */
 .lm-icon-picker { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -1270,6 +1307,18 @@ textarea {
 .lm-icon-picker-btn svg { width: 16px; height: 16px; }
 .lm-icon-picker-btn:hover { border-color: var(--lumi-border-strong); background: var(--lumi-tile-hover); }
 .lm-icon-picker-btn--active { border-color: var(--lumi-accent-a); background: rgba(167,139,250,0.1); color: var(--lumi-accent-a); }
+
+/* — Segmented control（分段选择器，用于语言切换等二选一/多选一） — */
+.lm-segmented { display: inline-flex; gap: var(--lumi-space-3); }
+.lm-segmented-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 72px; height: 34px; padding: 0 16px; border: 1px solid var(--lumi-border-strong); border-radius: var(--lumi-radius-control); cursor: pointer; transition: background var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry), color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry), border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry), box-shadow var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry); font-size: var(--lumi-text-base); font-weight: var(--lumi-weight-medium); white-space: nowrap; }
+.lm-segmented-btn:disabled { cursor: not-allowed; }
+
+/* — Steps（说明步骤列表） — */
+.lm-steps { margin: var(--lumi-space-4) 0 0; padding-left: var(--lumi-space-7); display: flex; flex-direction: column; gap: var(--lumi-space-3); }
+.lm-steps li { line-height: var(--lumi-leading-relaxed); }
+
+/* — Tool tooltip（工具描述即时浮层，替代原生 title） — */
+.lm-tool-tooltip { position: fixed; transform: translate(12px, 12px); max-width: 240px; padding: var(--lumi-space-4) var(--lumi-space-5); border-radius: var(--lumi-radius-control); font-size: var(--lumi-text-sm); line-height: var(--lumi-leading-snug); pointer-events: none; z-index: 100; }
 
 /* — Tool selector — */
 .lm-tool-selector { display: flex; flex-direction: column; gap: 10px; }

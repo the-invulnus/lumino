@@ -1,11 +1,20 @@
 import { Fragment, useState } from "react"
 import { marked } from "marked"
+import DOMPurify from "dompurify"
 import type { OpenAiChatMessage } from "../../lib/chat/openai-messages"
 import { exportWorkspaceFile } from "../../lib/fs/workspace"
+import { useT } from "../../lib/i18n"
 import { LumiToolCall } from "./LumiToolCall"
 
 function renderMarkdown(text: string): JSX.Element {
-  const html = marked.parse(text, { async: false }) as string
+  const rawHtml = marked.parse(text, { async: false }) as string
+  // 消毒：LLM 回复（或被 prompt injection）可能含 <script>/<img onerror> 等，
+  // side panel 运行在扩展上下文，XSS 等于扩展被接管，必须过滤。
+  const html = DOMPurify.sanitize(rawHtml, {
+    USE_PROFILES: { html: true },
+    FORBID_TAGS: ["script", "style"],
+    FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover"]
+  })
   return (
     <div
       className="lm-chat-md"
@@ -49,6 +58,7 @@ export function ChatMessageBlock({
   index: number
   inGroup?: boolean
 }) {
+  const t = useT()
   if (message.role === "user") {
     if (inGroup) return <>{formatMessagePreview(message)}</>
     return (
@@ -141,7 +151,7 @@ export function ChatMessageBlock({
     return (
       <div className="lm-chat-row lm-chat-row--tool">
         <div className="lm-chat-meta">
-          结果 · {toolName || id.slice(0, 8)}
+          {t("toolcall.result", { name: toolName || id.slice(0, 8) })}
         </div>
         <pre className="lm-chat-tool-body">{message.content ?? ""}</pre>
       </div>

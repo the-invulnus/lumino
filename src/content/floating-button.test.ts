@@ -17,6 +17,12 @@ describe("floating button", () => {
     vi.stubGlobal("chrome", {
       runtime: {
         sendMessage: sendMessage
+      },
+      storage: {
+        local: {
+          get: async () => ({}),
+          set: async () => undefined
+        }
       }
     })
   })
@@ -30,7 +36,7 @@ describe("floating button", () => {
 
     expect(button.id).toBe(FLOATING_BUTTON_ID)
     expect(button.className).toContain("lumino-fab")
-    expect(button.getAttribute("aria-label")).toBe("打开 Lumino 侧边栏")
+    expect(button.getAttribute("aria-label")).toBe("Open Lumino side panel")
     expect(button.textContent).toContain("L")
     expect(button.querySelector(".lumino-fab__glyph")).not.toBeNull()
   })

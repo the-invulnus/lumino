@@ -110,9 +110,11 @@ export async function generateThreadTitle(
   llmSettings: { baseUrl: string; apiKey: string; model: string }
 ): Promise<string> {
   const text = userInput.trim().replace(/\s+/g, " ")
-  if (!text) return "新会话"
+  if (!text) return "New chat"
 
-  const prompt = `用户问题：${text.slice(0, 200)}\n\n为这个对话起一个简短标题（10个字以内），只输出标题本身。`
+  // 提示词用英文（instruction 遵循度更高），但要求标题语言跟随用户输入语言：
+  // 英文 query → 英文标题；中文 query → 中文标题；其他语言同理。
+  const prompt = `User question: ${text.slice(0, 200)}\n\nGenerate a short title for this conversation (under 10 characters), in the SAME language as the question. Output only the title.`
 
   const url = `${llmSettings.baseUrl}/chat/completions`
 
@@ -126,7 +128,7 @@ export async function generateThreadTitle(
       body: JSON.stringify({
         model: llmSettings.model,
         messages: [
-          { role: "system", content: "你是一个标题生成器。根据用户的问题，生成一个简短的会话标题。只输出标题内容，不要引号、标点或任何其他文字。10个字以内。" },
+          { role: "system", content: "You are a title generator. Based on the user's question, generate a short conversation title. The title MUST be in the SAME language as the user's question (English question → English title; Chinese question → Chinese title; etc.). Output only the title — no quotes, punctuation, or any other text. Keep it under 10 characters." },
           { role: "user", content: prompt }
         ],
         max_tokens: 30,
@@ -143,7 +145,6 @@ export async function generateThreadTitle(
     const data = await res.json() as { choices?: { message?: { content?: string } }[] }
     const raw = (data.choices?.[0]?.message?.content ?? "").trim()
     const title = raw.replace(/^["'「『]|["'」』]$/g, "").replace(/[。，、！？,.!?]/g, "").trim()
-    console.log("[lumino:title] 生成:", title || "(空)")
     return title.slice(0, 20) || text.slice(0, 20)
   } catch (err) {
     console.warn("[lumino:title] 异常:", err)

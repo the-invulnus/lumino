@@ -12,6 +12,7 @@ import { getThread, deleteThread } from "../lib/chat/thread-idb"
 import type { LlmSettings } from "../lib/llm/types"
 import { getLlmSettings } from "../lib/settings"
 import { applyTheme, getTheme } from "../lib/theme"
+import { initLocaleFromStorage } from "../lib/i18n"
 import { HomePage } from "./HomePage"
 import { ChatView, type ChatViewHandle } from "./ChatView"
 import { IconSidebar } from "./IconSidebar"
@@ -32,6 +33,8 @@ export function App() {
 
   // 初始化
   useEffect(() => {
+    // 恢复语言（默认 en），子组件 useT() 会随事件重渲染
+    void initLocaleFromStorage()
     Promise.all([getLlmSettings(), getTheme(), getAllAgents()])
       .then(([s, theme, loadedAgents]) => {
         setSettings(s)
@@ -56,19 +59,25 @@ export function App() {
   }, [])
 
   // 监听 storage 变化（settings 更新后实时反映）
+  // LLM/Obsidian 凭证存在 local（安全，不同步），theme 与自定义 Agent 存 sync
   useEffect(() => {
     const SETTINGS_KEYS = ["baseUrl", "apiKey", "model"]
     function handleChanged(changes: Record<string, chrome.storage.StorageChange>, areaName: string) {
-      if (areaName !== "sync") return
-      if ("theme" in changes) {
-        applyTheme((changes.theme.newValue as any) || "paper")
+      if (areaName === "sync") {
+        if ("theme" in changes) {
+          applyTheme((changes.theme.newValue as any) || "paper")
+        }
+        // 自定义 Agent 配置随账号同步
+        if ("lumino_custom_agents" in changes) {
+          getAllAgents().then(setAgents).catch(() => {})
+        }
       }
-      if (SETTINGS_KEYS.some((key) => key in changes)) {
-        getLlmSettings().then(setSettings).catch(() => {})
-      }
-      // 检查自定义 Agent 是否变化
-      if ("lumino_custom_agents" in changes) {
-        getAllAgents().then(setAgents).catch(() => {})
+      if (areaName === "local") {
+        // LLM 凭证在 local
+        if (SETTINGS_KEYS.some((key) => key in changes)) {
+          getLlmSettings().then(setSettings).catch(() => {})
+        }
+        // 语言切换：local 中的 lumino_locale 变化时由 i18n 事件处理，此处无需额外动作
       }
     }
     chrome.storage.onChanged.addListener(handleChanged)

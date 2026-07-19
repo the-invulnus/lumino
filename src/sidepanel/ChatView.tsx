@@ -22,13 +22,14 @@ import {
   putThread,
   listThreads,
   saveThreadMessages,
-  suggestTitleFromMessages,
   generateThreadTitle,
   type ChatThreadRecord
 } from "../lib/chat/thread-idb"
 import type { AgentConfig } from "../lib/chat/mode-config"
 import type { LlmSettings } from "../lib/llm/types"
 import { getLlmSettings, hasCompleteLlmSettings } from "../lib/settings"
+import { useT } from "../lib/i18n"
+import { formatRelativeTime } from "../lib/format-time"
 import {
   START_AGENT_MESSAGE,
   STOP_AGENT_MESSAGE,
@@ -58,25 +59,6 @@ function SendArrowIcon() {
       <path d="M5 12h14" />
       <path d="m13 6 6 6-6 6" />
     </svg>
-  )
-}
-
-function formatSessionTime(updatedAt: number): string {
-  const diff = Date.now() - updatedAt
-  if (diff < 60_000) return "刚刚"
-  if (diff < 3600_000) return `${Math.floor(diff / 60_000)} 分钟前`
-  if (diff < 86400_000) return `${Math.floor(diff / 3600_000)} 小时前`
-  return new Date(updatedAt).toLocaleDateString("zh-CN", {
-    month: "numeric",
-    day: "numeric"
-  })
-}
-
-function threadLabel(record: ChatThreadRecord): string {
-  return (
-    record.title ??
-    suggestTitleFromMessages(record.messages) ??
-    (record.messages.length ? "会话" : "新会话")
   )
 }
 
@@ -116,6 +98,8 @@ export const ChatView = forwardRef<ChatViewHandle, {
   const activeThreadIdRef = useRef("")
   const sendInFlightMapRef = useRef<Record<string, boolean>>({})
   const draftMapRef = useRef<Record<string, string>>({})
+
+  const t = useT()
 
   // 自动增高：重置为 auto 再取 scrollHeight，受 min/max-height 约束。
   // 抽成函数 + layoutEffect 在 draft 变化时统一调用，保证首屏、输入、
@@ -186,7 +170,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
           }
         }
       } catch {
-        if (!cancelled) setError("读取会话失败。")
+        if (!cancelled) setError(t("chat.error.read"))
       } finally {
         if (!cancelled) setIsHydrating(false)
       }
@@ -299,7 +283,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
           await chrome.runtime.sendMessage(startPayload)
         } catch {
           console.warn("[lumino:sidepanel]", "启动 agent 失败")
-          setError("启动失败，请重试。")
+          setError(t("chat.error.start"))
         }
       }
     }
@@ -309,7 +293,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
   async function sendUserMessage() {
     const trimmed = draft.trim()
     if (!trimmed) return  // 空内容静默忽略；按钮已置灰，此处为防御
-    if (!hasCompleteLlmSettings(settings)) { setError("请先在设置页配置 Base URL、API Key 和模型。"); return }
+    if (!hasCompleteLlmSettings(settings)) { setError(t("chat.error.config")); return }
 
     // 没有活跃会话：创建新的
     if (!activeThreadIdRef.current) {
@@ -419,7 +403,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
   const isConfigured = hasCompleteLlmSettings(settings)
   const isLoading = loadingThreadIds.has(activeThreadId)
   const currentThread = threads.find((t) => t.id === activeThreadId)
-  const displayTitle = currentThread?.title || "新会话"
+  const displayTitle = currentThread?.title || t("thread.defaultTitle")
 
   async function saveThreadTitle(newTitle: string) {
     if (!activeThreadId || !newTitle.trim()) return
@@ -469,7 +453,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
           ) : (
             <span
               className="lm-chat-view-mode-name"
-              title="点击修改会话名称"
+              title={t("chat.tooltip.rename")}
               onClick={startEditTitle}
             >
               {displayTitle}
@@ -479,7 +463,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
         <div className="lm-chat-view-header-actions">
           <button
             className="lm-chat-view-new-btn"
-            title="新建会话"
+            title={t("chat.tooltip.newThread")}
             onClick={() => void handleNewThread()}
             type="button"
           >
@@ -490,7 +474,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
           </button>
           <button
             className="lm-chat-view-history-btn"
-            title="历史会话"
+            title={t("chat.tooltip.history")}
             onClick={onOpenHistory}
             type="button"
           >
@@ -506,26 +490,26 @@ export const ChatView = forwardRef<ChatViewHandle, {
       <section className="lm-chat-panel" aria-busy={isLoading}>
         {!isConfigured ? (
           <div className="lm-note lm-note--compact">
-            <p>请先在设置中填写 Base URL、API Key 与模型。</p>
+            <p>{t("chat.notConfigured")}</p>
             <button
               className="lm-secondary-button lm-secondary-button--sm"
               onClick={() => chrome.runtime.openOptionsPage()}
               type="button">
-              打开设置
+              {t("chat.openSettings")}
             </button>
           </div>
         ) : null}
 
         <div className="lm-chat-scroll" role="log" aria-relevant="additions">
           {isHydrating ? (
-            <p className="lm-chat-hint">正在加载…</p>
+            <p className="lm-chat-hint">{t("chat.loading")}</p>
           ) : !activeThreadId ? (
             <p className="lm-chat-hint">
-              在下方输入消息，开始新的对话。
+              {t("chat.emptyHintNoThread")}
             </p>
           ) : visibleMessages.length === 0 ? (
             <p className="lm-chat-hint">
-              在下方输入后发送即可。
+              {t("chat.emptyHintNewThread")}
             </p>
           ) : (
             mergedMessages.map((item, gIdx) => {
@@ -557,7 +541,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
                       </div>
                     </div>
                     <div className="lm-chat-actions">
-                      <button aria-label="重新生成" className="lm-chat-action-btn"
+                      <button aria-label={t("chat.action.regenerate")} className="lm-chat-action-btn"
                         disabled={sendInFlightMapRef.current[activeThreadId]}
                         onClick={() => {
                           const groupStart = messages.indexOf(group[0])
@@ -570,7 +554,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
                           saveThreadMessages(activeThreadId, newHistory).catch(() => {})
                           doSend(newHistory, formatMessagePreview(prevUser))
                         }}
-                        title="重新生成" type="button"
+                        title={t("chat.action.regenerate")} type="button"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="23 4 23 10 17 10" />
@@ -578,16 +562,16 @@ export const ChatView = forwardRef<ChatViewHandle, {
                           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                         </svg>
                       </button>
-                      <button aria-label="复制消息内容" className="lm-chat-action-btn"
+                      <button aria-label={t("chat.action.copyMessage")} className="lm-chat-action-btn"
                         onClick={() => { navigator.clipboard.writeText(groupText).catch(() => {}) }}
-                        title="复制" type="button"
+                        title={t("chat.action.copy")} type="button"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                         </svg>
                       </button>
-                      <button aria-label="删除此消息" className="lm-chat-action-btn"
+                      <button aria-label={t("chat.action.deleteMessage")} className="lm-chat-action-btn"
                         onClick={() => {
                           setMessages((prev) => {
                             const next = [...prev]
@@ -600,7 +584,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
                             return next
                           })
                         }}
-                        title="删除" type="button"
+                        title={t("chat.action.delete")} type="button"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="3 6 5 6 21 6" />
@@ -644,7 +628,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
                           autoFocus
                           rows={3}
                         />
-                        <div className="lm-edit-hint">Enter 发送 · Shift+Enter 换行 · Esc 取消</div>
+                        <div className="lm-edit-hint">{t("chat.editHint")}</div>
                       </div>
                     </div>
                   ) : (
@@ -652,10 +636,10 @@ export const ChatView = forwardRef<ChatViewHandle, {
                   )}
                   <div className="lm-chat-actions">
                     {msg.role === "user" && !isEditingThis ? (
-                      <button aria-label="编辑消息" className="lm-chat-action-btn"
+                      <button aria-label={t("chat.action.editMessage")} className="lm-chat-action-btn"
                         disabled={sendInFlightMapRef.current[activeThreadId]}
                         onClick={() => { setEditingIndex(msgIndex); setEditingText(formatMessagePreview(msg)) }}
-                        title="编辑" type="button"
+                        title={t("chat.action.edit")} type="button"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -663,19 +647,19 @@ export const ChatView = forwardRef<ChatViewHandle, {
                         </svg>
                       </button>
                     ) : null}
-                    <button aria-label="复制消息内容" className="lm-chat-action-btn"
+                    <button aria-label={t("chat.action.copyMessage")} className="lm-chat-action-btn"
                       onClick={() => {
                         const text = typeof msg.content === "string" ? msg.content : ""
                         navigator.clipboard.writeText(text).catch(() => {})
                       }}
-                      title="复制" type="button"
+                      title={t("chat.action.copy")} type="button"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                       </svg>
                     </button>
-                    <button aria-label="删除此消息" className="lm-chat-action-btn"
+                    <button aria-label={t("chat.action.deleteMessage")} className="lm-chat-action-btn"
                       onClick={() => {
                         setMessages((prev) => {
                           const next = [...prev]
@@ -691,7 +675,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
                           return next
                         })
                       }}
-                      title="删除" type="button"
+                      title={t("chat.action.delete")} type="button"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6" />
@@ -719,7 +703,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
         <div className="lm-composer">
           <textarea
             ref={composerRef}
-            aria-label="对话输入"
+            aria-label={t("chat.composerAria")}
             className="lm-input lm-input--composer"
             disabled={isHydrating}
             onChange={(event) => {
@@ -731,13 +715,13 @@ export const ChatView = forwardRef<ChatViewHandle, {
                 void sendUserMessage()
               }
             }}
-            placeholder="Enter 发送，Shift+Enter 换行"
+            placeholder={t("chat.placeholder")}
             rows={1}
             value={draft}
           />
           <button
             aria-busy={isLoading}
-            aria-label={isLoading ? "停止生成" : "发送"}
+            aria-label={isLoading ? t("chat.stop") : t("chat.send")}
             className={`lm-composer-send${isLoading ? " lm-composer-send--stop" : ""}`}
             disabled={isHydrating || (!isLoading && !draft.trim())}
             onClick={() => { isLoading ? handleStop() : void sendUserMessage() }}

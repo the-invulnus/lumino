@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { exportWorkspaceFile } from "../../lib/fs/workspace"
+import { useT } from "../../lib/i18n"
 
 export function LumiToolCall({
   call,
@@ -10,6 +11,7 @@ export function LumiToolCall({
 }) {
   const [expanded, setExpanded] = useState(false)
   const hasResult = result !== null
+  const t = useT()
 
   // 检测工具结果是否为错误
   let toolError: string | null = null
@@ -47,7 +49,7 @@ export function LumiToolCall({
   }
 
   const label = isReadFileSkill
-    ? `加载技能：${skillName}`
+    ? t("toolcall.loadingSkill", { name: skillName })
     : call.function.name
 
   return (
@@ -132,7 +134,7 @@ export function LumiToolCall({
                   <button
                     type="button"
                     className="lumi-tool-call__download"
-                    title={`下载 ${filePath}`}
+                    title={t("toolcall.download", { path: filePath ?? "" })}
                     onClick={async (e) => {
                       e.stopPropagation()
                       const exported = await exportWorkspaceFile(filePath!)

@@ -18,7 +18,6 @@ export const RETRY_DELAY_MS = 300
  */
 export function getActiveTab(): Promise<chrome.tabs.Tab> {
   return getAgentWindowId().then((agentWid) => {
-    console.log('[lumino:bt] getActiveTab agentWid:', agentWid)
     const query = agentWid != null
       ? { active: true, windowId: agentWid }
       : { active: true, currentWindow: true }

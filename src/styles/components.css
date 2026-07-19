@@ -531,6 +531,24 @@
   line-height: 1.4;
 }
 
+/* — Segmented control（语言切换分段选择器） — */
+.lm-segmented-btn {
+  background: var(--lumi-tile);
+  color: var(--lumi-text-soft);
+}
+.lm-segmented-btn:hover:not(.lm-segmented-btn--active) {
+  border-color: var(--lumi-border-strong);
+  color: var(--lumi-text);
+}
+.lm-segmented-btn--active {
+  background: var(--lumi-gradient-accent);
+  background-size: 140% 140%;
+  border-color: transparent;
+  color: var(--lumi-btn-primary-color);
+  box-shadow: var(--lumi-btn-primary-shadow);
+  font-weight: var(--lumi-weight-semibold);
+}
+
 /* ================================================
    Buttons
    ================================================ */
@@ -549,6 +567,44 @@
 
 .lm-primary-button:hover:not(:disabled) {
   box-shadow: var(--lumi-btn-primary-shadow-hover);
+}
+
+/* 智能体表单内创建/取消按钮：组合选择器（优先级高于 .lm-primary-button 基类），
+   强制统一尺寸、居中、圆角、朴素中性配色（不用主题色，不用纯黑）。
+   创建 = 暖灰实心底 + 深字；取消 = 白底描边。 */
+.lm-agent-form-btn {
+  min-width: 88px;
+  min-height: 36px;
+  padding: 0 20px;
+  font-size: var(--lumi-text-base);
+  font-weight: var(--lumi-weight-medium);
+  border-radius: var(--lumi-radius-control);
+  letter-spacing: var(--lumi-tracking-normal);
+  transition: background-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+.lm-primary-button.lm-agent-form-btn {
+  background: var(--lumi-tile-hover);
+  border: 1px solid var(--lumi-border-strong);
+  box-shadow: none;
+  color: var(--lumi-text);
+  justify-content: center;
+  padding: 0 20px;
+  min-height: 36px;
+}
+.lm-primary-button.lm-agent-form-btn:hover:not(:disabled) {
+  background: var(--lumi-well);
+  box-shadow: none;
+}
+.lm-agent-card-btn.lm-agent-form-btn {
+  background: var(--lumi-tile);
+  border: 1px solid var(--lumi-border);
+  color: var(--lumi-text-soft);
+}
+.lm-agent-card-btn.lm-agent-form-btn:hover {
+  border-color: var(--lumi-border-strong);
+  color: var(--lumi-text);
 }
 
 .lm-primary-trail {
@@ -579,24 +635,50 @@
    Notes, Errors, Spinner
    ================================================ */
 
+/* 提示/说明面板（lm-note）与错误面板（lm-error）= 标准浮起卡片，
+   与 .lm-history-item 完全同款：描边 + tile 底 + 双层柔和阴影 + card 圆角。
+   不用色条/整块染色——语义仅靠文字颜色区分，保持与其他浮起卡片一致。 */
 .lm-note {
-  background: var(--lumi-gradient-note);
-  border: 1px solid var(--lumi-warn-border);
-  border-radius: var(--lumi-radius-input);
-  color: var(--lumi-warn-text);
+  background: var(--lumi-tile);
+  border: 1px solid var(--lumi-border);
+  border-radius: var(--lumi-radius-card);
+  box-shadow: 0 1px 2px rgba(45, 38, 34, 0.04), 0 4px 14px -6px rgba(45, 38, 34, 0.08);
+  color: var(--lumi-text);
   font-size: var(--lumi-text-base);
-  padding: var(--lumi-space-7) var(--lumi-space-7);
+  padding: var(--lumi-space-7);
 }
 
 .lm-note p {
   font-size: var(--lumi-text-base);
   line-height: var(--lumi-leading-relaxed);
+  color: var(--lumi-text-soft);
+}
+
+.lm-note > strong {
+  display: block;
+  margin-bottom: var(--lumi-space-2);
+  font-weight: var(--lumi-weight-semibold);
+  color: var(--lumi-text);
+}
+
+.lm-steps {
+  font-size: var(--lumi-text-base);
+  color: var(--lumi-text-soft);
+}
+
+/* 工具描述 tooltip：浮起卡片风格，与历史卡片同语言 */
+.lm-tool-tooltip {
+  background: var(--lumi-tile);
+  border: 1px solid var(--lumi-border);
+  box-shadow: 0 4px 14px -6px rgba(45, 38, 34, 0.18);
+  color: var(--lumi-text-soft);
 }
 
 .lm-error {
-  background: var(--lumi-danger-bg);
-  border: 1px solid var(--lumi-danger-border);
-  border-radius: var(--lumi-radius-input);
+  background: var(--lumi-tile);
+  border: 1px solid var(--lumi-border);
+  border-radius: var(--lumi-radius-card);
+  box-shadow: 0 1px 2px rgba(45, 38, 34, 0.04), 0 4px 14px -6px rgba(45, 38, 34, 0.08);
   color: var(--lumi-danger-text);
   font-size: var(--lumi-text-base);
   line-height: var(--lumi-leading-normal);
@@ -816,6 +898,18 @@
   color: var(--lumi-text-faint);
 }
 
+.lm-home-hero-tagline {
+  color: var(--lumi-text);
+}
+
+.lm-home-hero-desc {
+  color: var(--lumi-text-soft);
+}
+
+.lm-home-hero-cta {
+  color: var(--lumi-text-faint);
+}
+
 .lm-home-section-title {
   color: var(--lumi-text-faint);
 }
@@ -936,7 +1030,25 @@
 
 .lm-history-item {
   background: #ffffff;
+  /* stagger 入场：默认隐藏，.lm-history-panel--open 时逐条淡入上移 */
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry),
+              transform var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry);
 }
+
+.lm-history-panel--open .lm-history-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+.lm-history-panel--open .lm-history-item:nth-child(1) { transition-delay: 80ms; }
+.lm-history-panel--open .lm-history-item:nth-child(2) { transition-delay: 120ms; }
+.lm-history-panel--open .lm-history-item:nth-child(3) { transition-delay: 160ms; }
+.lm-history-panel--open .lm-history-item:nth-child(4) { transition-delay: 200ms; }
+.lm-history-panel--open .lm-history-item:nth-child(5) { transition-delay: 240ms; }
+.lm-history-panel--open .lm-history-item:nth-child(6) { transition-delay: 280ms; }
+.lm-history-panel--open .lm-history-item:nth-child(7) { transition-delay: 320ms; }
+.lm-history-panel--open .lm-history-item:nth-child(8) { transition-delay: 360ms; }
 
 .lm-history-item:hover {
   background: #ffffff;
@@ -1041,10 +1153,6 @@
     background: rgba(255, 250, 244, 0.05);
   }
 
-  :root[data-theme="paper"] .lm-note {
-    background: linear-gradient(135deg, rgba(60, 48, 28, 0.65), rgba(55, 38, 48, 0.55));
-  }
-
   :root[data-theme="paper"] .lm-input.lm-input--composer {
     background: #2a2522;
   }
@@ -1063,6 +1171,11 @@
 
   :root[data-theme="paper"] .lm-history-item--active {
     background: #3a3330;
+  }
+
+  :root[data-theme="paper"] .lm-note,
+  :root[data-theme="paper"] .lm-error {
+    background: #322c29;
   }
 }
 

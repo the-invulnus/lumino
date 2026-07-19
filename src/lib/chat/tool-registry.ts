@@ -42,7 +42,6 @@ let mcpRegistered = false
 function registerBaseTools(): void {
   if (baseRegistered) return
   baseRegistered = true
-  console.log("[lumino:registry] 注册基础工具...")
 
   // 文件系统工具
   registerTool("ls", handleLs)
@@ -82,17 +81,14 @@ function registerBaseTools(): void {
 
 async function registerObsidianMcpTools(): Promise<void> {
   if (mcpRegistered) {
-    console.log("[lumino:registry] Obsidian MCP 工具已注册，跳过")
     return
   }
 
   const settings = await getObsidianSettings()
   if (!isObsidianConfigured(settings)) {
-    console.log("[lumino:registry] Obsidian 未配置，跳过 MCP 工具")
     return
   }
 
-  console.log("[lumino:registry] 尝试连接 Obsidian MCP...")
   try {
     // 确保 MCP 客户端已连接
     const client = await ensureMcpClient()
@@ -106,7 +102,6 @@ async function registerObsidianMcpTools(): Promise<void> {
     }
 
     mcpRegistered = true
-    console.log(`[lumino:registry] Obsidian MCP: ${serverTools.length} 个工具注册成功`)
   } catch (err) {
     console.warn("[lumino:registry] Obsidian MCP 连接失败，工具未注册:", err)
     mcpRegistered = false

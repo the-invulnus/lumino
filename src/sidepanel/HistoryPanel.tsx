@@ -9,28 +9,10 @@ import type { ChatThreadRecord } from "../lib/chat/thread-idb"
 import { listThreads } from "../lib/chat/thread-idb"
 import { getAllAgents } from "../lib/chat/builtin-agents"
 import { NavIcon } from "./IconSidebar"
+import { useT } from "../lib/i18n"
+import { formatHistoryDate } from "../lib/format-time"
 
-function formatHistoryDate(updatedAt: number): string {
-  const d = new Date(updatedAt)
-  const now = new Date()
-  const hours = String(d.getHours()).padStart(2, "0")
-  const mins = String(d.getMinutes()).padStart(2, "0")
-  const timeStr = `${hours}:${mins}`
-
-  // 当天只显示时间
-  if (d.toDateString() === now.toDateString()) return timeStr
-
-  // 昨天
-  const yesterday = new Date(now)
-  yesterday.setDate(yesterday.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return `昨天 ${timeStr}`
-
-  const month = String(d.getMonth() + 1).padStart(2, "0")
-  const day = String(d.getDate()).padStart(2, "0")
-  return `${d.getFullYear()}/${month}/${day} ${timeStr}`
-}
-
-function getThreadPreview(record: ChatThreadRecord): string {
+function getThreadPreview(record: ChatThreadRecord, emptyLabel: string): string {
   // 取第一条 assistant 消息的内容作为预览
   const assistant = record.messages.find((m) => m.role === "assistant")
   if (assistant?.content) {
@@ -47,7 +29,7 @@ function getThreadPreview(record: ChatThreadRecord): string {
     const text = typeof user.content === "string" ? user.content : ""
     return text.slice(0, 50).replace(/\s+/g, " ")
   }
-  return "空会话"
+  return emptyLabel
 }
 
 export function HistoryPanel({
@@ -65,11 +47,13 @@ export function HistoryPanel({
   const [agentMap, setAgentMap] = useState<Record<string, string>>({})
   const [allThreads, setAllThreads] = useState<ChatThreadRecord[]>([])
 
+  const t = useT()
+
   useEffect(() => {
     getAllAgents().then((agents) => {
       const map: Record<string, string> = {}
       for (const a of agents) {
-        map[a.id] = a.name
+        map[a.id] = a.name  // 存的是 i18n key，展示时由 t() 解析
       }
       setAgentMap(map)
     }).catch(() => {})
@@ -88,19 +72,29 @@ export function HistoryPanel({
     setAllThreads(rows)
   }
 
-  function getAgentLabel(mode?: string): string {
-    if (!mode) return "通用"
-    return agentMap[mode] || "通用"
+  // 打开时锁定背景滚动，避免列表滚动穿透到下层页面
+  useEffect(() => {
+    if (!open) return
+    const body = document.body
+    const prev = body.style.overflow
+    body.style.overflow = "hidden"
+    return () => { body.style.overflow = prev }
+  }, [open])
+
+  function getAgentLabelKey(mode?: string): string {
+    if (!mode) return "agent.chat.name"
+    return agentMap[mode] || "agent.chat.name"
   }
 
   const filteredThreads = useMemo(() => {
     if (!search.trim()) return allThreads
     const q = search.trim().toLowerCase()
-    return allThreads.filter((t) => {
-      const title = (t.title ?? "").toLowerCase()
-      const preview = getThreadPreview(t).toLowerCase()
+    return allThreads.filter((thread) => {
+      const title = (thread.title ?? "").toLowerCase()
+      const preview = getThreadPreview(thread, t("thread.empty")).toLowerCase()
       return title.includes(q) || preview.includes(q)
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allThreads, search])
 
   return (
@@ -114,7 +108,7 @@ export function HistoryPanel({
       {/* 面板 */}
       <div className={`lm-history-panel${open ? " lm-history-panel--open" : ""}`}>
         <div className="lm-history-panel-header">
-          <h3 className="lm-history-panel-title">历史会话 ({allThreads.length})</h3>
+          <h3 className="lm-history-panel-title">{t("history.title", { count: allThreads.length })}</h3>
           <button className="lm-history-panel-close" onClick={onClose} type="button">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -127,7 +121,7 @@ export function HistoryPanel({
           <input
             type="text"
             className="lm-history-search-input"
-            placeholder="搜索会话..."
+            placeholder={t("history.search")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -136,35 +130,37 @@ export function HistoryPanel({
         <div className="lm-history-panel-list">
           {filteredThreads.length === 0 ? (
             <p className="lm-history-panel-empty">
-              {search.trim() ? "未找到匹配的会话" : "暂无历史会话"}
+              {search.trim() ? t("history.notFound") : t("history.empty")}
             </p>
           ) : (
-            filteredThreads.map((record) => (
+            filteredThreads.map((record) => {
+              const agentLabel = t(getAgentLabelKey(record.mode))
+              return (
               <div
                 key={record.id}
                 className="lm-history-item"
                 onClick={() => onSelect(record.id)}
               >
                 <div className="lm-history-item-left">
-                  <span className="lm-history-item-agent" title={getAgentLabel(record.mode)}>
+                  <span className="lm-history-item-agent" title={agentLabel}>
                     <NavIcon icon={record.mode || "chat"} />
                   </span>
-                  <span className="lm-history-item-agent-label">{getAgentLabel(record.mode)}</span>
+                  <span className="lm-history-item-agent-label">{agentLabel}</span>
                 </div>
                 <div className="lm-history-item-body">
                   <div className="lm-history-item-header">
                     <span className="lm-history-item-title">
-                      {record.title || "新会话"}
+                      {record.title || t("thread.defaultTitle")}
                     </span>
                     <span className="lm-history-item-date">
                       {formatHistoryDate(record.updatedAt)}
                     </span>
                   </div>
                   <div className="lm-history-item-preview">
-                    <span>{getThreadPreview(record)}</span>
+                    <span>{getThreadPreview(record, t("thread.empty"))}</span>
                     <button
                       className="lm-history-item-delete"
-                      title="删除"
+                      title={t("history.delete")}
                       onClick={(e) => { e.stopPropagation(); handleDelete(record.id) }}
                       type="button"
                     >
@@ -176,7 +172,8 @@ export function HistoryPanel({
                   </div>
                 </div>
               </div>
-            ))
+              )
+            })
           )}
         </div>
       </div>

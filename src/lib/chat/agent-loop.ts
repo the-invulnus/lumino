@@ -12,7 +12,9 @@ import { buildAgentMessages } from "./system-prompt"
 import { getLuminoAgentTools } from "./tool-definitions"
 
 const MAX_AGENT_STEPS = 100
-const DEBUG_AGENT = true
+// 生产构建关闭调试日志。debugLog 会序列化整个错误对象（含 fetch 请求体/headers），
+// 生产环境可能泄露敏感信息，故默认 false；开发时手动改 true。
+const DEBUG_AGENT = false
 function debugLog(...args: unknown[]) {
   if (DEBUG_AGENT) console.log("[lumino:agent]", ...args)
 }

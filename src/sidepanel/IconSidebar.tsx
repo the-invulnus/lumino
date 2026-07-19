@@ -7,6 +7,7 @@
 
 import { type AgentConfig } from "../lib/chat/mode-config"
 import type { CSSProperties } from "react"
+import { useT } from "../lib/i18n"
 
 /** 导航栏图标组件 — 使用纯 SVG 图标（无需外部依赖） */
 function NavIcon({ icon }: { icon: string }) {
@@ -100,19 +101,20 @@ export function IconSidebar({
   onGoHome: () => void
   onOpenSettings: () => void
 }) {
+  const t = useT()
   return (
-    <nav className="lm-icon-sidebar" aria-label="功能导航">
+    <nav className="lm-icon-sidebar" aria-label={t("nav.ariaLabel")}>
       {/* 首页 */}
       <button
         className={`lm-nav-item${currentAgentId === null ? " lm-nav-item--active" : ""}`}
-        title="首页"
+        title={t("nav.home")}
         onClick={onGoHome}
         type="button"
       >
         <div className="lm-nav-icon-box">
           <NavIcon icon="home" />
         </div>
-        <span className="lm-nav-label">首页</span>
+        <span className="lm-nav-label">{t("nav.home")}</span>
       </button>
 
       {/* 所有 Agent（内置 + 自定义） */}
@@ -123,7 +125,7 @@ export function IconSidebar({
           <button
             key={agent.id}
             className={`lm-nav-item${isActive ? " lm-nav-item--active" : ""}`}
-            title={agent.name}
+            title={t(agent.name)}
             onClick={() => onSelectAgent(agent)}
             type="button"
             style={{ position: "relative" } as CSSProperties}
@@ -131,7 +133,7 @@ export function IconSidebar({
             <div className="lm-nav-icon-box">
               <NavIcon icon={getIconKey(agent, false)} />
             </div>
-            <span className="lm-nav-label">{agent.name}</span>
+            <span className="lm-nav-label">{t(agent.name)}</span>
             {/* 运行中指示器 */}
             {isRunning && (
               <span className="lm-nav-running-dot" />
@@ -146,14 +148,14 @@ export function IconSidebar({
       {/* 设置 */}
       <button
         className="lm-nav-item"
-        title="设置"
+        title={t("nav.settings")}
         onClick={onOpenSettings}
         type="button"
       >
         <div className="lm-nav-icon-box">
           <NavIcon icon="settings" />
         </div>
-        <span className="lm-nav-label">设置</span>
+        <span className="lm-nav-label">{t("nav.settings")}</span>
       </button>
     </nav>
   )
