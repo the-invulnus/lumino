@@ -614,7 +614,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
                           value={editingText}
                           onChange={(e) => setEditingText(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
+                            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                               e.preventDefault()
                               const trimmed = editingText.trim()
                               if (!trimmed) return

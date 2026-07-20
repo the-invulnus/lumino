@@ -29,6 +29,7 @@ export function App() {
   const [isReady, setIsReady] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [pendingThreadId, setPendingThreadId] = useState<string | undefined>(undefined)
+  const [recentVersion, setRecentVersion] = useState(0)
   const chatViewRef = useRef<ChatViewHandle>(null)
 
   // 初始化
@@ -169,6 +170,8 @@ export function App() {
     await deleteThread(threadId).catch(() => {})
     // 委托给挂载的 ChatView 同步内部状态
     chatViewRef.current?.deleteThread(threadId)
+    // 刷新首页最近会话列表（HomePage 不在当前视图时无影响）
+    setRecentVersion((v) => v + 1)
   }, [])
 
   const handleOpenHistory = useCallback(() => setHistoryOpen(true), [])
@@ -212,6 +215,7 @@ export function App() {
               ) : (
                 <HomePage
                   agents={agents}
+                  refreshToken={recentVersion}
                   onSelectAgent={handleSelectAgent}
                   onSelectThread={handleSelectThread}
                   onOpenHistory={handleOpenHistory}

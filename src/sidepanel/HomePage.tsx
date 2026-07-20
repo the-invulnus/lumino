@@ -25,11 +25,13 @@ function CardIcon({ icon }: { icon: string }) {
 
 export function HomePage({
   agents,
+  refreshToken,
   onSelectAgent,
   onSelectThread,
   onOpenHistory
 }: {
   agents: AgentConfig[]
+  refreshToken?: number
   onSelectAgent: (agent: AgentConfig) => void
   onSelectThread: (threadId: string) => void
   onOpenHistory: () => void
@@ -42,7 +44,7 @@ export function HomePage({
     listThreads().then((rows) => {
       setRecentThreads(rows.filter(r => r.messages.length > 0).slice(0, 6))
     }).catch(() => {})
-  }, [])
+  }, [refreshToken])
 
   return (
     <div className="lm-home-page">
