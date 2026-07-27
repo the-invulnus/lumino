@@ -332,12 +332,11 @@
   line-height: var(--lumi-leading-relaxed);
   min-height: 44px;
   max-height: 160px;
-  overflow-y: auto;
+  overflow-y: hidden;  /* 单行默认隐藏滚动；多行时 JS 切为 auto */
   padding: 12px 48px 12px 16px;
   resize: none;
   outline: none;
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+  scrollbar-width: none;  /* 始终隐藏滚动条轨道 */
   transition: border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
               box-shadow var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
 }
@@ -350,11 +349,12 @@
   color: var(--lumi-text-faint);
 }
 
-.lm-input--composer::-webkit-scrollbar { width: 4px; }
-.lm-input--composer::-webkit-scrollbar-track { background: transparent; }
-.lm-input--composer::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; }
-.lm-input--composer:hover::-webkit-scrollbar-thumb { background: var(--lumi-border-strong); }
-.lm-input--composer:hover { scrollbar-color: var(--lumi-border-strong) transparent; }
+/* 多行时开启滚动（由 JS 在 scrollHeight > minHeight 时加这个 class） */
+.lm-input--composer--scrollable {
+  overflow-y: auto;
+}
+
+.lm-input--composer::-webkit-scrollbar { display: none; }
 
 /* Send button: absolutely placed inside the textarea, always bottom-right */
 .lm-composer-send {
@@ -584,6 +584,20 @@
               border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
               color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
 }
+/* 确认弹窗卡片 */
+.lm-confirm-card {
+  background: var(--lumi-tile);
+  border: 1px solid var(--lumi-border);
+  box-shadow: var(--lumi-shadow-elevated);
+}
+.lm-confirm-msg {
+  color: var(--lumi-text);
+}
+.lm-confirm-delete-btn:hover {
+  border-color: #e5484d;
+  color: #e5484d;
+}
+
 .lm-primary-button.lm-agent-form-btn {
   background: var(--lumi-tile-hover);
   border: 1px solid var(--lumi-border-strong);
@@ -998,6 +1012,14 @@
   color: var(--lumi-text-primary);
 }
 
+.lm-chat-view-delete-btn {
+  color: var(--lumi-text-faint);
+}
+.lm-chat-view-delete-btn:hover {
+  background: var(--lumi-danger-bg);
+  color: var(--lumi-danger-text);
+}
+
 /* ================================================
    History Panel
    ================================================ */
@@ -1170,6 +1192,9 @@
 
   :root[data-theme="paper"] .lm-input.lm-input--composer {
     background: #2a2522;
+  }
+  :root[data-theme="paper"] .lm-input.lm-input--composer:focus {
+    border-color: var(--lumi-accent-b);
   }
 
   :root[data-theme="paper"] .lm-history-search-input {

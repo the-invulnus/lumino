@@ -94,6 +94,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState("")
   const [userScrolledUp, setUserScrolledUp] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const hasNewMessages = useRef(false)  // 避免首次挂载就显示"新消息"按钮
   const scrollAnchorRef = useRef<HTMLDivElement>(null)
   const chatScrollRef = useRef<HTMLDivElement>(null)
@@ -107,11 +108,15 @@ export const ChatView = forwardRef<ChatViewHandle, {
   // 自动增高：重置为 auto 再取 scrollHeight，受 min/max-height 约束。
   // 抽成函数 + layoutEffect 在 draft 变化时统一调用，保证首屏、输入、
   // 切换会话、发送清空等所有路径下高度一致，避免「输入瞬间上边缘抖动」。
+  // 单行时锁定 overflow hidden（无滚动条、无晃动），多行时开启 auto 滚动（滚动条隐藏）。
   const autoSizeComposer = useCallback(() => {
     const el = composerRef.current
     if (!el) return
     el.style.height = "auto"
     el.style.height = `${el.scrollHeight}px`
+    const minH = parseFloat(getComputedStyle(el).minHeight) || 44
+    // 强制重排后取 scrollHeight；内容超过 min-height 时开滚动
+    el.classList.toggle("lm-input--composer--scrollable", el.scrollHeight > minH + 2)
   }, [])
 
   useEffect(() => {
@@ -328,6 +333,8 @@ export const ChatView = forwardRef<ChatViewHandle, {
 
     if (sendInFlightMapRef.current[activeThreadIdRef.current]) return
     setDraft("")
+    // 发送后重置滚动状态，确保新的回复消息能自动滚到底
+    setUserScrolledUp(false)
 
     // 如果是新会话，生成标题
     const isNewThread = messages.length === 0
@@ -491,6 +498,20 @@ export const ChatView = forwardRef<ChatViewHandle, {
           )}
         </div>
         <div className="lm-chat-view-header-actions">
+          {/* 删除整个对话（有历史消息时才显示） */}
+          {messages.length > 0 && (
+            <button
+              className="lm-chat-view-delete-btn"
+              title={t("chat.tooltip.deleteThread")}
+              onClick={() => setShowDeleteConfirm(true)}
+              type="button"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </button>
+          )}
           <button
             className="lm-chat-view-new-btn"
             title={t("chat.tooltip.newThread")}
@@ -773,6 +794,35 @@ export const ChatView = forwardRef<ChatViewHandle, {
           ) : null}
         </div>
       </section>
+
+      {/* 删除确认弹窗（始终挂载，靠 class 切换进出动画） */}
+      <div
+        className={`lm-confirm-overlay${showDeleteConfirm ? " lm-confirm-overlay--active" : ""}`}
+        onClick={() => showDeleteConfirm && setShowDeleteConfirm(false)}
+      >
+        <div className="lm-confirm-card" onClick={(e) => e.stopPropagation()}>
+          <p className="lm-confirm-msg">{t("chat.confirmDeleteThread")}</p>
+          <div className="lm-confirm-actions">
+            <button
+              className="lm-primary-button lm-agent-form-btn"
+              onClick={() => setShowDeleteConfirm(false)}
+              type="button"
+            >
+              {t("option.agents.cancel")}
+            </button>
+            <button
+              className="lm-agent-card-btn lm-agent-form-btn lm-confirm-delete-btn"
+              onClick={() => {
+                setShowDeleteConfirm(false)
+                handleDeleteThread(activeThreadId)
+              }}
+              type="button"
+            >
+              {t("option.agents.delete")}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 })

@@ -34,6 +34,8 @@ export const zh: Record<string, string> = {
   // 聊天操作按钮
   "chat.tooltip.rename": "点击修改会话名称",
   "chat.tooltip.newThread": "新建会话",
+  "chat.tooltip.deleteThread": "删除此会话",
+  "chat.confirmDeleteThread": "确认删除？",
   "chat.tooltip.history": "历史会话",
   "chat.action.regenerate": "重新生成",
   "chat.action.copy": "复制",

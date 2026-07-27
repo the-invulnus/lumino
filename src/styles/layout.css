@@ -843,6 +843,7 @@ textarea {
   flex: 1;
   min-height: 0;
   min-width: 0;
+  position: relative;
   /* 不设 overflow: hidden — composer 底部阴影需向下扩散。滚动由 .lm-chat-scroll 自管。 */
 }
 
@@ -898,7 +899,8 @@ textarea {
 }
 
 .lm-chat-view-new-btn,
-.lm-chat-view-history-btn {
+.lm-chat-view-history-btn,
+.lm-chat-view-delete-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -914,14 +916,16 @@ textarea {
 }
 
 .lm-chat-view-new-btn:hover,
-.lm-chat-view-history-btn:hover {
+.lm-chat-view-history-btn:hover,
+.lm-chat-view-delete-btn:hover {
   background: var(--lumi-tile-hover);
   color: var(--lumi-text-primary);
   transform: translateY(-1px);
 }
 
 .lm-chat-view-new-btn:active,
-.lm-chat-view-history-btn:active {
+.lm-chat-view-history-btn:active,
+.lm-chat-view-delete-btn:active {
   transform: translateY(0);
 }
 
@@ -1308,6 +1312,55 @@ textarea {
 .lm-icon-picker-btn svg { width: 16px; height: 16px; }
 .lm-icon-picker-btn:hover { border-color: var(--lumi-border-strong); background: var(--lumi-tile-hover); }
 .lm-icon-picker-btn--active { border-color: var(--lumi-accent-a); background: rgba(167,139,250,0.1); color: var(--lumi-accent-a); }
+
+/* — Confirm dialog（插件内自定义确认弹窗） — */
+.lm-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(45, 38, 34, 0.18);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry),
+              visibility 0s linear var(--lumi-motion-duration-short);
+}
+.lm-confirm-overlay--active {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry),
+              visibility 0s;
+}
+.lm-confirm-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lumi-space-7);
+  width: 280px;
+  padding: var(--lumi-space-8);
+  border-radius: var(--lumi-radius-panel);
+  text-align: center;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry),
+              transform var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry);
+}
+.lm-confirm-overlay--active .lm-confirm-card {
+  opacity: 1;
+  transform: scale(1);
+}
+.lm-confirm-msg {
+  font-size: var(--lumi-text-base);
+  line-height: var(--lumi-leading-relaxed);
+  margin: 0;
+}
+.lm-confirm-actions {
+  display: flex;
+  gap: var(--lumi-space-4);
+  justify-content: center;
+}
 
 /* — Segmented control（分段选择器，用于语言切换等二选一/多选一） — */
 .lm-segmented { display: inline-flex; gap: var(--lumi-space-3); }

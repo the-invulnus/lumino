@@ -34,6 +34,8 @@ export const en: Record<string, string> = {
   // 聊天操作按钮
   "chat.tooltip.rename": "Click to rename conversation",
   "chat.tooltip.newThread": "New conversation",
+  "chat.tooltip.deleteThread": "Delete this conversation",
+  "chat.confirmDeleteThread": "Delete this conversation?",
   "chat.tooltip.history": "History",
   "chat.action.regenerate": "Regenerate",
   "chat.action.copy": "Copy",
