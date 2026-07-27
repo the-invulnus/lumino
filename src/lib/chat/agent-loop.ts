@@ -12,12 +12,6 @@ import { buildAgentMessages } from "./system-prompt"
 import { getLuminoAgentTools } from "./tool-definitions"
 
 const MAX_AGENT_STEPS = 100
-// 生产构建关闭调试日志。debugLog 会序列化整个错误对象（含 fetch 请求体/headers），
-// 生产环境可能泄露敏感信息，故默认 false；开发时手动改 true。
-const DEBUG_AGENT = false
-function debugLog(...args: unknown[]) {
-  if (DEBUG_AGENT) console.log("[lumino:agent]", ...args)
-}
 
 // ═══════════════ OpenAI → AI SDK ModelMessage ═══════════════
 
@@ -220,12 +214,29 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMes
   const tools = await getLuminoAgentTools(toolFilter) as unknown as ToolSet
 
   // OpenAI provider（强制 Chat API）
+  let fetchCallCount = 0
   const openai = createOpenAI({
     apiKey: settings.apiKey,
     baseURL: settings.baseUrl,
     fetch: async (url, init) => {
       if (signal?.aborted) throw new DOMException("用户中止了请求", "AbortError")
-      return fetch(url, { ...init, signal: signal ?? init?.signal })
+      fetchCallCount++
+      const callIdx = fetchCallCount
+      // 注入 thinking:disabled 到请求体（deepseek 等模型需要 extra_body）
+      let patchedInit = init
+      if (init?.body) {
+        try {
+          const body = JSON.parse(init.body as string)
+          body.thinking = { type: "disabled" }
+          patchedInit = { ...init, body: JSON.stringify(body) }
+        } catch { /* body 非 JSON */ }
+      }
+      const res = await fetch(url, { ...patchedInit, signal: signal ?? init?.signal })
+      // 克隆响应体，记录原始内容
+      const cloned = res.clone()
+      const resText = await cloned.text()
+      console.log(`[lumino:agent] 🔽 HTTP #${callIdx} status=${res.status}, body=`, resText.slice(0, 3000))
+      return res
     }
   })
 
@@ -240,10 +251,7 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMes
     { role: "user", content: userInput }
   ]
 
-  debugLog(`Agent 启动，历史=${historyMessages.length}，工具=${Object.keys(tools).length}，工具名=${Object.keys(tools).join(",")}，model=${settings.model}`)
-
   try {
-    debugLog("→ 调用 generateText...")
     const result = await generateText({
       model: openai.chat(settings.model as any),
       system: systemPrompt,
@@ -272,8 +280,6 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMes
         if (onMessagesUpdate) await onMessagesUpdate(accumulatedMessages)
       }
     })
-    debugLog("← generateText 返回")
-
     const stepCount = result.steps?.length ?? 0
     // 达到步数上限时追加提示，让用户知道 agent 被截断了
     if (stepCount >= MAX_AGENT_STEPS && !result.text) {
@@ -284,41 +290,12 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMes
       if (onMessagesUpdate) await onMessagesUpdate(accumulatedMessages)
     }
 
-    debugLog(`Agent 结束，耗时 ${Date.now() - startTime}ms，步骤=${stepCount}，最终消息数=${accumulatedMessages.length}`)
     return accumulatedMessages
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
-      debugLog("Agent 被用户中止")
       throw err
     }
-    // AI SDK v6 AI_RetryError 包含 lastError / reason / errors，message 中可能缺失详情
-    if (err instanceof Error) {
-      const retryErr = err as { reason?: string; lastError?: unknown; errors?: unknown[] }
-      console.error("[lumino:agent] 执行出错:", err.message)
-      if (retryErr.reason) console.error("[lumino:agent]   原因:", retryErr.reason)
-      if (retryErr.lastError) {
-        const lastErr = retryErr.lastError as Error
-        console.error("[lumino:agent]   最后一次错误:", lastErr.message || lastErr)
-        if (lastErr.cause) console.error("[lumino:agent]   cause:", lastErr.cause)
-        // 打印 lastError 的全部可枚举属性
-        const props = Object.entries(lastErr).filter(([k]) => k !== "message")
-        if (props.length > 0) console.error("[lumino:agent]   属性:", Object.fromEntries(props))
-      }
-      if (retryErr.errors) {
-        console.error("[lumino:agent]   全部错误列表:")
-        for (let i = 0; i < retryErr.errors.length; i++) {
-          const e = retryErr.errors[i] as Error | undefined
-          console.error(`[lumino:agent]     [${i + 1}]`, e?.message || e)
-        }
-      }
-      // 如果连 message 都没有，打印原始 object
-      if (!err.message) {
-        console.error("[lumino:agent]   原始错误对象:", JSON.parse(JSON.stringify(err)))
-      }
-    } else {
-      console.error("[lumino:agent] 执行出错:", err)
-    }
-    debugLog("Agent 出错:", err)
+    console.error("[lumino:agent] 执行出错:", err)
     throw err
   }
 }

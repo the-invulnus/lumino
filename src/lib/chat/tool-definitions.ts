@@ -185,14 +185,6 @@ export const getPageContentTool = luminoTool({
   })
 })
 
-export const takeSelectionTool = luminoTool({
-  name: "take_selection",
-  description: "获取用户在页面中选中的文本。",
-  inputSchema: z.z.object({
-    tab_id: z.z.number().int().describe("目标标签页的 ID。不传则使用当前活跃标签页。").optional()
-  })
-})
-
 // ═══════════════════════════════════════════
 // 浏览器交互工具
 // ═══════════════════════════════════════════
@@ -346,7 +338,7 @@ export const BASE_TOOLS = [
   // 浏览器系统
   currentPageTool, tabsTool, getActiveTabIdTool,
   // 页面阅读
-  getPageContentTool, takeSelectionTool,
+  getPageContentTool,
   // 浏览器交互
   inspectElementTool, fillFormTool, clickElementTool, screenshotTool,
   scrollTool, pressKeyTool, navigateTool, closeTabTool,
@@ -413,13 +405,15 @@ export async function getLuminoAgentTools(toolFilter?: string[]): Promise<Record
   }
 
   // Obsidian MCP 工具：从客户端动态获取
+  // 若 toolFilter 包含 "mcp:*" 通配符，则 MCP 工具全量注入（不做过滤）
+  const includeMcp = !toolFilter || toolFilter.length === 0 || toolFilter.includes("mcp:*")
   try {
     const client = getObsidianMcpClient()
     if (client?.isConnected) {
       const serverTools = await client.listTools()
       for (const st of serverTools) {
-        // 如果指定了 toolFilter，MCP 工具也需要过滤
-        if (toolFilter && toolFilter.length > 0 && !toolFilter.includes(st.name)) continue
+        // 如果指定了 toolFilter 且没有 mcp:* 通配符，MCP 工具也需要过滤
+        if (!includeMcp && !toolFilter!.includes(st.name)) continue
 
         try {
           const zodSchema = jsonSchemaToZod(st.inputSchema as Record<string, unknown>)

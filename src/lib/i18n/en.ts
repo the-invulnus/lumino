@@ -144,8 +144,7 @@ export const en: Record<string, string> = {
 
   // 页面阅读工具
   "tool.get_page_content.desc": "Read the visible text content of the current page",
-  "tool.take_selection.desc": "Get the text selected by the user on the page",
-
+  
   // 浏览器交互工具
   "tool.inspect_element.desc": "Inspect the DOM structure of interactive elements",
   "tool.fill_form.desc": "Auto-fill a form on the page",

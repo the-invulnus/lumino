@@ -27,7 +27,7 @@ export const SEMI_STATIC_SYSTEM_PROMPT = `## 文件系统
 
 ### 标签页锁定（重要）
 - 每次会话中涉及浏览器操作时，首先调用 get_active_tab_id 获取当前标签页 ID
-- 所有浏览器工具（get_page_content、take_selection、inspect_element、fill_form、click_element、screenshot）都支持 tab_id 参数
+- 所有浏览器工具（get_page_content、inspect_element、fill_form、click_element、screenshot）都支持 tab_id 参数
 - 后续所有浏览器操作必须传入相同的 tab_id，确保始终操作用户最初让你工作的页面，不受用户切换标签页影响
 - 不传 tab_id 时默认使用当前活跃标签页（可能已被用户切换）
 
@@ -45,8 +45,6 @@ export const SEMI_STATIC_SYSTEM_PROMPT = `## 文件系统
   - mode="text"（默认）提取正文；mode="structured" + selector 提取结构化列表
   - 通过 selector 参数可精确提取某个区域，如 selector=".article-content"
   - 通过 max_chars 控制返回长度，默认 8000 字符
-- 使用 take_selection 获取用户在页面中选中的文本
-  - 用户说"翻译这段""解释这段""总结这段"→ 先用 take_selection 获取选中内容
 - 使用 inspect_element 探查页面 DOM 结构
   - 传入 CSS 选择器精确探查某个元素；不传则智能探测交互区域
   - 返回元素标签、属性、交互性、候选选择器、子元素树（depth 控制深度）
@@ -64,7 +62,6 @@ export const SEMI_STATIC_SYSTEM_PROMPT = `## 文件系统
 - 用户说"帮我填""自动填表"→ 先用 inspect_element 探查 DOM，再用 fill_form/click_element 操作
 - 用户说"点那个按钮"→ 调用 click_element
 - 用户说"截图""看看长什么样"→ 调用 screenshot
-- 用户说"翻译/总结/解释这段"且未指定内容来源 → 先用 take_selection 获取选中文本
 
 ## 日常工作流
 

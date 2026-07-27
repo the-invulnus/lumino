@@ -19,7 +19,6 @@ import {
 import { isObsidianConfigured, getObsidianSettings } from "../settings"
 import {
   handleGetPageContent,
-  handleTakeSelection,
   handleInspectElement,
   handleFillForm,
   handleClickElement,
@@ -60,7 +59,6 @@ function registerBaseTools(): void {
 
   // 页面阅读工具
   registerTool("get_page_content", handleGetPageContent)
-  registerTool("take_selection", handleTakeSelection)
 
   // 浏览器交互工具
   registerTool("inspect_element", handleInspectElement)

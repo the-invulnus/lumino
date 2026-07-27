@@ -39,7 +39,6 @@ const TOOL_GROUPS: { labelKey: string; tools: { name: string; descKey: string }[
       { name: "tabs", descKey: "tool.tabs.desc" },
       { name: "get_active_tab_id", descKey: "tool.get_active_tab_id.desc" },
       { name: "get_page_content", descKey: "tool.get_page_content.desc" },
-      { name: "take_selection", descKey: "tool.take_selection.desc" },
       { name: "inspect_element", descKey: "tool.inspect_element.desc" },
       { name: "fill_form", descKey: "tool.fill_form.desc" },
       { name: "click_element", descKey: "tool.click_element.desc" },

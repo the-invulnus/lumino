@@ -37,12 +37,21 @@ export async function executeToolCall(
     const rawResult = await handler(args)
 
     // 驱逐判定：大工具结果自动写入 OPFS，用预览替换返回内容
-    return await maybeEvictToolResult(rawResult, call.id, name)
+    const evicted = await maybeEvictToolResult(rawResult, call.id, name)
+
+    // 工具返回 error 字段时加日志，方便定位 agent 静默停止的原因
+    if (evicted.startsWith('{"error"')) {
+      console.warn(`[lumino:agent] tool ${name} returned error:`, evicted.slice(0, 200))
+    }
+
+    return evicted
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error)
+    console.warn(`[lumino:agent] tool ${name} threw:`, errMsg)
     return JSON.stringify({
       error: "tool_execution_failed",
       name,
-      message: error instanceof Error ? error.message : String(error)
+      message: errMsg
     })
   }
 }

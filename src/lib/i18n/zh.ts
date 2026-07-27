@@ -144,8 +144,7 @@ export const zh: Record<string, string> = {
 
   // 页面阅读工具
   "tool.get_page_content.desc": "读取当前页面的可见文本内容",
-  "tool.take_selection.desc": "获取用户在页面中选中的文本",
-
+  
   // 浏览器交互工具
   "tool.inspect_element.desc": "探查页面可交互元素的 DOM 结构",
   "tool.fill_form.desc": "在页面中自动填充表单",

@@ -108,7 +108,7 @@ const FS_TOOLS = ["ls", "read_file", "write_file", "edit_file", "glob", "grep", 
 const SYSTEM_TOOLS = ["current_page", "tabs", "get_active_tab_id"]
 
 /** 页面阅读工具 */
-const PAGE_READING_TOOLS = ["get_page_content", "take_selection"]
+const PAGE_READING_TOOLS = ["get_page_content"]
 
 /** 浏览器交互工具 */
 const BROWSER_INTERACTION_TOOLS = [
@@ -152,7 +152,11 @@ export const BUILTIN_AGENTS: AgentConfig[] = [
       ...PAGE_READING_TOOLS,
       "inspect_element", "screenshot", "scroll",
       "navigate", "close_tab",
-      "scrape_structure"
+      "scrape_structure",
+      // 文件系统工具（调研结果保存到工作区/Obsidian）
+      "read_file", "write_file", "ls",
+      // Obsidian MCP 工具（运行时动态注入，不受 toolFilter 限制）
+      "mcp:*"
     ],
     order: 1
   },

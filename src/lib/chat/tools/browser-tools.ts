@@ -10,6 +10,21 @@ import {
   RETRY_DELAY_MS
 } from "./browser-utils"
 
+// ── 等待 tab 加载完成（最多 15s，避免 navigate 后立即 get_page_content 失败）──
+async function waitForTabLoad(tabId: number, timeoutMs = 8_000): Promise<void> {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const tab = await chrome.tabs.get(tabId)
+      if (!tab) return
+      if (tab.status === "complete") return
+    } catch {
+      return  // tab 不存在
+    }
+    await new Promise((r) => setTimeout(r, 300))
+  }
+}
+
 // ── get_page_content ──
 // 提取当前页面文本内容，支持两种模式。
 // 完整内容始终通过 executeScript 获取，然后在 handleGetPageContent 中
@@ -113,62 +128,6 @@ export async function handleGetPageContent(
   } catch (error) {
     return JSON.stringify({
       error: "get_page_content_failed",
-      message: error instanceof Error ? error.message : String(error)
-    })
-  }
-}
-
-// ── take_selection ──
-// 获取用户在页面中选中的文本
-
-export async function handleTakeSelection(
-  args: Record<string, unknown>
-): Promise<string> {
-  let tabId: number
-  try {
-    tabId = await resolveTabId(args)
-  } catch {
-    return JSON.stringify({ error: "no_tab_id" })
-  }
-
-  try {
-    const [result] = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => {
-        const sel = window.getSelection()
-        if (!sel || sel.isCollapsed) {
-          return JSON.stringify({ selected: false, message: "当前页面没有选中文本" })
-        }
-
-        const range = sel.getRangeAt(0)
-        const container = range.commonAncestorContainer
-        const parentEl = container.nodeType === 3 ? container.parentElement : container as Element
-
-        return JSON.stringify({
-          selected: true,
-          text: sel.toString(),
-          length: sel.toString().length,
-          // 提供上下文：选中文本前后各取一点周围文本
-          context_before: parentEl?.textContent?.slice(
-            Math.max(0, (parentEl.textContent.indexOf(sel.toString()) - 50)),
-            parentEl.textContent.indexOf(sel.toString())
-          )?.trim() || null,
-          context_after: parentEl?.textContent?.slice(
-            parentEl.textContent.indexOf(sel.toString()) + sel.toString().length,
-            parentEl.textContent.indexOf(sel.toString()) + sel.toString().length + 50
-          )?.trim() || null
-        })
-      }
-    })
-
-    if (!result || !result.result) {
-      return JSON.stringify({ error: "execute_script_failed" })
-    }
-
-    return typeof result.result === "string" ? result.result : JSON.stringify(result.result)
-  } catch (error) {
-    return JSON.stringify({
-      error: "take_selection_failed",
       message: error instanceof Error ? error.message : String(error)
     })
   }
@@ -751,6 +710,19 @@ export async function handleNavigate(
       // 新开后台标签页
       const agentWinId = await getAgentWindowId()
       tab = await chrome.tabs.create({ url: normalizedUrl, active: false, ...(agentWinId != null ? { windowId: agentWinId } : {}) })
+    }
+
+    // 等待页面加载完成再返回，避免 agent 拿到 tab_id 后立即调用 get_page_content
+    // 时页面尚未渲染，导致 executeScript 注入失败
+    if (tab.id) {
+      await waitForTabLoad(tab.id)
+      // 重新获取 tab 信息，确保 url/title 是加载完成后的值
+      try {
+        const loaded = await chrome.tabs.get(tab.id)
+        tab = loaded
+      } catch {
+        // tab 可能已被关闭
+      }
     }
 
     return JSON.stringify({
