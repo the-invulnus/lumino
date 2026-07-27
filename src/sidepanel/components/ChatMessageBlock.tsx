@@ -10,7 +10,8 @@ function renderMarkdown(text: string): JSX.Element {
   const rawHtml = marked.parse(text, { async: false }) as string
   // 消毒：LLM 回复（或被 prompt injection）可能含 <script>/<img onerror> 等，
   // side panel 运行在扩展上下文，XSS 等于扩展被接管，必须过滤。
-  const html = DOMPurify.sanitize(rawHtml, {
+  // trim 末尾换行防止 white-space: pre-wrap 产生底部空行
+  const html = DOMPurify.sanitize(rawHtml.trimEnd(), {
     USE_PROFILES: { html: true },
     FORBID_TAGS: ["script", "style"],
     FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover"]

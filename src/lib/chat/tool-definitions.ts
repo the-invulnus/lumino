@@ -2,22 +2,22 @@
  * Lumino 工具定义
  *
  * 架构：
- * - 基础工具（memory、fs、browser）→ schema + handler 绑定在一起，直接传给 AI SDK
- * - Obsidian MCP 工具 → schema 静态定义，handler 由 McpClient 动态提供，但写入
- *   toolRegistry 后 schema 的 execute 从中查找
+ * - 基础工具（memory、fs、browser）→ schema + handler 绑定在一起
+ * - Obsidian MCP 工具 → schema 静态定义，handler 由 McpClient 动态提供
  *
  * 关键约定：每个 luminoTool 的 name 必须和 toolRegistry 中 registerTool 的 key 一致。
  * getLuminoAgentTools() 只返回已经实际注册了 handler 的工具，避免 schema 暴露但
  * handler 缺失导致的 "unknown_tool" 错误。
  */
 
-import { tool } from "ai"
 import * as z from "zod"
+import type { LuminoTool } from "../llm/llm-types"
+import { jsonSchemaToZod } from "../llm/zod-to-json-schema"
 import { getObsidianMcpClient } from "./tools/obsidian-mcp"
 import { getToolHandler } from "./tool-executor"
 
 // ═══════════════════════════════════════════
-// luminoTool — AI SDK tool 包装器
+// luminoTool — 工具包装器
 // ═══════════════════════════════════════════
 
 /**
@@ -31,8 +31,9 @@ function luminoTool<NAME extends string, SCHEMA extends z.ZodTypeAny>(opts: {
   description: string
   inputSchema: SCHEMA
   handler?: (args: Record<string, unknown>) => Promise<string>
-}) {
-  const t = tool({
+}): LuminoTool {
+  return {
+    name: opts.name,
     description: opts.description,
     inputSchema: opts.inputSchema,
     execute: opts.handler
@@ -66,9 +67,7 @@ function luminoTool<NAME extends string, SCHEMA extends z.ZodTypeAny>(opts: {
             })
           }
         }
-  })
-  ;(t as any).luminoName = opts.name
-  return t
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -332,7 +331,7 @@ export const fetchResourceTool = luminoTool({
 // 工具列表
 // ═══════════════════════════════════════════
 
-export const BASE_TOOLS = [
+export const BASE_TOOLS: LuminoTool[] = [
   // 文件
   lsTool, readFileTool, writeFileTool, editFileTool, globTool, grepTool, rmTool, exportTool,
   // 浏览器系统
@@ -346,46 +345,8 @@ export const BASE_TOOLS = [
   scrapeStructureTool, scrapeStylesTool, scrapeResourcesTool, fetchResourceTool
 ]
 
-function jsonSchemaToZod(schema: Record<string, unknown>): z.ZodTypeAny {
-  if (!schema || typeof schema !== "object") return z.z.any()
-
-  const s = schema as Record<string, unknown>
-  const type = s.type as string
-
-  if (type === "object") {
-    const props = (s.properties || {}) as Record<string, Record<string, unknown>>
-    const required = (s.required || []) as string[]
-    const shape: Record<string, z.ZodTypeAny> = {}
-    for (const [key, propSchema] of Object.entries(props)) {
-      let field = jsonSchemaToZod(propSchema)
-      if (propSchema.description) {
-        field = field.describe(propSchema.description as string)
-      }
-      if (!required.includes(key)) {
-        field = field.optional()
-      }
-      shape[key] = field
-    }
-    return z.z.object(shape)
-  }
-
-  if (type === "string") {
-    if (s.enum) return z.z.enum(s.enum as [string, ...string[]])
-    return z.z.string()
-  }
-
-  if (type === "number" || type === "integer") return z.z.number()
-  if (type === "boolean") return z.z.boolean()
-  if (type === "array") {
-    const items = s.items as Record<string, unknown> | undefined
-    return z.z.array(items ? jsonSchemaToZod(items) : z.z.any())
-  }
-
-  return z.z.any()
-}
-
 /**
- * 获取当前可用的 AI SDK 工具集。
+ * 获取当前可用的 Lumino 工具集。
  *
  * Obsidian 工具从 MCP client.listTools() 动态获取 schema 和 description，
  * 不再是静态定义。只有 MCP 已连接且 handler 已注册时才暴露。
@@ -393,15 +354,13 @@ function jsonSchemaToZod(schema: Record<string, unknown>): z.ZodTypeAny {
  * @param toolFilter - 可选，工具名称白名单。传入后只返回匹配的工具（用于模式过滤）。
  *                     不传则返回全部工具。
  */
-export async function getLuminoAgentTools(toolFilter?: string[]): Promise<Record<string, any>> {
-  const tools: Record<string, any> = {}
+export async function getLuminoAgentTools(toolFilter?: string[]): Promise<LuminoTool[]> {
+  const tools: LuminoTool[] = []
 
   // 基础工具始终可用（可按 toolFilter 过滤）
   for (const t of BASE_TOOLS) {
-    const name = (t as any).luminoName as string
-    if (!name) continue
-    if (toolFilter && toolFilter.length > 0 && !toolFilter.includes(name)) continue
-    tools[name] = t
+    if (toolFilter && toolFilter.length > 0 && !toolFilter.includes(t.name)) continue
+    tools.push(t)
   }
 
   // Obsidian MCP 工具：从客户端动态获取
@@ -417,12 +376,13 @@ export async function getLuminoAgentTools(toolFilter?: string[]): Promise<Record
 
         try {
           const zodSchema = jsonSchemaToZod(st.inputSchema as Record<string, unknown>)
-          tools[st.name] = tool({
+          tools.push({
+            name: st.name,
             description: st.description || "",
             inputSchema: zodSchema,
-            execute: async (args) => {
+            execute: async (args: Record<string, unknown>) => {
               try {
-                return await client.callTool(st.name, args as Record<string, unknown>)
+                return await client.callTool(st.name, args)
               } catch (error) {
                 return JSON.stringify({
                   error: "obsidian_mcp_failed",

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react"
 
-import type { LlmSettings } from "./lib/llm/types"
+import type { LlmSettings } from "./lib/llm/llm-types"
 import {
   getLlmSettings,
   saveLlmSettings,

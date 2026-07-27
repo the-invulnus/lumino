@@ -5,7 +5,7 @@ import {
   hasCompleteLlmSettings,
   saveLlmSettings
 } from "./settings"
-import type { LlmSettings } from "./llm/types"
+import type { LlmSettings } from "./llm/llm-types"
 
 function createStorageArea(initial: Partial<LlmSettings> = {}) {
   let stored = { ...initial }

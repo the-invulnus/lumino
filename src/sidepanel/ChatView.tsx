@@ -26,7 +26,7 @@ import {
   type ChatThreadRecord
 } from "../lib/chat/thread-idb"
 import type { AgentConfig } from "../lib/chat/mode-config"
-import type { LlmSettings } from "../lib/llm/types"
+import type { LlmSettings } from "../lib/llm/llm-types"
 import { getLlmSettings, hasCompleteLlmSettings } from "../lib/settings"
 import { useT } from "../lib/i18n"
 import { formatRelativeTime } from "../lib/format-time"
@@ -112,11 +112,17 @@ export const ChatView = forwardRef<ChatViewHandle, {
   const autoSizeComposer = useCallback(() => {
     const el = composerRef.current
     if (!el) return
+    const maxH = 160
     el.style.height = "auto"
-    el.style.height = `${el.scrollHeight}px`
-    const minH = parseFloat(getComputedStyle(el).minHeight) || 44
-    // 强制重排后取 scrollHeight；内容超过 min-height 时开滚动
-    el.classList.toggle("lm-input--composer--scrollable", el.scrollHeight > minH + 2)
+    const scrollH = el.scrollHeight
+    // 内容超过 max-height 时锁定高度 + 开启滚动；否则自动撑高
+    if (scrollH > maxH) {
+      el.style.height = `${maxH}px`
+      el.classList.add("lm-input--composer--scrollable")
+    } else {
+      el.style.height = `${scrollH}px`
+      el.classList.remove("lm-input--composer--scrollable")
+    }
   }, [])
 
   useEffect(() => {

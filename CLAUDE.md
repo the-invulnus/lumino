@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-Lumino 是一款基于 Plasmo 框架构建的 Chrome 浏览器扩展，定位为「多模式 AI 助手」。用户通过 Side Panel 从首页选择功能模式，进入对应的 Agent 对话界面。每个 Agent 模式有不同的系统提示词和工具子集，适应搜索调研、设计复刻、页面操控等场景。用户可在 Options 页创建自定义 Agent。AI 通过 Agent 框架（Vercel AI SDK v6）自主调度内置工具系统，可读取网页内容、操作 DOM、管理文件、存取 Obsidian 笔记。配备 OPFS 文件系统工作区。
+Lumino 是一款基于 Plasmo 框架构建的 Chrome 浏览器扩展，定位为「多模式 AI 助手」。用户通过 Side Panel 从首页选择功能模式，进入对应的 Agent 对话界面。每个 Agent 模式有不同的系统提示词和工具子集，适应搜索调研、设计复刻、页面操控等场景。用户可在 Options 页创建自定义 Agent。AI 通过自研 Agent 循环（`while(true)` + tool calling）自主调度内置工具系统，可读取网页内容、操作 DOM、管理文件、存取 Obsidian 笔记。配备 OPFS 文件系统工作区。
 
 （文档更新有滞后性，如果发现代码实现与本文档说明不符，一律以代码实现为准。）
 
@@ -14,9 +14,9 @@ Lumino 是一款基于 Plasmo 框架构建的 Chrome 浏览器扩展，定位为
 |---|---|
 | 框架 | [Plasmo](https://docs.plasmo.com/) 0.90.5 |
 | UI | React 18 + TypeScript 5.3 |
-| Agent 框架 | [Vercel AI SDK v6](https://sdk.vercel.ai/) (`ai@6.0.190`) |
-| LLM Provider | `@ai-sdk/openai@3.0.65`（OpenAI 兼容协议） |
-| Schema 校验 | zod@4.4.3（AI SDK tool() inputSchema 使用） |
+| Agent 框架 | 自研 `LlmClient` + `runAgentLoop()`（`while(true)` + tool calling） |
+| LLM Provider | 自研 `LlmClient`（OpenAI 兼容协议，非流式/流式） |
+| Schema 校验 | zod@3.25.76（工具 inputSchema 定义） |
 | 样式 | 纯 CSS 三层架构 + 多主题切换（tokens / layout / components） |
 | 包管理 | pnpm |
 | 测试 | Vitest + jsdom |
@@ -101,14 +101,14 @@ BUILTIN_AGENTS (builtin-agents.ts)  +  customAgents (chrome.storage.sync)
                                                     runAgentLoop()
                                                                │
                                                     ┌──────────▼──────────┐
-                                                    │   agent-loop.ts     │
-                                                    │  AI SDK generateText│
-                                                    │  + onStepFinish     │
+                                                    │  llm/agent-loop.ts  │
+                                                    │  while(true) +      │
+                                                    │  LlmClient.chat()   │
                                                     └──────────┬──────────┘
                                                                │
                                                     ┌──────────▼──────────┐
                                                     │  tool-definitions.ts│
-                                                    │  tool() + zod v4    │
+                                                    │  LuminoTool + zod   │
                                                     │  ↓ execute 调用     │
                                                     │  tool-executor.ts   │
                                                     │  ↓ handler 路由     │
@@ -116,29 +116,35 @@ BUILTIN_AGENTS (builtin-agents.ts)  +  customAgents (chrome.storage.sync)
                                                     └─────────────────────┘
 ```
 
-### Agent 循环 (agent-loop.ts)
+### Agent 循环
 
-使用 AI SDK v6 的 `generateText()` 替代手写 `while(true)` 循环：
+两层架构分离：
 
-- **模型调用**：`openai.chat(model)` — 强制使用 Chat Completions API（非 Responses API）
-- **工具集成**：`tools` 参数传入 AI SDK `ToolSet`，由 SDK 自动管理 tool call → tool result 的循环
-- **最大步数**：`stopWhen: stepCountIs(15)`
-- **每步回调**：`onStepFinish` 中调用 `appendStepMessages()` 将当前步骤的 assistant 消息 + tool results 追加到累积数组，然后通过 `onMessagesUpdate` 回调推送给 background.ts
-- **消息格式转换**：`openAiToModelMessages()` 将 IndexedDB 中存储的 `OpenAiChatMessage[]` 转为 AI SDK 要求的 `ModelMessage[]`
+**底层 `src/lib/llm/agent-loop.ts`** — 核心循环，不与 Lumino 业务耦合：
+- `while(true)` + `LlmClient.chat()` 实现多轮 tool calling
+- 消息格式全程使用 OpenAI 原生格式（`LlmMessage`），无格式转换
+- 最大步数默认 100，每步完成后回调 `onStepFinish`
+- 支持 `AbortSignal` 中止、自定义 `fetch`、超时控制
 
-关键类型转换：
-```
-OpenAiChatMessage[]  ──openAiToModelMessages()──→  ModelMessage[]
-    ↑                                                      │
-    │                              generateText({ messages, tools, onStepFinish })
-    │                                                      │
-    └────────── appendStepMessages() ←─────────────────────┘
-                    (累积完整消息)
-```
+**上层 `src/lib/chat/agent-loop.ts`** — 薄包装层：
+- 调用 `buildAgentMessages()` 构建系统提示词
+- 调用 `getLuminoAgentTools()` 获取工具列表（`LuminoTool[]`）
+- 创建 `LlmClient`（配置 `thinking: { type: "disabled" }` + HTTP 日志）
+- 管理 `accumulatedMessages` 用于 UI 推送
+
+### LlmClient (`src/lib/llm/llm-client.ts`)
+
+OpenAI 兼容的 LLM 调用客户端，统一封装非流式/流式两种模式：
+
+- `chat(messages, tools?, options?)` → 非流式，返回 `LlmResponse { text, toolCalls, usage? }`
+- `chatStream(messages, tools?, onChunk, options?)` → SSE 流式，逐 token 回调
+- 支持 `LlmConfig` 配置：`maxTokens`, `temperature`, `topP`, `thinking`, `extraBody`
+- 支持图片输入：user message 的 `content` 可为 `ContentPart[]`（`{ type: "text" }` | `{ type: "image_url" }`）
+- 当前应用使用非流式 `chat()` 模式
 
 ### 工具定义 (tool-definitions.ts)
 
-使用 AI SDK 的 `tool()` + Zod v4 schema 定义所有工具：
+使用自研 `LuminoTool` 类型 + Zod schema 定义所有工具：
 
 ```ts
 const tool = luminoTool({
@@ -151,9 +157,11 @@ const tool = luminoTool({
 })
 ```
 
-- `luminoTool()` 内部包装 AI SDK `tool()`，`execute` 直接调用 `getToolHandler(name)` 从 `tool-executor.ts` 注册表获取 handler
-- Zod v4 兼容性：使用 `import * as z from "zod"` + `z.z.string()` 模式（Plasmo/Parcel CJS 打包要求）
-- 工具列表分 `BASE_TOOLS`（24个基础工具）+ Obsidian MCP 工具，根据配置动态合并
+- `LuminoTool` 类型：`{ name, description, inputSchema: ZodType, execute: (args) => Promise<string> }`
+- `luminoTool()` 返回 `LuminoTool`，`execute` 直接调用 `getToolHandler(name)` 从 `tool-executor.ts` 注册表获取 handler
+- `getLuminoAgentTools()` 返回 `LuminoTool[]`，Agent 循环中通过 `luminoToolsToOpenAi()` 转为 OpenAI tools 参数
+- Zod Schema 通过 `zodToJsonSchema()` 转为 JSON Schema 传给 LLM
+- 工具列表分 `BASE_TOOLS`（23个基础工具）+ Obsidian MCP 动态工具，根据配置合并
 
 ### 工具注册与执行 (tool-executor.ts)
 
@@ -168,7 +176,7 @@ const tool = luminoTool({
 |------|--------|------|
 | 文件系统 | `ls`, `read_file`, `write_file`, `edit_file`, `glob`, `grep`, `rm`, `export` | `tools/fs-tools.ts` |
 | 浏览器系统 | `current_page`, `tabs`, `get_active_tab_id` | `tools/system-tools.ts` |
-| 页面阅读 | `get_page_content`, `take_selection` | `tools/browser-tools.ts` |
+| 页面阅读 | `get_page_content` | `tools/browser-tools.ts` |
 | 浏览器交互 | `inspect_element`, `fill_form`, `click_element`, `screenshot`, `scroll`, `press_key`, `navigate`, `close_tab` | `tools/browser-tools.ts` |
 | 页面爬取 | `scrape_structure`, `scrape_styles`, `scrape_resources`, `fetch_resource` | `tools/scrape-tools.ts` |
 | Obsidian (MCP) | 运行时动态获取（`vault_list`, `vault_read`, `vault_write` 等） | `mcp/mcp-client.ts` + `tools/obsidian-mcp.ts` |
@@ -185,7 +193,7 @@ const tool = luminoTool({
 | `AGENT_COMPLETE_MESSAGE` | SW → SP | agent 正常完成 / 用户中止后推送最终 messages |
 | `AGENT_ERROR_MESSAGE` | SW → SP | agent 异常终止，携带错误信息 |
 
-**推送策略**：`onStepFinish` 中每次工具调用完成就推送一次完整消息数组。Side Panel 收到后直接 `setMessages(cloneMessages(msgs))` 全量替换。由于 AI SDK 的 `onStepFinish` 会在每次 tool call → tool result 循环后触发，Side Panel 可以实时看到每步进展。
+**推送策略**：Agent 循环中每次 tool call 完成就通过 `onStepFinish` 回调推送一次完整消息数组。Side Panel 收到后直接 `setMessages(cloneMessages(msgs))` 全量替换，实时看到每步进展。
 
 ## 前端 UI 架构
 
@@ -295,11 +303,11 @@ lumino/
 │   │   │   ├── builtin-agents.ts           # 内置 Agent 配置（新增内置 Agent 只需编辑此文件）
 │   │   │   ├── mode-config.ts              # AgentConfig 类型 + 自定义 Agent 加载/保存
 │   │   │   ├── active-thread-storage.ts    # 当前活跃会话（chrome.storage.local）
-│   │   │   ├── agent-loop.ts               # Agent 循环：AI SDK generateText + onStepFinish
-│   │   │   ├── openai-messages.ts          # OpenAI 消息/工具调用类型
+│   │   │   ├── agent-loop.ts               # Agent 循环薄包装（系统提示词 + 工具获取 + LlmClient 创建）
+│   │   │   ├── openai-messages.ts          # OpenAI 消息/工具调用类型（IndexedDB 存储格式）
 │   │   │   ├── system-prompt.ts            # 系统提示词组装（支持 override + 当前时间 + Obsidian）
 │   │   │   ├── thread-idb.ts               # IndexedDB 会话 CRUD（ChatThreadRecord 含 mode 字段）
-│   │   │   ├── tool-definitions.ts         # AI SDK tool() 定义 + getLuminoAgentTools(toolFilter?)
+│   │   │   ├── tool-definitions.ts         # LuminoTool 定义 + getLuminoAgentTools(toolFilter?)
 │   │   │   ├── tool-executor.ts            # 工具注册表 & 统一执行 & getToolHandler
 │   │   │   ├── tool-eviction.ts            # 大结果驱逐 & 定时清理
 │   │   │   ├── tool-registry.ts            # 工具注册入口（registerAllTools）
@@ -314,9 +322,10 @@ lumino/
 │   │   │       ├── browser-tools.test.ts
 │   │   │       └── scrape-tools.test.ts
 │   │   ├── llm/
-│   │   │   ├── types.ts                   # LLM 设置类型
-│   │   │   ├── openai.ts                  # OpenAI 兼容 API 调用（已废弃，由 AI SDK 替代）
-│   │   │   └── openai.test.ts
+│   │   │   ├── llm-types.ts               # 核心类型：LlmConfig, LlmMessage, LlmTool, LuminoTool, LlmResponse 等
+│   │   │   ├── llm-client.ts              # LlmClient 类（chat + chatStream 非流式/流式）
+│   │   │   ├── agent-loop.ts              # 核心 runAgentLoop()（while(true) + tool calling）
+│   │   │   └── zod-to-json-schema.ts      # Zod ↔ JSON Schema 互转（zodToJsonSchema + jsonSchemaToZod）
 │   │   ├── fs/
 │   │   │   ├── types.ts
 │   │   │   ├── fs-ops.ts
@@ -359,8 +368,9 @@ lumino/
 
 ### 已完成
 - 多会话聊天（新建、切换、删除）
-- AI SDK v6 Agent 循环（`generateText` + `onStepFinish` 流式推送）
-- 24 个内置工具（浏览器交互、文件系统、Obsidian 集成、页面爬取），加上 Obsidian MCP 动态工具
+- 自研 Agent 循环（`while(true)` + `LlmClient.chat()`，替代 AI SDK）
+- 自研 `LlmClient`（非流式/流式，支持图片输入、LLM 参数配置）
+- 23 个内置工具（浏览器交互、文件系统、Obsidian 集成、页面爬取），加上 Obsidian MCP 动态工具
 - 前端消息合并渲染（同轮 agent 多步消息合并为一个气泡）
 - 标签页锁定机制（agent 不受用户切换 tab 影响）
 - 大结果驱逐 + 定时清理
@@ -368,9 +378,10 @@ lumino/
 - 悬浮按钮注入 `<all_urls>`
 - 三主题切换系统（Paper/ORYZO/Fictional）
 - 页面爬取工具（scrape_structure/scrape_styles/scrape_resources/fetch_resource）
+- 中英文 i18n 运行时切换（自建轻量方案，默认英文）
+- Markdown 渲染 + DOMPurify 消毒
 
 ### 待扩展
-- Markdown 渲染（当前助手回复为纯文本）
 - Agent 请求重试 / 错误恢复机制
 - 工具可进一步扩展（书签管理、标签分组等浏览器能力）
 - 测试覆盖可进一步加强（fs / obsidian 模块）

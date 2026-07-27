@@ -1,4 +1,4 @@
-import type { LlmSettings } from "./llm/types"
+import type { LlmSettings } from "./llm/llm-types"
 
 type StorageArea = Pick<typeof chrome.storage.sync, "get" | "set">
 

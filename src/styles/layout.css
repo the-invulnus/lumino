@@ -435,6 +435,7 @@ textarea {
 
 .lm-chat-md {
   white-space: pre-wrap;
+  padding-block: 4px;
 }
 
 .lm-chat-md > * { margin: 0; }
@@ -494,11 +495,10 @@ textarea {
 /* — Composer — */
 .lm-composer {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   flex-shrink: 0;
-  gap: 6px;
-  /* wrapper for textarea positioning context */
-  position: relative;
+  gap: 8px;
+  align-items: center;
 }
 
 .lm-input--composer {
@@ -506,7 +506,7 @@ textarea {
 }
 
 .lm-composer-send {
-  /* absolute within .lm-composer (positioning context) */
+  /* flex item within .lm-composer row */
 }
 
 /* — Side nav — */
@@ -1337,10 +1337,10 @@ textarea {
 .lm-confirm-card {
   display: flex;
   flex-direction: column;
-  gap: var(--lumi-space-7);
-  width: 280px;
-  padding: var(--lumi-space-8);
-  border-radius: var(--lumi-radius-panel);
+  gap: 12px;
+  width: 220px;
+  padding: 16px;
+  border-radius: var(--lumi-radius-card);
   text-align: center;
   opacity: 0;
   transform: scale(0.92);
