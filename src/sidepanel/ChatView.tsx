@@ -93,7 +93,10 @@ export const ChatView = forwardRef<ChatViewHandle, {
   const [editingText, setEditingText] = useState("")
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState("")
+  const [userScrolledUp, setUserScrolledUp] = useState(false)
+  const hasNewMessages = useRef(false)  // 避免首次挂载就显示"新消息"按钮
   const scrollAnchorRef = useRef<HTMLDivElement>(null)
+  const chatScrollRef = useRef<HTMLDivElement>(null)
   const composerRef = useRef<HTMLTextAreaElement>(null)
   const activeThreadIdRef = useRef("")
   const sendInFlightMapRef = useRef<Record<string, boolean>>({})
@@ -179,9 +182,25 @@ export const ChatView = forwardRef<ChatViewHandle, {
     return () => { cancelled = true }
   }, [agent.id])
 
+  // 自动滚动到底部（仅当用户在底部/未手动上滚时）
   useEffect(() => {
-    scrollAnchorRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "end" })
-  }, [messages, loadingThreadIds, activeThreadId])
+    if (!userScrolledUp) {
+      scrollAnchorRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "end" })
+    }
+    hasNewMessages.current = userScrolledUp
+  }, [messages, loadingThreadIds, activeThreadId, userScrolledUp])
+
+  // 监听用户滚动：滚到底部重置 userScrolledUp，滚离底部则设为 true
+  useEffect(() => {
+    const el = chatScrollRef.current
+    if (!el) return
+    const handle = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 32
+      setUserScrolledUp((prev) => atBottom ? false : prev || !atBottom)
+    }
+    el.addEventListener("scroll", handle, { passive: true })
+    return () => el.removeEventListener("scroll", handle)
+  }, [])
 
   const persistMessages = useCallback(
     async (threadId: string, next: OpenAiChatMessage[]) => {
@@ -400,6 +419,17 @@ export const ChatView = forwardRef<ChatViewHandle, {
     return out
   }, [visibleMessages])
 
+  // 取最后一条 assistant 消息的文本内容（复制时使用，不含工具调用结果）
+  const lastAssistantText = useMemo(() => {
+    for (let i = visibleMessages.length - 1; i >= 0; i--) {
+      const m = visibleMessages[i]
+      if (m.role === "assistant" && typeof m.content === "string" && m.content) {
+        return m.content
+      }
+    }
+    return ""
+  }, [visibleMessages])
+
   const isConfigured = hasCompleteLlmSettings(settings)
   const isLoading = loadingThreadIds.has(activeThreadId)
   const currentThread = threads.find((t) => t.id === activeThreadId)
@@ -500,7 +530,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
           </div>
         ) : null}
 
-        <div className="lm-chat-scroll" role="log" aria-relevant="additions">
+        <div className="lm-chat-scroll" role="log" aria-relevant="additions" ref={chatScrollRef}>
           {isHydrating ? (
             <p className="lm-chat-hint">{t("chat.loading")}</p>
           ) : !activeThreadId ? (
@@ -515,10 +545,6 @@ export const ChatView = forwardRef<ChatViewHandle, {
             mergedMessages.map((item, gIdx) => {
               if (Array.isArray(item)) {
                 const group = item as OpenAiChatMessage[]
-                const groupText = group
-                  .map(m => typeof m.content === 'string' ? m.content : '')
-                  .filter(Boolean)
-                  .join('\n\n')
                 return (
                   <div
                     key={`${activeThreadId}-group-${gIdx}`}
@@ -563,7 +589,9 @@ export const ChatView = forwardRef<ChatViewHandle, {
                         </svg>
                       </button>
                       <button aria-label={t("chat.action.copyMessage")} className="lm-chat-action-btn"
-                        onClick={() => { navigator.clipboard.writeText(groupText).catch(() => {}) }}
+                        onClick={() => {
+                          if (lastAssistantText) navigator.clipboard.writeText(lastAssistantText).catch(() => {})
+                        }}
                         title={t("chat.action.copy")} type="button"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -576,9 +604,8 @@ export const ChatView = forwardRef<ChatViewHandle, {
                           setMessages((prev) => {
                             const next = [...prev]
                             const delStart = prev.indexOf(group[0])
-                            const delEnd = prev.indexOf(group[group.length - 1])
-                            if (delStart >= 0 && delEnd >= delStart) {
-                              next.splice(delStart, delEnd - delStart + 1)
+                            if (delStart >= 0) {
+                              next.splice(delStart, next.length - delStart)
                             }
                             saveThreadMessages(activeThreadId, next).catch(() => {})
                             return next
@@ -649,8 +676,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
                     ) : null}
                     <button aria-label={t("chat.action.copyMessage")} className="lm-chat-action-btn"
                       onClick={() => {
-                        const text = typeof msg.content === "string" ? msg.content : ""
-                        navigator.clipboard.writeText(text).catch(() => {})
+                        if (lastAssistantText) navigator.clipboard.writeText(lastAssistantText).catch(() => {})
                       }}
                       title={t("chat.action.copy")} type="button"
                     >
@@ -663,14 +689,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
                       onClick={() => {
                         setMessages((prev) => {
                           const next = [...prev]
-                          const target = next[msgIndex]
-                          if (target.role === "assistant" && target.tool_calls) {
-                            let i2 = msgIndex + 1
-                            while (i2 < next.length && next[i2].role === "tool") i2++
-                            next.splice(msgIndex, i2 - msgIndex)
-                          } else {
-                            next.splice(msgIndex, 1)
-                          }
+                          next.splice(msgIndex, next.length - msgIndex)
                           saveThreadMessages(activeThreadId, next).catch(() => {})
                           return next
                         })
@@ -688,6 +707,21 @@ export const ChatView = forwardRef<ChatViewHandle, {
                 </div>
               )
             })
+          )}
+          {userScrolledUp && hasNewMessages.current && !isLoading && (
+            <button
+              className="lm-scroll-bottom-btn"
+              type="button"
+              onClick={() => {
+                setUserScrolledUp(false)
+                // 下次 useEffect 触发 scrollIntoView，先立即执行一次
+                setTimeout(() => scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 20)
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
           )}
           <div ref={scrollAnchorRef} />
         </div>

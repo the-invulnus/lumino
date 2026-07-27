@@ -666,6 +666,21 @@
   color: var(--lumi-text-soft);
 }
 
+/* 滚动到底按钮：浮起圆形按钮 */
+.lm-scroll-bottom-btn {
+  background: var(--lumi-tile);
+  border: 1px solid var(--lumi-border-strong);
+  box-shadow: var(--lumi-shadow-panel);
+  color: var(--lumi-text-soft);
+  transition: box-shadow var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              transform var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+.lm-scroll-bottom-btn:hover {
+  box-shadow: var(--lumi-shadow-elevated);
+  color: var(--lumi-text);
+}
+
 /* 工具描述 tooltip：浮起卡片风格，与历史卡片同语言 */
 .lm-tool-tooltip {
   background: var(--lumi-tile);

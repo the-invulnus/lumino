@@ -297,6 +297,7 @@ textarea {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 10px 8px;
+  position: relative;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
@@ -1319,6 +1320,9 @@ textarea {
 
 /* — Tool tooltip（工具描述即时浮层，替代原生 title） — */
 .lm-tool-tooltip { position: fixed; transform: translate(12px, 12px); max-width: 240px; padding: var(--lumi-space-4) var(--lumi-space-5); border-radius: var(--lumi-radius-control); font-size: var(--lumi-text-sm); line-height: var(--lumi-leading-snug); pointer-events: none; z-index: 100; }
+
+/* — 滚动到底按钮（用户上滚后有新消息时显示） — */
+.lm-scroll-bottom-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: none; border-radius: 50%; cursor: pointer; position: absolute; z-index: 5; bottom: 12px; left: 50%; transform: translateX(-50%); }
 
 /* — Tool selector — */
 .lm-tool-selector { display: flex; flex-direction: column; gap: 10px; }
