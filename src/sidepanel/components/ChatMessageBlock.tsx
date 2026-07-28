@@ -36,7 +36,7 @@ function renderMarkdown(text: string): JSX.Element {
 }
 
 /** 隐藏内部标记前缀（如 Current Time），不暴露给 UI */
-const HIDDEN_PREFIX = /^Current Time: \d{4}-\d{2}-\d{2}.+\n\n/
+const HIDDEN_PREFIX = /^\[Current Time: \d{4}-\d{2}-\d{2}.+\]\n\n/
 
 export function displayContent(content: string): string {
   return content.replace(HIDDEN_PREFIX, "")

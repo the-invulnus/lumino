@@ -28,7 +28,7 @@ const MAX_AGENT_STEPS = 100
 function buildUserInputWithTime(userInput: string): string {
   const now = new Date()
   const timeStr = now.toISOString() + " (" + now.toLocaleString("en-US", { timeZone: "Asia/Shanghai" }) + ")"
-  return `Current Time: ${timeStr}\n\n${userInput}`
+  return `[Current Time: ${timeStr}]\n\n${userInput}`
 }
 
 export type AgentLoopInput = {
