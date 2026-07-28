@@ -403,10 +403,13 @@ export async function handleGrep(
 export async function handleRm(
   args: Record<string, unknown>
 ): Promise<string> {
-  const path = args.path as string
-  await deleteWorkspaceFile(path)
+  const filePath = (args.file_path as string) || ""
+  if (!filePath) {
+    return JSON.stringify({ error: "missing_path", message: "请提供要删除的文件路径" })
+  }
+  await deleteWorkspaceFile(filePath)
 
-  return `已删除：${path}`
+  return `已删除：${filePath}`
 }
 
 // ── export ──

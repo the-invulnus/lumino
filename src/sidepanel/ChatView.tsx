@@ -42,7 +42,7 @@ import {
   type AgentCompleteMessage,
   type AgentErrorMessage
 } from "../lib/side-panel-bridge"
-import { ChatMessageBlock, formatMessagePreview } from "./components/ChatMessageBlock"
+import { ChatMessageBlock, displayContent, formatMessagePreview } from "./components/ChatMessageBlock"
 import blackCatGif from "data-base64:~black_cat.gif"
 
 function SendArrowIcon() {
@@ -605,7 +605,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
                           const prevUser = messages[prevUserIdx]
                           const newHistory = messages.slice(0, prevUserIdx)
                           saveThreadMessages(activeThreadId, newHistory).catch(() => {})
-                          doSend(newHistory, formatMessagePreview(prevUser))
+                          doSend(newHistory, displayContent(formatMessagePreview(prevUser)))
                         }}
                         title={t("chat.action.regenerate")} type="button"
                       >
@@ -692,7 +692,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
                     {msg.role === "user" && !isEditingThis ? (
                       <button aria-label={t("chat.action.editMessage")} className="lm-chat-action-btn"
                         disabled={sendInFlightMapRef.current[activeThreadId]}
-                        onClick={() => { setEditingIndex(msgIndex); setEditingText(formatMessagePreview(msg)) }}
+                        onClick={() => { setEditingIndex(msgIndex); setEditingText(displayContent(formatMessagePreview(msg))) }}
                         title={t("chat.action.edit")} type="button"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

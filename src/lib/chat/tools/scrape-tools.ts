@@ -11,7 +11,7 @@
  */
 
 import { writeWorkspaceFile } from "../../fs/workspace"
-import { resolveTabId, executeScriptWithRetry, EVICT_DIR } from "./browser-utils"
+import { resolveTabId, executeScriptWithRetry, EVICT_DIR, DOWNLOADS_DIR } from "./browser-utils"
 import { getAgentWindowId } from "./agent-window"
 
 // ═══════════════════════════════════════════
@@ -662,17 +662,24 @@ export async function handleFetchResource(
     const content = await response.text()
     const contentType = response.headers.get("content-type") || "unknown"
 
-    // 生成确定性的文件名（基于 URL hash）
-    const urlHash = btoa(resolvedUrl).replace(/[/+=]/g, "_").slice(0, 32)
-    const timestamp = Date.now()
-    const ext = contentType.includes("css") ? ".css"
+    // 生成文件名：优先从 URL 路径提取后缀，content-type 兜底
+    const urlPath = (() => {
+      try { return new URL(resolvedUrl).pathname } catch { return "" }
+    })()
+    const pathExt = urlPath.includes(".") ? urlPath.split(".").pop()?.toLowerCase() : undefined
+    const ext = pathExt ? `.${pathExt}`
+      : contentType.includes("css") ? ".css"
       : contentType.includes("javascript") ? ".js"
       : contentType.includes("svg") ? ".svg"
       : contentType.includes("html") ? ".html"
       : contentType.includes("json") ? ".json"
       : contentType.includes("font") || contentType.includes("woff") ? ".woff2"
       : ".txt"
-    const path = `${EVICT_DIR}/fetch_resource_${timestamp}_${urlHash}${ext}`
+    const urlFileName = pathExt ? urlPath.split("/").pop() : undefined
+    const safeName = urlFileName && urlFileName.length <= 128
+      ? urlFileName
+      : `fetch_resource_${timestamp}_${btoa(resolvedUrl).replace(/[/+=]/g, "_").slice(0, 32)}${ext}`
+    const path = `${DOWNLOADS_DIR}/${safeName}`
 
     await writeWorkspaceFile(path, content)
 
