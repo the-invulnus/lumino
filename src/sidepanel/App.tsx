@@ -30,6 +30,7 @@ export function App() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [pendingThreadId, setPendingThreadId] = useState<string | undefined>(undefined)
   const [recentVersion, setRecentVersion] = useState(0)
+  const [threadErrors, setThreadErrors] = useState<Record<string, string>>({})
   const chatViewRef = useRef<ChatViewHandle>(null)
 
   // 初始化
@@ -211,6 +212,8 @@ export function App() {
                   settings={settings}
                   initialThreadId={pendingThreadId}
                   onOpenHistory={handleOpenHistory}
+                  threadErrors={threadErrors}
+                  onThreadErrorsChange={setThreadErrors}
                 />
               ) : (
                 <HomePage

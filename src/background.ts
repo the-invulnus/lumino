@@ -6,6 +6,7 @@ import {
   OPEN_SIDE_PANEL_MESSAGE,
   START_AGENT_MESSAGE,
   STOP_AGENT_MESSAGE,
+  RETRY_AGENT_MESSAGE,
   AGENT_PROGRESS_MESSAGE,
   AGENT_COMPLETE_MESSAGE,
   AGENT_ERROR_MESSAGE,
@@ -13,6 +14,7 @@ import {
   SIDEPANEL_STATE_MESSAGE,
   type StartAgentMessage,
   type StopAgentMessage,
+  type RetryAgentMessage,
   type AgentProgressMessage,
   type AgentCompleteMessage,
   type AgentErrorMessage,
@@ -84,12 +86,19 @@ async function executeAgentInBackground(
   broadcastAgentRunningState()
 
   try {
+    // 重试模式：historyMessages 为空时从 DB 加载最新的消息
+    let msgs = historyMessages
+    if (msgs.length === 0 && !userInput) {
+      const record = await getThread(threadId)
+      msgs = record?.messages ?? []
+    }
+
     const settings = await getLlmSettings()
 
     const result = await runAgentLoop({
       settings,
       threadId,
-      historyMessages,
+      historyMessages: msgs,
       userInput,
       signal: abortController.signal,
       mode,
@@ -135,6 +144,8 @@ async function executeAgentInBackground(
     }
 
     const errorMsg = err instanceof Error ? err.message : t("chat.error.modelRequest")
+    // 即使不是当前 threadId，也确保错误被广播
+    console.error("[lumino:bg] agent error:", err)
 
     chrome.runtime.sendMessage({
       type: AGENT_ERROR_MESSAGE,
@@ -193,6 +204,24 @@ function setupMessageHandlers(): void {
         mode,
         agentConfig
       )
+      return
+    }
+
+    // ---- Side Panel → SW：重试 agent（错误后从上一条消息继续） ----
+    if (message?.type === RETRY_AGENT_MESSAGE) {
+      const { threadId, windowId, mode, agentConfig } = (message as RetryAgentMessage).payload
+
+      if (runningAgents.has(threadId)) {
+        sendResponse({ received: true, duplicate: true })
+        return
+      }
+
+      if (windowId != null) {
+        void setAgentWindowId(windowId)
+      }
+
+      sendResponse({ received: true })
+      void executeAgentInBackground(threadId, [], "", mode, agentConfig)
       return
     }
 

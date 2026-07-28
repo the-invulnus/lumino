@@ -744,6 +744,44 @@
   pointer-events: none;
 }
 
+/* 模型调用错误卡片 — 对话面板底部 */
+.lm-chat-error {
+  background: var(--lumi-tile);
+  border: 1px solid var(--lumi-border);
+  border-radius: var(--lumi-radius-card);
+  box-shadow: 0 1px 2px rgba(45, 38, 34, 0.04), 0 4px 14px -6px rgba(45, 38, 34, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 0 8px;
+}
+.lm-chat-error__msg {
+  flex: 1;
+  color: var(--lumi-danger-text);
+  font-size: var(--lumi-text-sm);
+  line-height: var(--lumi-leading-snug);
+  margin: 0;
+}
+.lm-chat-error__retry {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--lumi-border-strong);
+  border-radius: var(--lumi-radius-control);
+  background: var(--lumi-well);
+  color: var(--lumi-text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.lm-chat-error__retry:hover {
+  background: var(--lumi-tile-hover);
+  border-color: var(--lumi-accent-b);
+}
+
 .lm-spinner {
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: #fff;

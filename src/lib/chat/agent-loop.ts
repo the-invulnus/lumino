@@ -73,23 +73,18 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMes
     thinking: { type: "disabled" }
   })
 
-  // 4. 时间注入：新会话时拼到第一条 user message，落库后即固定，保证 prefix cache 命中
-  const isNewThread = historyMessages.length === 0
-  const enrichedInput = isNewThread ? buildUserInputWithTime(userInput) : userInput
+  // 4. 初始消息：重试时 historyMessages 已包含完整历史，直接使用；否则追加新 user 消息
+  const initialMessages: LlmMessage[] = historyMessages.map((m) => m as LlmMessage)
+  const accumulatedMessages: OpenAiChatMessage[] = [...historyMessages]
 
-  // 5. 初始消息
-  const initialMessages: LlmMessage[] = [
-    ...historyMessages.map((m) => m as LlmMessage),
-    { role: "user", content: enrichedInput }
-  ]
+  if (userInput) {
+    const isNewThread = historyMessages.length === 0
+    const enrichedInput = isNewThread ? buildUserInputWithTime(userInput) : userInput
+    initialMessages.push({ role: "user", content: enrichedInput })
+    accumulatedMessages.push({ role: "user", content: enrichedInput })
+  }
 
-  // 6. 积累 UI 推送用的消息（与核心循环返回的消息保持同步）
-  const accumulatedMessages: OpenAiChatMessage[] = [
-    ...historyMessages,
-    { role: "user", content: enrichedInput }
-  ]
-
-  // 7. 执行核心循环
+  // 5. 执行核心循环
   const result = await coreRunAgentLoop({
     client,
     systemPrompt,

@@ -74,20 +74,23 @@ export const ChatView = forwardRef<ChatViewHandle, {
   settings: LlmSettings
   initialThreadId?: string
   onOpenHistory: () => void
+  threadErrors: Record<string, string>
+  onThreadErrorsChange: (updater: (prev: Record<string, string>) => Record<string, string>) => void
 }>(function ChatView({
   agent,
   onBack,
   settings,
   initialThreadId,
-  onOpenHistory
+  onOpenHistory,
+  threadErrors,
+  onThreadErrorsChange
 }, ref) {
   const [threads, setThreads] = useState<ChatThreadRecord[]>([])
   const [activeThreadId, setActiveThreadIdState] = useState<string>("")
   const [messages, setMessages] = useState<OpenAiChatMessage[]>([])
   const [draft, setDraft] = useState("")
   const draftRef = useRef(draft)
-  const [error, setError] = useState("")
-  const [loadingThreadIds, setLoadingThreadIds] = useState<Set<string>>(new Set())
+    const [loadingThreadIds, setLoadingThreadIds] = useState<Set<string>>(new Set())
   const [isHydrating, setIsHydrating] = useState(true)
   const [editingIndex, setEditingIndex] = useState<number>(-1)
   const [editingText, setEditingText] = useState("")
@@ -184,7 +187,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
           }
         }
       } catch {
-        if (!cancelled) setError(t("chat.error.read"))
+        if (!cancelled) onThreadErrorsChange(prev => ({ ...prev, [initialThreadId ?? activeThreadId]: t("chat.error.read") }))
       } finally {
         if (!cancelled) setIsHydrating(false)
       }
@@ -227,7 +230,6 @@ export const ChatView = forwardRef<ChatViewHandle, {
   const selectThread = useCallback(
     async (threadId: string) => {
       if (threadId === activeThreadIdRef.current) return
-      setError("")
       draftMapRef.current[activeThreadIdRef.current] = draftRef.current
       setActiveThreadIdState(threadId)
       const thread = await getThread(threadId)
@@ -238,7 +240,6 @@ export const ChatView = forwardRef<ChatViewHandle, {
   )
 
   const handleNewThread = useCallback(async () => {
-    setError("")
     // 保存当前草稿
     if (activeThreadIdRef.current) {
       draftMapRef.current[activeThreadIdRef.current] = draftRef.current
@@ -282,7 +283,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
     if (!threadId) return
     sendInFlightMapRef.current[threadId] = true
     setLoadingThreadIds((prev) => new Set(prev).add(threadId))
-    setError("")
+    onThreadErrorsChange(prev => { const next = {...prev}; delete next[threadId]; return next })
     setEditingIndex(-1)
     setEditingText("")
 
@@ -313,7 +314,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
           await chrome.runtime.sendMessage(startPayload)
         } catch {
           console.warn("[lumino:sidepanel]", "启动 agent 失败")
-          setError(t("chat.error.start"))
+          onThreadErrorsChange(prev => ({ ...prev, [threadId]: t("chat.error.start") }))
         }
       }
     }
@@ -323,7 +324,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
   async function sendUserMessage() {
     const trimmed = draft.trim()
     if (!trimmed) return  // 空内容静默忽略；按钮已置灰，此处为防御
-    if (!hasCompleteLlmSettings(settings)) { setError(t("chat.error.config")); return }
+    if (!hasCompleteLlmSettings(settings)) { onThreadErrorsChange(prev => ({ ...prev, [activeThreadId]: t("chat.error.config") })); return }
 
     // 没有活跃会话：创建新的
     if (!activeThreadIdRef.current) {
@@ -400,7 +401,6 @@ export const ChatView = forwardRef<ChatViewHandle, {
       const errorMsg = message as AgentErrorMessage
       if (errorMsg.type === AGENT_ERROR_MESSAGE) {
         const { threadId, error: errMsg } = errorMsg.payload
-        if (!sendInFlightMapRef.current[threadId]) return
         delete sendInFlightMapRef.current[threadId]
         setLoadingThreadIds((prev) => {
           const next = new Set(prev)
@@ -408,7 +408,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
           return next
         })
         if (threadId === activeThreadIdRef.current) {
-          setError(errMsg)
+          onThreadErrorsChange(prev => ({ ...prev, [threadId]: errMsg }))
         }
       }
     }
@@ -761,6 +761,32 @@ export const ChatView = forwardRef<ChatViewHandle, {
           </div>
         )}
 
+        {activeThreadId && threadErrors[activeThreadId] ? (
+          <div className="lm-chat-error" role="alert">
+            <p className="lm-chat-error__msg">{threadErrors[activeThreadId]}</p>
+            <button
+              className="lm-chat-error__retry"
+              onClick={() => {
+                onThreadErrorsChange(prev => { const next = {...prev}; delete next[activeThreadId]; return next })
+                if (!activeThreadId) return
+                chrome.runtime.sendMessage({
+                  type: "lumino/retry-agent",
+                  payload: {
+                    threadId: activeThreadId,
+                    mode: agent.id,
+                    agentConfig: !agent.isBuiltin ? { systemPrompt: agent.systemPrompt, tools: agent.tools } : undefined
+                  }
+                }).catch(() => {})
+                sendInFlightMapRef.current[activeThreadId] = true
+                setLoadingThreadIds((prev) => new Set(prev).add(activeThreadId))
+              }}
+              type="button"
+            >
+              {t("chat.action.retry")}
+            </button>
+          </div>
+        ) : null}
+
         <div className="lm-composer">
           <textarea
             ref={composerRef}
@@ -795,9 +821,6 @@ export const ChatView = forwardRef<ChatViewHandle, {
               <SendArrowIcon />
             )}
           </button>
-          {error ? (
-            <p className="lm-error lm-error--tight" role="alert">{error}</p>
-          ) : null}
         </div>
       </section>
 

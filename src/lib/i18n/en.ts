@@ -38,6 +38,7 @@ export const en: Record<string, string> = {
   "chat.confirmDeleteThread": "Delete this conversation?",
   "chat.tooltip.history": "History",
   "chat.action.regenerate": "Regenerate",
+  "chat.action.retry": "Retry",
   "chat.action.copy": "Copy",
   "chat.action.copyMessage": "Copy message",
   "chat.action.delete": "Delete",

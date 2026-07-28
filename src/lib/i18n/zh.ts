@@ -38,6 +38,7 @@ export const zh: Record<string, string> = {
   "chat.confirmDeleteThread": "确认删除？",
   "chat.tooltip.history": "历史会话",
   "chat.action.regenerate": "重新生成",
+  "chat.action.retry": "重试",
   "chat.action.copy": "复制",
   "chat.action.copyMessage": "复制消息内容",
   "chat.action.delete": "删除",

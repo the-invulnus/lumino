@@ -67,6 +67,23 @@ export type AgentErrorMessage = {
   }
 }
 
+/** Side Panel → Service Worker：重试 agent（出错后从上一条消息继续） */
+export const RETRY_AGENT_MESSAGE = "lumino/retry-agent" as const
+
+export type RetryAgentMessage = {
+  type: typeof RETRY_AGENT_MESSAGE
+  payload: {
+    threadId: string
+    /** Agent 所在窗口的 ID */
+    windowId?: number
+    mode?: string
+    agentConfig?: {
+      systemPrompt: string
+      tools: string[]
+    }
+  }
+}
+
 /** Service Worker → 内容脚本：通知悬浮按钮全局 agent 运行状态 */
 export const AGENT_RUNNING_STATE_MESSAGE = "lumino/agent-running-state" as const
 
