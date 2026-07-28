@@ -1277,6 +1277,8 @@
 
 .lm-edit-bubble {
   padding: var(--lumi-space-3) var(--lumi-space-4);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .lm-edit-textarea {
