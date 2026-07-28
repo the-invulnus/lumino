@@ -10,20 +10,20 @@
  */
 
 import { type AgentConfig, loadCustomAgents } from "./mode-config"
-import { BUILTIN_PROMPTS } from "./system-prompt"
+import { buildBuiltinPrompt } from "./system-prompt"
+import { isObsidianConfigured, getObsidianSettings } from "../settings"
 
 // ═══════════════════════════════════════════
 // 内置 Agent 列表
 // ═══════════════════════════════════════════
 
-export const BUILTIN_AGENTS: AgentConfig[] = [
+const BUILTIN_AGENT_DEFS: Omit<AgentConfig, "systemPrompt">[] = [
   {
     id: "chat",
     name: "agent.chat.name",
     description: "agent.chat.desc",
     icon: "chat",
     isBuiltin: true,
-    systemPrompt: BUILTIN_PROMPTS.chat,
     tools: [],  // 空数组 = 全部工具
     order: 0
   },
@@ -33,7 +33,6 @@ export const BUILTIN_AGENTS: AgentConfig[] = [
     description: "agent.research.desc",
     icon: "research",
     isBuiltin: true,
-    systemPrompt: BUILTIN_PROMPTS.research,
     tools: [],
     order: 1
   },
@@ -43,7 +42,6 @@ export const BUILTIN_AGENTS: AgentConfig[] = [
     description: "agent.replicate.desc",
     icon: "replicate",
     isBuiltin: true,
-    systemPrompt: BUILTIN_PROMPTS.replicate,
     tools: [],
     order: 2
   },
@@ -53,18 +51,33 @@ export const BUILTIN_AGENTS: AgentConfig[] = [
     description: "agent.automate.desc",
     icon: "automate",
     isBuiltin: true,
-    systemPrompt: BUILTIN_PROMPTS.automate,
     tools: [],
     order: 3
   }
 ]
 
 /**
+ * 获取内置 Agent 列表（含动态生成的 system prompt）。
+ * Obsidian 配置状态影响 prompt 注入。
+ */
+export async function getBuiltinAgents(): Promise<AgentConfig[]> {
+  const obsidianSettings = await getObsidianSettings()
+  const obsidianOn = isObsidianConfigured(obsidianSettings)
+  return BUILTIN_AGENT_DEFS.map((def) => ({
+    ...def,
+    systemPrompt: buildBuiltinPrompt(def.id, obsidianOn)
+  }))
+}
+
+/**
  * 获取所有可用的 Agent（内置 + 用户自定义），统一排序
  */
 export async function getAllAgents(): Promise<AgentConfig[]> {
-  const customAgents = await loadCustomAgents()
-  return [...BUILTIN_AGENTS, ...customAgents].sort((a, b) => {
+  const [builtinAgents, customAgents] = await Promise.all([
+    getBuiltinAgents(),
+    loadCustomAgents()
+  ])
+  return [...builtinAgents, ...customAgents].sort((a, b) => {
     if (a.isBuiltin && b.isBuiltin) return a.order - b.order
     if (a.isBuiltin) return -1
     return 1
@@ -75,7 +88,8 @@ export async function getAllAgents(): Promise<AgentConfig[]> {
  * 根据 id 查找 Agent（从内置 + 自定义中查找）
  */
 export async function getAgentById(id: string): Promise<AgentConfig | undefined> {
-  const builtin = BUILTIN_AGENTS.find(a => a.id === id)
+  const builtinAgents = await getBuiltinAgents()
+  const builtin = builtinAgents.find(a => a.id === id)
   if (builtin) return builtin
 
   const customAgents = await loadCustomAgents()

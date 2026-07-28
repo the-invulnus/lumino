@@ -25,6 +25,12 @@ import { getLuminoAgentTools } from "./tool-definitions"
 
 const MAX_AGENT_STEPS = 100
 
+function buildUserInputWithTime(userInput: string): string {
+  const now = new Date()
+  const timeStr = now.toISOString() + " (" + now.toLocaleString("en-US", { timeZone: "Asia/Shanghai" }) + ")"
+  return `Current Time: ${timeStr}\n\n${userInput}`
+}
+
 export type AgentLoopInput = {
   settings: LlmSettings
   threadId: string
@@ -67,19 +73,23 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMes
     thinking: { type: "disabled" }
   })
 
-  // 4. 初始消息
+  // 4. 时间注入：新会话时拼到第一条 user message，落库后即固定，保证 prefix cache 命中
+  const isNewThread = historyMessages.length === 0
+  const enrichedInput = isNewThread ? buildUserInputWithTime(userInput) : userInput
+
+  // 5. 初始消息
   const initialMessages: LlmMessage[] = [
     ...historyMessages.map((m) => m as LlmMessage),
-    { role: "user", content: userInput }
+    { role: "user", content: enrichedInput }
   ]
 
-  // 5. 积累 UI 推送用的消息（与核心循环返回的消息保持同步）
+  // 6. 积累 UI 推送用的消息（与核心循环返回的消息保持同步）
   const accumulatedMessages: OpenAiChatMessage[] = [
     ...historyMessages,
-    { role: "user", content: userInput }
+    { role: "user", content: enrichedInput }
   ]
 
-  // 6. 执行核心循环
+  // 7. 执行核心循环
   const result = await coreRunAgentLoop({
     client,
     systemPrompt,

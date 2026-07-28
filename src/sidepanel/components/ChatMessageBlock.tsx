@@ -35,6 +35,13 @@ function renderMarkdown(text: string): JSX.Element {
   )
 }
 
+/** 隐藏内部标记前缀（如 Current Time），不暴露给 UI */
+const HIDDEN_PREFIX = /^Current Time: \d{4}-\d{2}-\d{2}.+\n\n/
+
+export function displayContent(content: string): string {
+  return content.replace(HIDDEN_PREFIX, "")
+}
+
 export function formatMessagePreview(message: OpenAiChatMessage): string {
   if (message.role === "tool") {
     return message.content ?? ""
@@ -61,11 +68,11 @@ export function ChatMessageBlock({
 }) {
   const t = useT()
   if (message.role === "user") {
-    if (inGroup) return <>{formatMessagePreview(message)}</>
+    if (inGroup) return <>{displayContent(formatMessagePreview(message))}</>
     return (
       <div className="lm-chat-row lm-chat-row--user">
         <div className="lm-chat-bubble lm-chat-bubble--user">
-          {formatMessagePreview(message)}
+          {displayContent(formatMessagePreview(message))}
         </div>
       </div>
     )

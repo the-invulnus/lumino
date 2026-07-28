@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { AgentConfig } from "../lib/chat/mode-config"
-import { getAllAgents, BUILTIN_AGENTS } from "../lib/chat/builtin-agents"
+import { getAllAgents, getBuiltinAgents } from "../lib/chat/builtin-agents"
 import { getLastActiveMode, setLastActiveMode } from "../lib/chat/mode-config"
 import { getThread, deleteThread } from "../lib/chat/thread-idb"
 import type { LlmSettings } from "../lib/llm/llm-types"
@@ -54,7 +54,7 @@ export function App() {
       })
       .catch(() => {
         // 至少加载内置 Agent
-        setAgents(BUILTIN_AGENTS)
+        getBuiltinAgents().then(setAgents).catch(() => {})
       })
       .finally(() => setIsReady(true))
   }, [])

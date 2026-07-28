@@ -10,7 +10,8 @@ export const BASE_SYSTEM_PROMPT = `你是 Lumino，住在用户浏览器中的�
 依靠强大的工具集，帮助用户完成任何的复杂任务并创造价值。在遭遇失败时，总是尝试多路径解决方案，而不是直接放弃。记住，你不是一个被动的工具，你是拥有自主思维的高级AI，也是用户最可依赖的工作伙伴，用你强大的能力为用户带去惊喜吧！
 
 ## 输出规范
-总是使用规范的markdown格式来进行最终的输出，在任何引用网页内容的地方，通过植入超链接，以保证你输出的内容是可信、可追溯的
+- 总是使用规范的markdown格式来进行最终的输出，在任何引用网页内容的地方，通过植入超链接，以保证你输出的内容是可信、可追溯的
+- 始终使用与用户输入相同的语言
 
 ## 文件系统
 - 用户说"生成文件""创建项目"→ 在工作区中创建文件
@@ -138,12 +139,30 @@ const AUTOMATE_INSTRUCTIONS = `## 工作模式
 - click_element 会自动滚动到元素可见区域再点击
 - press_key 支持组合键如 Ctrl+a、Cmd+s、Shift+Enter`
 
-/** 内置 Agent 完整 system prompt（base + 个性化指令），按 agent id 索引 */
-export const BUILTIN_PROMPTS: Record<string, string> = {
-    chat: `${BASE_SYSTEM_PROMPT}\n\n${CHAT_INSTRUCTIONS}`,
-    research: `${BASE_SYSTEM_PROMPT}\n\n${RESEARCH_INSTRUCTIONS}`,
-    replicate: `${BASE_SYSTEM_PROMPT}\n\n${REPLICATE_INSTRUCTIONS}`,
-    automate: `${BASE_SYSTEM_PROMPT}\n\n${AUTOMATE_INSTRUCTIONS}`,
+const OBSIDIAN_INSTRUCTIONS = `## Obsidian 集成
+- 当用户明确提及Obsidian或Vault时，才使用Obsidian相关工具，否则默认在文件系统中读写文件
+- 新建Obsidian笔记时，默认保存在Lumino/目录下，寻找一个合适的地方
+`
+
+/** 内置 Agent 个性化指令，按 agent id 索引 */
+const BUILTIN_INSTRUCTIONS: Record<string, string> = {
+    chat: CHAT_INSTRUCTIONS,
+    research: RESEARCH_INSTRUCTIONS,
+    replicate: REPLICATE_INSTRUCTIONS,
+    automate: AUTOMATE_INSTRUCTIONS,
+}
+
+/**
+ * 获取内置 Agent 的完整 system prompt。
+ * 顺序：BASE_SYSTEM_PROMPT → Obsidian（如已配置）→ 个性化指令
+ */
+export function buildBuiltinPrompt(agentId: string, obsidianConfigured: boolean): string {
+    const instructions = BUILTIN_INSTRUCTIONS[agentId]
+    if (!instructions && instructions !== "") return ""
+    const parts = [BASE_SYSTEM_PROMPT]
+    if (obsidianConfigured) parts.push(OBSIDIAN_INSTRUCTIONS)
+    parts.push(instructions)
+    return parts.filter(Boolean).join("\n\n")
 }
 
 // ═══════════════════════════════════════════
@@ -167,9 +186,6 @@ export async function buildAgentMessages(
     tool_calls?: unknown[]
     tool_call_id?: string
 }>> {
-    const now = new Date()
-    const timeBlock = `## 当前时间\n${now.toISOString()}（${now.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}）`
-
     const messages: Array<{
         role: "system" | "user" | "assistant" | "tool"
         content: string | null
@@ -178,23 +194,18 @@ export async function buildAgentMessages(
     }> = []
 
     if (opts?.systemPromptOverride) {
-        // 自定义 Agent：使用用户提供的完整提示词 + 时间
+        // 自定义 Agent：使用用户提供的完整提示词
         messages.push({
             role: "system",
             content: opts.systemPromptOverride
         })
     } else {
-        // 默认：共享基础 prompt + 时间（个性化 instructions 由 agentConfig.systemPrompt 注入）
+        // 默认：共享基础 prompt（个性化 instructions 由 agentConfig.systemPrompt 注入）
         messages.push({
             role: "system",
             content: BASE_SYSTEM_PROMPT
         })
     }
-
-    messages.push({
-        role: "system",
-        content: timeBlock
-    })
 
     // 仅在 Obsidian 已配置时注入指引
     const obsidianSettings = await getObsidianSettings()

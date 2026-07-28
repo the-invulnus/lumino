@@ -11,6 +11,7 @@ import { getAllAgents } from "../lib/chat/builtin-agents"
 import { NavIcon } from "./IconSidebar"
 import { useT } from "../lib/i18n"
 import { formatHistoryDate } from "../lib/format-time"
+import { displayContent } from "./components/ChatMessageBlock"
 
 function getThreadPreview(record: ChatThreadRecord, emptyLabel: string): string {
   // 取第一条 assistant 消息的内容作为预览
@@ -26,7 +27,7 @@ function getThreadPreview(record: ChatThreadRecord, emptyLabel: string): string 
   // 回退：第一条 user 消息
   const user = record.messages.find((m) => m.role === "user")
   if (user?.content) {
-    const text = typeof user.content === "string" ? user.content : ""
+    const text = typeof user.content === "string" ? displayContent(user.content) : ""
     return text.slice(0, 50).replace(/\s+/g, " ")
   }
   return emptyLabel
