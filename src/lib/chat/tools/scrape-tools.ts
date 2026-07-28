@@ -678,7 +678,7 @@ export async function handleFetchResource(
     const urlFileName = pathExt ? urlPath.split("/").pop() : undefined
     const safeName = urlFileName && urlFileName.length <= 128
       ? urlFileName
-      : `fetch_resource_${timestamp}_${btoa(resolvedUrl).replace(/[/+=]/g, "_").slice(0, 32)}${ext}`
+      : `fetch_resource_${Date.now()}_${btoa(resolvedUrl).replace(/[/+=]/g, "_").slice(0, 32)}${ext}`
     const path = `${DOWNLOADS_DIR}/${safeName}`
 
     await writeWorkspaceFile(path, content)

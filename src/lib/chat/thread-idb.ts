@@ -107,14 +107,15 @@ export async function createEmptyThread(): Promise<ChatThreadRecord> {
  */
 export async function generateThreadTitle(
   userInput: string,
+  assistantReply: string,
   llmSettings: { baseUrl: string; apiKey: string; model: string }
 ): Promise<string> {
   const text = userInput.trim().replace(/\s+/g, " ")
   if (!text) return "New chat"
 
-  // 提示词用英文（instruction 遵循度更高），但要求标题语言跟随用户输入语言：
-  // 英文 query → 英文标题；中文 query → 中文标题；其他语言同理。
-  const prompt = `User question: ${text.slice(0, 200)}\n\nGenerate a short title for this conversation (under 10 characters), in the SAME language as the question. Output only the title.`
+  const replySnippet = assistantReply.trim().replace(/\s+/g, " ").slice(0, 300)
+
+  const prompt = `User: ${text.slice(0, 200)}\nAssistant: ${replySnippet}\n\nGenerate a short title for this conversation (under 10 characters), in the SAME language as the user's message. Output only the title.`
 
   const url = `${llmSettings.baseUrl}/chat/completions`
 
@@ -128,7 +129,7 @@ export async function generateThreadTitle(
       body: JSON.stringify({
         model: llmSettings.model,
         messages: [
-          { role: "system", content: "You are a title generator. Based on the user's question, generate a short conversation title. The title MUST be in the SAME language as the user's question (English question → English title; Chinese question → Chinese title; etc.). Output only the title — no quotes, punctuation, or any other text. Keep it under 10 characters." },
+          { role: "system", content: "You are a title generator. Based on the user's question and the assistant's reply, generate a short conversation title. The title MUST be in the SAME language as the user's question (English question → English title; Chinese question → Chinese title; etc.). Output only the title — no quotes, punctuation, or any other text. The title MUST not only contain the core concepts, but also reflect the user's intent, making it easily recognized from a groups of titles. Keep it short and concise." },
           { role: "user", content: prompt }
         ],
         max_tokens: 30,
@@ -157,15 +158,8 @@ export async function saveThreadMessages(
   messages: OpenAiChatMessage[]
 ): Promise<void> {
   const existing = await getThread(threadId)
-  // 如果已有有意义的标题（非默认），保留它，不被 suggestTitleFromMessages 覆盖
-  const hasTitle = existing?.title && existing.title !== "新会话"
-  const derived = hasTitle ? undefined : suggestTitleFromMessages(messages)
-  const title =
-    existing?.title === "新会话" && derived
-      ? derived
-      : hasTitle
-        ? existing!.title
-        : (derived ?? existing?.title ?? (threadId === DEFAULT_THREAD_ID ? "默认" : "新会话"))
+  // 标题由 generateTitleIfNew 在 agent 完整回复后生成，这里只保留已有标题
+  const title = existing?.title ?? (threadId === DEFAULT_THREAD_ID ? "默认" : "新会话")
 
   await putThread({
     id: threadId,

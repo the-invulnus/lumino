@@ -343,21 +343,6 @@ export const ChatView = forwardRef<ChatViewHandle, {
     // 发送后重置滚动状态，确保新的回复消息能自动滚到底
     setUserScrolledUp(false)
 
-    // 如果是新会话，生成标题
-    const isNewThread = messages.length === 0
-    if (isNewThread) {
-      const tid = activeThreadIdRef.current
-      generateThreadTitle(trimmed, settings).then(async (title) => {
-        const record = await getThread(tid)
-        if (record) {
-          record.title = title
-          await putThread(record)
-          // 更新 threads state 让 header 立即反映新标题
-          setThreads((prev) => prev.map((t) => (t.id === tid ? { ...t, title } : t)))
-        }
-      }).catch(() => {})
-    }
-
     await doSend(cloneMessages(messages), trimmed)
   }
 
@@ -368,6 +353,25 @@ export const ChatView = forwardRef<ChatViewHandle, {
       payload: { threadId }
     } as StopAgentMessage).catch(() => {})
   }, [])
+
+  // 新会话：Agent 完整回复后生成标题
+  const generateTitleIfNew = useCallback(async (threadId: string, msgs: OpenAiChatMessage[]) => {
+    const userMsg = msgs.find((m) => m.role === "user")
+    const assistantMsg = [...msgs].reverse().find((m) => m.role === "assistant" && typeof m.content === "string" && m.content)
+    if (!userMsg || !assistantMsg) return
+    const existing = await getThread(threadId)
+    if (existing?.title && existing.title !== "新会话") return
+    const userInput = typeof userMsg.content === "string" ? userMsg.content : ""
+    const reply = typeof assistantMsg.content === "string" ? assistantMsg.content : ""
+    generateThreadTitle(userInput, reply, settings).then(async (title) => {
+      const record = await getThread(threadId)
+      if (record) {
+        record.title = title
+        await putThread(record)
+        setThreads((prev) => prev.map((t) => (t.id === threadId ? { ...t, title } : t)))
+      }
+    }).catch(() => {})
+  }, [settings])
 
   // 监听 agent 进度/完成/错误消息
   useEffect(() => {
@@ -396,6 +400,8 @@ export const ChatView = forwardRef<ChatViewHandle, {
           refreshThreadList().catch(() => {})
         }
         saveThreadMessages(threadId, msgs as OpenAiChatMessage[]).catch(() => {})
+        // 新会话：Agent 完整回复后生成标题
+        generateTitleIfNew(threadId, msgs as OpenAiChatMessage[])
         return
       }
       const errorMsg = message as AgentErrorMessage
