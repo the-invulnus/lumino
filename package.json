@@ -14,6 +14,7 @@
     "dompurify": "^3.2.4",
     "jszip": "^3.10.1",
     "marked": "^18.0.4",
+    "pdfjs-dist": "^3.11.174",
     "plasmo": "0.90.5",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -27,7 +28,8 @@
       "alarms",
       "tabs",
       "downloads",
-      "scripting"
+      "scripting",
+      "offscreen"
     ],
     "host_permissions": [
       "<all_urls>"

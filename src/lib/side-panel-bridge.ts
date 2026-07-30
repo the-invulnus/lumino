@@ -18,10 +18,11 @@ export type StartAgentMessage = {
     windowId?: number
     /** Agent 模式 id，如 "chat" / "research" / custom-uuid */
     mode?: string
-    /** 自定义 Agent 完整配置（内置模式则为 undefined） */
+    /** Agent 配置（内置与自定义均传，含 isBuiltin 用于工具过滤分流） */
     agentConfig?: {
       systemPrompt: string
       tools: string[]
+      isBuiltin: boolean
     }
   }
 }
@@ -80,6 +81,7 @@ export type RetryAgentMessage = {
     agentConfig?: {
       systemPrompt: string
       tools: string[]
+      isBuiltin: boolean
     }
   }
 }

@@ -297,7 +297,8 @@ export const ChatView = forwardRef<ChatViewHandle, {
     // 构建 agentConfig（传递给 SW 用于系统提示词和工具过滤）
     const agentConfigPayload = {
       systemPrompt: agent.systemPrompt,
-      tools: agent.tools
+      tools: agent.tools,
+      isBuiltin: agent.isBuiltin
     }
 
     const startPayload = {
@@ -780,7 +781,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
                   payload: {
                     threadId: activeThreadId,
                     mode: agent.id,
-                    agentConfig: !agent.isBuiltin ? { systemPrompt: agent.systemPrompt, tools: agent.tools } : undefined
+                    agentConfig: { systemPrompt: agent.systemPrompt, tools: agent.tools, isBuiltin: agent.isBuiltin }
                   }
                 }).catch(() => {})
                 sendInFlightMapRef.current[activeThreadId] = true

@@ -42,13 +42,14 @@ LLM API Key 与 Obsidian token 存 `chrome.storage.local`（`settings.ts` 的 `g
 
 ## 运行模式
 
-Chrome Extension Manifest V3，**Service Worker + Side Panel + Content Script**：
+Chrome Extension Manifest V3，**Service Worker + Side Panel + Content Script + Offscreen**：
 
 | 入口 | 文件 | 说明 |
 |---|---|---|
 | Service Worker | `src/background.ts` | Agent 执行引擎、消息路由、定时任务（驱逐清理） |
 | Side Panel | `src/sidepanel.tsx` | 薄入口，实际逻辑在 `src/sidepanel/App.tsx` — 首页/聊天路由、导航栏、历史面板 |
 | Options Page | `src/options.tsx` | LLM 配置 + Obsidian 集成配置 + 主题切换 + 自定义 Agent 管理 |
+| Offscreen Document | `src/tabs/offscreen.tsx` | Plasmo Tab Pages 入口，由 SW 通过 `chrome.offscreen` 按需创建；用 pdf.js（`pdfjs-dist@3.11.174`，主线程模式）提取 PDF 文本。SW 不能 spawn Web Worker，故解析在 offscreen 的 DOM 环境完成。pdf.js 必须用 3.x 的 `pdf.worker.entry` 入口（挂 `globalThis.pdfjsWorker` 走主线程），6.x 的 worker/Blob import 机制会被 MV3 CSP 拦截 |
 | Content Script | `src/contents/lumino-floating-button.ts` | `<all_urls>` 注入悬浮按钮，点击唤起侧栏 |
 | Content Script（辅助） | `src/content/floating-button.ts` | 浮动按钮 DOM 创建/挂载逻辑 |
 | Content Script（辅助） | `src/contents/lumino-input-watcher.ts` | 基础注入，抑制 SW 上下文失效错误 |
@@ -74,7 +75,7 @@ BUILTIN_AGENTS (builtin-agents.ts)  +  customAgents (chrome.storage.sync)
 - **内置 Agent** 定义在 `src/lib/chat/builtin-agents.ts`，一个 `AgentConfig[]` 数组。新增内置 Agent 只需在数组中添加一个条目
 - **自定义 Agent** 存在 `chrome.storage.sync`（随 Chrome 账号同步），由 `src/lib/chat/mode-config.ts` 的 `loadCustomAgents()` / `saveCustomAgents()` 读写
 - **统一加载**：`builtin-agents.ts` 的 `getAllAgents()` 将内置和自定义 Agent 合并，统一排序后提供给前端
-- **工具过滤**：`getLuminoAgentTools(toolFilter?)` 接受可选工具名数组，`AgentConfig.tools` 空数组 = 全部工具
+- **工具过滤**：`agent-loop.ts` 按 `agentConfig.isBuiltin` 分流——内置 Agent 传 `toolFilter = undefined`（=全部工具），自定义 Agent 传 `agentConfig.tools` 作为显式白名单（空数组 = 无工具）。`getLuminoAgentTools(toolFilter?)` 语义：`undefined` = 全部工具，数组 = 按名过滤。白名单可含 `"mcp:*"` 通配符全量注入 Obsidian MCP 工具
 
 ### 内置 Agent 列表
 
@@ -161,7 +162,7 @@ const tool = luminoTool({
 - `luminoTool()` 返回 `LuminoTool`，`execute` 直接调用 `getToolHandler(name)` 从 `tool-executor.ts` 注册表获取 handler
 - `getLuminoAgentTools()` 返回 `LuminoTool[]`，Agent 循环中通过 `luminoToolsToOpenAi()` 转为 OpenAI tools 参数
 - Zod Schema 通过 `zodToJsonSchema()` 转为 JSON Schema 传给 LLM
-- 工具列表分 `BASE_TOOLS`（23个基础工具）+ Obsidian MCP 动态工具，根据配置合并
+- 工具列表分 `BASE_TOOLS`（基础工具，随版本演进会增减）+ Obsidian MCP 动态工具，根据配置合并
 
 ### 工具注册与执行 (tool-executor.ts)
 
@@ -170,15 +171,16 @@ const tool = luminoTool({
 - **执行流程**：`executeToolCall(call, signal)` → handler → `maybeEvictToolResult()`（大结果驱逐）
 - **对外接口**：`getToolHandler(name)` 供 tool-definitions.ts 使用
 
-### 工具清单（24个 + Obsidian MCP 动态工具）
+### 工具清单（基础工具 + Obsidian MCP 动态工具）
 
 | 分类 | 工具名 | 文件 |
 |------|--------|------|
 | 文件系统 | `ls`, `read_file`, `write_file`, `edit_file`, `glob`, `grep`, `rm`, `export` | `tools/fs-tools.ts` |
-| 浏览器系统 | `current_page`, `tabs`, `get_active_tab_id` | `tools/system-tools.ts` |
+| 浏览器系统 | `current_page`, `tabs` | `tools/system-tools.ts` |
 | 页面阅读 | `get_page_content` | `tools/browser-tools.ts` |
 | 浏览器交互 | `inspect_element`, `fill_form`, `click_element`, `screenshot`, `scroll`, `press_key`, `navigate`, `close_tab` | `tools/browser-tools.ts` |
 | 页面爬取 | `scrape_structure`, `scrape_styles`, `scrape_resources`, `fetch_resource` | `tools/scrape-tools.ts` |
+| PDF | `read_pdf`（在 offscreen document 用 pdf.js 提取文本，支持 path/url 两种来源） | `tools/pdf-tools.ts` + `tabs/offscreen.tsx` + `lib/offscreen-pdf-bridge.ts` |
 | Obsidian (MCP) | 运行时动态获取（`vault_list`, `vault_read`, `vault_write` 等） | `mcp/mcp-client.ts` + `tools/obsidian-mcp.ts` |
 
 ### Side Panel ↔ Service Worker 通信
@@ -316,6 +318,7 @@ lumino/
 │   │   │       ├── browser-utils.ts        # 浏览器工具共享函数
 │   │   │       ├── browser-tools.ts        # 页面阅读 + 浏览器交互工具
 │   │   │       ├── scrape-tools.ts         # 页面爬取工具
+│   │   │       ├── pdf-tools.ts            # read_pdf handler（调 offscreen 解析 PDF）
 │   │   │       ├── fs-tools.ts             # 文件系统工具
 │   │   │       ├── obsidian-mcp.ts         # Obsidian MCP 工具
 │   │   │       ├── system-tools.ts         # 浏览器系统工具
@@ -334,13 +337,16 @@ lumino/
 │   │   ├── db.ts                          # IndexedDB 实例管理（threads 存储）
 │   │   ├── theme.ts                       # 主题应用
 │   │   ├── settings.ts                    # 设置读写（LLM + Obsidian）
-│   │   └── side-panel-bridge.ts           # SP ↔ SW 通信协议类型（含 mode/agentConfig）
+│   │   ├── side-panel-bridge.ts           # SP ↔ SW 通信协议类型（含 mode/agentConfig）
+│   │   └── offscreen-pdf-bridge.ts        # SW ↔ offscreen 通信桥（ensureOffscreenDocument + parsePdfViaOffscreen）
+│   ├── tabs/
+│   │   └── offscreen.tsx                  # Plasmo Tab Pages 入口 → offscreen.html，pdf.js 解析 PDF
 │   ├── styles/
 │   │   ├── tokens.css                     # 主题 Token 变量
 │   │   ├── layout.css                     # 纯布局层（含导航栏、首页、历史面板）
 │   │   └── components.css                 # 视觉表现层
 │   └── assets/
-│       └── black_cat.gif
+│       └── (图标、截图等静态资源)
 ├── package.json
 ├── tsconfig.json
 ├── pnpm-workspace.yaml                   # zod v4 CJS 兼容覆盖

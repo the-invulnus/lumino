@@ -37,7 +37,6 @@ const TOOL_GROUPS: { labelKey: string; tools: { name: string; descKey: string }[
     tools: [
       { name: "current_page", descKey: "tool.current_page.desc" },
       { name: "tabs", descKey: "tool.tabs.desc" },
-      { name: "get_active_tab_id", descKey: "tool.get_active_tab_id.desc" },
       { name: "get_page_content", descKey: "tool.get_page_content.desc" },
       { name: "inspect_element", descKey: "tool.inspect_element.desc" },
       { name: "fill_form", descKey: "tool.fill_form.desc" },
@@ -56,6 +55,12 @@ const TOOL_GROUPS: { labelKey: string; tools: { name: string; descKey: string }[
       { name: "scrape_styles", descKey: "tool.scrape_styles.desc" },
       { name: "scrape_resources", descKey: "tool.scrape_resources.desc" },
       { name: "fetch_resource", descKey: "tool.fetch_resource.desc" }
+    ]
+  },
+  {
+    labelKey: "toolgroup.pdf",
+    tools: [
+      { name: "read_pdf", descKey: "tool.read_pdf.desc" }
     ]
   }
 ]

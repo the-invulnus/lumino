@@ -77,7 +77,7 @@ async function executeAgentInBackground(
   historyMessages: OpenAiChatMessage[],
   userInput: string,
   mode?: string,
-  agentConfig?: { systemPrompt: string; tools: string[] }
+  agentConfig?: { systemPrompt: string; tools: string[]; isBuiltin: boolean }
 ) {
   const abortController = new AbortController()
   await registerAllTools()

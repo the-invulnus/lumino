@@ -12,7 +12,7 @@ export type AgentConfig = {
   icon: string          // 图标标识符，对应 icons.tsx 中的 key
   isBuiltin: boolean
   systemPrompt: string  // 完整系统提示词
-  tools: string[]       // 工具名称列表（空数组 = 全部工具）
+  tools: string[]       // 工具名称白名单。内置 agent 忽略此字段（用全部工具）；自定义 agent 按此过滤，空数组 = 无工具。可含 "mcp:*" 通配符。
   order: number         // 排序权重
 }
 

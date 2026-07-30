@@ -5,7 +5,9 @@
  * 所有 Agent（内置 + 用户自定义）使用完全相同的 AgentConfig 类型，
  * 运行时由 mode-config.ts 的 getAllAgents() 统一合并加载。
  *
- * 所有内置 Agent 均使用全部工具（tools: []），仅 system prompt 不同。
+ * 工具配置：内置 Agent 一律使用全部工具（agent-loop.ts 按 isBuiltin 分流，
+ * toolFilter 传 undefined = 全部工具），tools 字段对内置 Agent 无意义。
+ * 自定义 Agent 的 tools 是显式白名单（空数组 = 无工具）。
  * system prompt = 共享基础 Prompt（BASE_SYSTEM_PROMPT）+ 各自个性化指令。
  */
 
@@ -24,7 +26,7 @@ const BUILTIN_AGENT_DEFS: Omit<AgentConfig, "systemPrompt">[] = [
     description: "agent.chat.desc",
     icon: "chat",
     isBuiltin: true,
-    tools: [],  // 空数组 = 全部工具
+    tools: [],  // 内置 agent 用全部工具（isBuiltin 时忽略 tools）
     order: 0
   },
   {

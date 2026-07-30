@@ -36,6 +36,7 @@ export type AgentLoopInput = {
   agentConfig?: {
     systemPrompt: string
     tools: string[]
+    isBuiltin: boolean
   }
 }
 
@@ -62,10 +63,11 @@ export async function runAgentLoop(
     .join("\n\n")
 
   // 2. 获取工具列表
-  const toolFilter =
-    agentConfig?.tools && agentConfig.tools.length > 0
-      ? agentConfig.tools
-      : undefined
+  // 内置 agent 用全部工具（toolFilter = undefined）；自定义 agent 用其显式配置的 tools
+  // 白名单（空数组 = 真没工具）。MCP 通配符 "mcp:*" 在 getLuminoAgentTools 内处理。
+  const toolFilter = agentConfig?.isBuiltin
+    ? undefined
+    : agentConfig?.tools
   const tools: LuminoTool[] = await getLuminoAgentTools(toolFilter)
 
   // 3. 创建 LlmClient（配置 thinking:disabled）

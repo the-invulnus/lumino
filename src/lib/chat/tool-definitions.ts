@@ -154,19 +154,13 @@ export const exportTool = luminoTool({
 
 export const currentPageTool = luminoTool({
   name: "current_page",
-  description: "获取当前活跃标签页的 URL、标题和基本信息。",
+  description: "获取当前活跃标签页的 ID、URL 和标题。涉及浏览器操作时调用以锁定目标页面。",
   inputSchema: z.z.object({})
 })
 
 export const tabsTool = luminoTool({
   name: "tabs",
   description: "列出浏览器中所有打开的标签页（URL 和标题）。",
-  inputSchema: z.z.object({})
-})
-
-export const getActiveTabIdTool = luminoTool({
-  name: "get_active_tab_id",
-  description: "获取当前活跃标签页的 ID。涉及浏览器操作时必须先调用此工具锁定目标页面。",
   inputSchema: z.z.object({})
 })
 
@@ -319,6 +313,19 @@ export const fetchResourceTool = luminoTool({
   })
 })
 
+// ═══════════════════════════════════════════
+// PDF 工具
+// ═══════════════════════════════════════════
+
+export const readPdfTool = luminoTool({
+  name: "read_pdf",
+  description: "提取 PDF 的文本内容。path（工作区路径）或 url 二选一，优先 path。",
+  inputSchema: z.z.object({
+    path: z.z.string().describe("工作区里的 PDF 路径（如 /report.pdf）。与 url 二选一，优先 path。").optional(),
+    url: z.z.string().describe("PDF 链接（http/https）。与 path 二选一。").optional()
+  })
+})
+
 
 // ═══════════════════════════════════════════
 // Obsidian MCP 工具
@@ -335,14 +342,16 @@ export const BASE_TOOLS: LuminoTool[] = [
   // 文件
   lsTool, readFileTool, writeFileTool, editFileTool, globTool, grepTool, rmTool, exportTool,
   // 浏览器系统
-  currentPageTool, tabsTool, getActiveTabIdTool,
+  currentPageTool, tabsTool,
   // 页面阅读
   getPageContentTool,
   // 浏览器交互
   inspectElementTool, fillFormTool, clickElementTool, screenshotTool,
   scrollTool, pressKeyTool, navigateTool, closeTabTool,
   // 页面爬取
-  scrapeStructureTool, scrapeStylesTool, scrapeResourcesTool, fetchResourceTool
+  scrapeStructureTool, scrapeStylesTool, scrapeResourcesTool, fetchResourceTool,
+  // PDF
+  readPdfTool
 ]
 
 /**
@@ -351,28 +360,30 @@ export const BASE_TOOLS: LuminoTool[] = [
  * Obsidian 工具从 MCP client.listTools() 动态获取 schema 和 description，
  * 不再是静态定义。只有 MCP 已连接且 handler 已注册时才暴露。
  *
- * @param toolFilter - 可选，工具名称白名单。传入后只返回匹配的工具（用于模式过滤）。
- *                     不传则返回全部工具。
+ * @param toolFilter - 工具名称白名单。undefined = 全部工具（内置 agent）；
+ *                     传数组 = 仅返回白名单内的工具，空数组 = 无工具（自定义 agent）。
+ *                     白名单可含 "mcp:*" 通配符，表示全量注入所有 MCP 工具。
  */
 export async function getLuminoAgentTools(toolFilter?: string[]): Promise<LuminoTool[]> {
   const tools: LuminoTool[] = []
+  // undefined = 全部基础工具；数组 = 按白名单过滤（空数组过滤后为空）
+  const filterAll = toolFilter === undefined
 
-  // 基础工具始终可用（可按 toolFilter 过滤）
+  // 基础工具
   for (const t of BASE_TOOLS) {
-    if (toolFilter && toolFilter.length > 0 && !toolFilter.includes(t.name)) continue
+    if (!filterAll && !toolFilter!.includes(t.name)) continue
     tools.push(t)
   }
 
   // Obsidian MCP 工具：从客户端动态获取
-  // 若 toolFilter 包含 "mcp:*" 通配符，则 MCP 工具全量注入（不做过滤）
-  const includeMcp = !toolFilter || toolFilter.length === 0 || toolFilter.includes("mcp:*")
+  // undefined 或白名单含 "mcp:*" → MCP 工具全量注入；否则按白名单逐个过滤
+  const includeAllMcp = filterAll || toolFilter!.includes("mcp:*")
   try {
     const client = getObsidianMcpClient()
     if (client?.isConnected) {
       const serverTools = await client.listTools()
       for (const st of serverTools) {
-        // 如果指定了 toolFilter 且没有 mcp:* 通配符，MCP 工具也需要过滤
-        if (!includeMcp && !toolFilter!.includes(st.name)) continue
+        if (!includeAllMcp && !toolFilter!.includes(st.name)) continue
 
         try {
           const zodSchema = jsonSchemaToZod(st.inputSchema as Record<string, unknown>)

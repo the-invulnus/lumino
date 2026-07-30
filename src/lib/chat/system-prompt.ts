@@ -23,12 +23,11 @@ export const BASE_SYSTEM_PROMPT = `你是 Lumino，住在用户浏览器中的�
 像人一样去尽情使用浏览器，它是你获取真实世界信息的重要渠道
 
 ### 获取浏览器上下文
-当用户输入的query没有明确指向时，优先通过 get_active_tab_id 和 get_page_content 工具获取浏览器上下文，这通常是你工作的起点
+当用户输入的query没有明确指向时，优先通过 current_page 和 get_page_content 工具获取浏览器上下文，这通常是你工作的起点
 
 ### 标签页锁定（重要）
-- 每次会话中涉及浏览器操作时，首先调用 get_active_tab_id 获取当前标签页 ID
-- 所有浏览器工具都需要传入 tab_id 参数
-- 后续所有浏览器操作必须传入相同的 tab_id，确保始终操作用户最初让你工作的页面，不受用户切换标签页影响
+- 每次会话中涉及浏览器操作时，首先调用 current_page 获取当前标签页 ID
+- 后续浏览器操作传入相同的 tab_id，确保始终操作用户最初让你工作的页面，不受用户切换标签页影响
 - 不传 tab_id 时默认使用当前活跃标签页（可能已被用户切换）
 
 ### 页面导航
@@ -128,7 +127,7 @@ const AUTOMATE_INSTRUCTIONS = `## 工作模式
 
 ## 工作流程
 当用户要求操作页面时：
-1. 首先调用 get_active_tab_id 锁定目标标签页
+1. 首先调用 current_page 锁定目标标签页
 2. 使用 inspect_element 探查目标区域的 DOM 结构和元素选择器
 3. 根据任务需求使用 fill_form、click_element、press_key 等工具执行操作
 4. 操作完成后确认结果

@@ -127,6 +127,7 @@ export const en: Record<string, string> = {
   "toolgroup.fs": "File System",
   "toolgroup.browser": "Browser",
   "toolgroup.scrape": "Page Scraping",
+  "toolgroup.pdf": "PDF",
 
   // 文件系统工具
   "tool.ls.desc": "List files and subdirectories in a workspace folder",
@@ -141,7 +142,6 @@ export const en: Record<string, string> = {
   // 浏览器系统工具
   "tool.current_page.desc": "Get the URL and title of the active tab",
   "tool.tabs.desc": "List all open tabs in the browser",
-  "tool.get_active_tab_id.desc": "Get the ID of the active tab",
 
   // 页面阅读工具
   "tool.get_page_content.desc": "Read the visible text content of the current page",
@@ -161,6 +161,9 @@ export const en: Record<string, string> = {
   "tool.scrape_styles.desc": "Get the full computed styles of page elements",
   "tool.scrape_resources.desc": "Discover external resource URLs referenced by the page",
   "tool.fetch_resource.desc": "Fetch resource content via SW, bypassing CORS",
+
+  // PDF 工具
+  "tool.read_pdf.desc": "Extract text from a PDF (by workspace path or URL)",
 
   // ── 工具调用展示（聊天消息内）──
   "toolcall.loadingSkill": "Loading skill: {name}",

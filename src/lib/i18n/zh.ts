@@ -127,6 +127,7 @@ export const zh: Record<string, string> = {
   "toolgroup.fs": "文件系统",
   "toolgroup.browser": "浏览器",
   "toolgroup.scrape": "页面爬取",
+  "toolgroup.pdf": "PDF",
 
   // 文件系统工具
   "tool.ls.desc": "列出工作区目录中的文件和子目录",
@@ -141,7 +142,6 @@ export const zh: Record<string, string> = {
   // 浏览器系统工具
   "tool.current_page.desc": "获取当前活跃标签页的 URL 和标题",
   "tool.tabs.desc": "列出浏览器中所有打开的标签页",
-  "tool.get_active_tab_id.desc": "获取当前活跃标签页的 ID",
 
   // 页面阅读工具
   "tool.get_page_content.desc": "读取当前页面的可见文本内容",
@@ -161,6 +161,9 @@ export const zh: Record<string, string> = {
   "tool.scrape_styles.desc": "获取页面元素的完整计算样式",
   "tool.scrape_resources.desc": "发现页面引用的外部资源 URL",
   "tool.fetch_resource.desc": "通过 SW 获取资源内容，无 CORS 限制",
+
+  // PDF 工具
+  "tool.read_pdf.desc": "提取 PDF 文本（按工作区路径或 URL）",
 
   // ── 工具调用展示（聊天消息内）──
   "toolcall.loadingSkill": "加载技能：{name}",

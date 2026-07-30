@@ -9,7 +9,7 @@ import {
   handleRm,
   handleExport
 } from "./tools/fs-tools"
-import { handleCurrentPage, handleTabs, handleGetActiveTabId } from "./tools/system-tools"
+import { handleCurrentPage, handleTabs } from "./tools/system-tools"
 import {
   createMcpHandler,
   ensureMcpClient,
@@ -34,6 +34,7 @@ import {
   handleScrapeResources,
   handleFetchResource
 } from "./tools/scrape-tools"
+import { handleReadPdf } from "./tools/pdf-tools"
 
 let baseRegistered = false
 let mcpRegistered = false
@@ -55,7 +56,6 @@ function registerBaseTools(): void {
   // 浏览器系统工具
   registerTool("current_page", handleCurrentPage)
   registerTool("tabs", handleTabs)
-  registerTool("get_active_tab_id", handleGetActiveTabId)
 
   // 页面阅读工具
   registerTool("get_page_content", handleGetPageContent)
@@ -75,6 +75,9 @@ function registerBaseTools(): void {
   registerTool("scrape_styles", handleScrapeStyles)
   registerTool("scrape_resources", handleScrapeResources)
   registerTool("fetch_resource", handleFetchResource)
+
+  // PDF 工具
+  registerTool("read_pdf", handleReadPdf)
 }
 
 async function registerObsidianMcpTools(): Promise<void> {
