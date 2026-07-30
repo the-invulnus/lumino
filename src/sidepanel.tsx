@@ -7,7 +7,6 @@
 
 import { App } from "./sidepanel/App"
 import "./styles/components.css"
-import blackCatGif from "data-base64:~black_cat.gif"
 
 export default function SidePanel() {
   return <App />

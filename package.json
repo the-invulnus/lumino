@@ -1,9 +1,9 @@
 {
   "name": "lumino",
-  "displayName": "Lumino",
+  "displayName": "Lumino: From Chat to Done — Connect Browser to Your Work.",
   "version": "1.0.0",
-  "description": "A multi-mode AI assistant in your browser side panel — research, replicate designs, and automate pages.",
-  "author": "",
+  "description": "A free AI assistant for deep research, knowledge management, web replication, browser automation, etc. — powered by your own LLM.",
+  "author": "the invulnus",
   "scripts": {
     "dev": "NODE_OPTIONS='--no-deprecation' plasmo dev",
     "build": "NODE_OPTIONS='--no-deprecation' plasmo build",

@@ -1,11 +1,12 @@
 import {
+  deleteWorkspaceFile,
+  exportWorkspaceDir,
+  exportWorkspaceFile,
   getWorkspaceHandle,
+  isBinaryPath,
   listWorkspaceDir,
   readWorkspaceFile,
-  writeWorkspaceFile,
-  deleteWorkspaceFile,
-  exportWorkspaceFile,
-  exportWorkspaceDir
+  writeWorkspaceFile
 } from "../../fs/workspace"
 
 async function resolvePath(
@@ -45,15 +46,16 @@ async function resolvePath(
 
 // ── ls ──
 
-export async function handleLs(
-  args: Record<string, unknown>
-): Promise<string> {
+export async function handleLs(args: Record<string, unknown>): Promise<string> {
   const root = await getWorkspaceHandle()
   const path = (args.path as string) || ""
 
   const target = await resolvePath(root, path)
   if (!target) {
-    return JSON.stringify({ error: "not_found", message: `路径不存在：/${path}` })
+    return JSON.stringify({
+      error: "not_found",
+      message: `路径不存在：/${path}`
+    })
   }
 
   if (target.kind === "file") {
@@ -65,7 +67,9 @@ export async function handleLs(
     return "(empty directory)"
   }
 
-  return entries.map((e) => e.name + (e.kind === "directory" ? "/" : "")).join("\n")
+  return entries
+    .map((e) => e.name + (e.kind === "directory" ? "/" : ""))
+    .join("\n")
 }
 
 // ── read_file ──
@@ -73,16 +77,33 @@ export async function handleLs(
 export async function handleReadFile(
   args: Record<string, unknown>
 ): Promise<string> {
-  const root = await getWorkspaceHandle()
-  const filePath = args.file_path as string
+  const filePath = (args.file_path as string) || ""
 
+  if (!filePath) {
+    return JSON.stringify({ error: "missing_file_path", message: "缺少必填参数 file_path" })
+  }
+
+  const root = await getWorkspaceHandle()
   const target = await resolvePath(root, filePath)
   if (!target) {
-    return JSON.stringify({ error: "not_found", message: `文件不存在：${filePath}` })
+    return JSON.stringify({
+      error: "not_found",
+      message: `文件不存在：${filePath}`
+    })
   }
 
   if (target.kind === "directory") {
-    return JSON.stringify({ error: "is_directory", message: `${filePath} 是一个目录，请使用 ls。` })
+    return JSON.stringify({
+      error: "is_directory",
+      message: `${filePath} 是一个目录，请使用 ls。`
+    })
+  }
+
+  if (isBinaryPath(filePath)) {
+    return JSON.stringify({
+      error: "binary_file",
+      message: `${filePath} 是二进制文件（图片/字体/音视频等），read_file 无法读取。`
+    })
   }
 
   const fileHandle = target as FileSystemFileHandle
@@ -105,7 +126,9 @@ export async function handleReadFile(
   if (endLine < allLines.length) {
     const remaining = allLines.length - endLine
     const nextOffset = endLine
-    resultLines.push(`[Truncated: ${remaining} more lines not shown. Use offset=${nextOffset} to continue.]`)
+    resultLines.push(
+      `[Truncated: ${remaining} more lines not shown. Use offset=${nextOffset} to continue.]`
+    )
   }
 
   return resultLines.join("\n")
@@ -119,6 +142,13 @@ export async function handleWriteFile(
   const filePath = args.file_path as string
   const content = args.content as string
 
+  if (!filePath) {
+    return JSON.stringify({ error: "missing_file_path", message: "缺少必填参数 file_path" })
+  }
+  if (content === undefined || content === null) {
+    return JSON.stringify({ error: "missing_content", message: "缺少必填参数 content" })
+  }
+
   await writeWorkspaceFile(filePath, content)
 
   return `文件已写入：${filePath}`
@@ -129,19 +159,35 @@ export async function handleWriteFile(
 export async function handleEditFile(
   args: Record<string, unknown>
 ): Promise<string> {
-  const filePath = args.file_path as string
+  const filePath = (args.file_path as string) || ""
   const oldString = args.old_string as string
   const newString = args.new_string as string
+
+  if (!filePath) {
+    return JSON.stringify({ error: "missing_file_path", message: "缺少必填参数 file_path" })
+  }
+  if (oldString === undefined || oldString === null) {
+    return JSON.stringify({ error: "missing_old_string", message: "缺少必填参数 old_string" })
+  }
+  if (newString === undefined || newString === null) {
+    return JSON.stringify({ error: "missing_new_string", message: "缺少必填参数 new_string" })
+  }
 
   const root = await getWorkspaceHandle()
   const target = await resolvePath(root, filePath)
 
   if (!target) {
-    return JSON.stringify({ error: "not_found", message: `文件不存在：${filePath}` })
+    return JSON.stringify({
+      error: "not_found",
+      message: `文件不存在：${filePath}`
+    })
   }
 
   if (target.kind === "directory") {
-    return JSON.stringify({ error: "is_directory", message: `${filePath} 是一个目录。` })
+    return JSON.stringify({
+      error: "is_directory",
+      message: `${filePath} 是一个目录。`
+    })
   }
 
   const fileHandle = target as FileSystemFileHandle
@@ -182,10 +228,10 @@ function matchGlob(name: string, pattern: string): boolean {
   // 将 glob 模式转换为正则表达式
   const regexStr = pattern
     .replace(/[.+^${}()|[\]\\]/g, "\\$&") // 转义特殊字符
-    .replace(/\*\*/g, "___DOUBLESTAR___")   // 临时替换 **
-    .replace(/\*/g, "[^/]*")                // * 匹配任意非 / 字符
-    .replace(/___DOUBLESTAR___/g, ".*")     // ** 匹配任意字符包括 /
-    .replace(/\?/g, "[^/]")                 // ? 匹配单个非 / 字符
+    .replace(/\*\*/g, "___DOUBLESTAR___") // 临时替换 **
+    .replace(/\*/g, "[^/]*") // * 匹配任意非 / 字符
+    .replace(/___DOUBLESTAR___/g, ".*") // ** 匹配任意字符包括 /
+    .replace(/\?/g, "[^/]") // ? 匹配单个非 / 字符
 
   try {
     const regex = new RegExp(`^${regexStr}$`)
@@ -203,7 +249,10 @@ async function collectAllFiles(
   for await (const [name, handle] of (dirHandle as any).entries()) {
     const fullPath = prefix ? `${prefix}/${name}` : name
     if (handle.kind === "directory") {
-      const subResults = await collectAllFiles(handle as FileSystemDirectoryHandle, fullPath)
+      const subResults = await collectAllFiles(
+        handle as FileSystemDirectoryHandle,
+        fullPath
+      )
       results.push(...subResults)
     } else {
       results.push(fullPath)
@@ -222,13 +271,19 @@ export async function handleGlob(
   const target = searchPath ? await resolvePath(root, searchPath) : root
 
   if (!target) {
-    return JSON.stringify({ error: "not_found", message: `路径不存在：${searchPath || "/"}` })
+    return JSON.stringify({
+      error: "not_found",
+      message: `路径不存在：${searchPath || "/"}`
+    })
   }
 
   let allFiles: string[]
 
   if (target.kind === "directory") {
-    allFiles = await collectAllFiles(target as FileSystemDirectoryHandle, searchPath)
+    allFiles = await collectAllFiles(
+      target as FileSystemDirectoryHandle,
+      searchPath
+    )
   } else {
     allFiles = [searchPath]
   }
@@ -270,7 +325,10 @@ export async function handleGrep(
 
   const target = searchPath ? await resolvePath(root, searchPath) : root
   if (!target) {
-    return JSON.stringify({ error: "not_found", message: `路径不存在：${searchPath || "/"}` })
+    return JSON.stringify({
+      error: "not_found",
+      message: `路径不存在：${searchPath || "/"}`
+    })
   }
 
   // 先尝试字面量匹配，失败后再尝试正则
@@ -281,12 +339,18 @@ export async function handleGrep(
     // 如果是简单的字面量，优先用 indexOf 匹配
     isRegex = /[.*+?^${}()|[\]\\]/.test(pattern)
   } catch {
-    return JSON.stringify({ error: "invalid_regex", message: `无效的正则表达式：${pattern}` })
+    return JSON.stringify({
+      error: "invalid_regex",
+      message: `无效的正则表达式：${pattern}`
+    })
   }
 
   const perFileMatches: Map<string, string[]> = new Map()
 
-  async function searchDir(dirHandle: FileSystemDirectoryHandle, prefix: string) {
+  async function searchDir(
+    dirHandle: FileSystemDirectoryHandle,
+    prefix: string
+  ) {
     for await (const [name, handle] of (dirHandle as any).entries()) {
       const fullPath = prefix ? `${prefix}/${name}` : name
       if (handle.kind === "directory") {
@@ -334,7 +398,10 @@ export async function handleGrep(
     const text = await file.text()
     const lines = text.split("\n")
 
-    if (!globFilter || matchGlobFilter(searchPath.split("/").pop() || "", globFilter)) {
+    if (
+      !globFilter ||
+      matchGlobFilter(searchPath.split("/").pop() || "", globFilter)
+    ) {
       const matches: string[] = []
       for (let i = 0; i < lines.length; i++) {
         let matched: boolean
@@ -356,7 +423,10 @@ export async function handleGrep(
     }
   }
 
-  const totalMatches = Array.from(perFileMatches.values()).reduce((s, m) => s + m.length, 0)
+  const totalMatches = Array.from(perFileMatches.values()).reduce(
+    (s, m) => s + m.length,
+    0
+  )
 
   if (outputMode === "files_with_matches") {
     const filePaths = Array.from(perFileMatches.keys()).sort()
@@ -392,7 +462,9 @@ export async function handleGrep(
   }
 
   if (totalMatches > MAX_SHOWN) {
-    lines.push(`[Truncated: ${totalMatches - MAX_SHOWN} more matches not shown.]`)
+    lines.push(
+      `[Truncated: ${totalMatches - MAX_SHOWN} more matches not shown.]`
+    )
   }
 
   return lines.join("\n")
@@ -400,12 +472,13 @@ export async function handleGrep(
 
 // ── rm ──
 
-export async function handleRm(
-  args: Record<string, unknown>
-): Promise<string> {
+export async function handleRm(args: Record<string, unknown>): Promise<string> {
   const filePath = (args.file_path as string) || ""
   if (!filePath) {
-    return JSON.stringify({ error: "missing_path", message: "请提供要删除的文件路径" })
+    return JSON.stringify({
+      error: "missing_path",
+      message: "请提供要删除的文件路径"
+    })
   }
   await deleteWorkspaceFile(filePath)
 
@@ -438,10 +511,15 @@ export async function handleExport(
             isDir = true
           }
         } else {
-          current = await (current as FileSystemDirectoryHandle).getDirectoryHandle(parts[i])
+          current = await (
+            current as FileSystemDirectoryHandle
+          ).getDirectoryHandle(parts[i])
         }
       } catch {
-        return JSON.stringify({ error: "not_found", message: `路径不存在：${filePath}` })
+        return JSON.stringify({
+          error: "not_found",
+          message: `路径不存在：${filePath}`
+        })
       }
     }
 

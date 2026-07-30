@@ -46,6 +46,29 @@ export async function readWorkspaceFile(path: string): Promise<string | null> {
   }
 }
 
+/** 以二进制读取文件（用于图片等非文本资源） */
+export async function readWorkspaceFileBytes(
+  path: string
+): Promise<Uint8Array | null> {
+  try {
+    const dir = await getWorkspaceHandle()
+    const parts = path.replace(/^\/+/, "").split("/")
+    const fileName = parts.pop()!
+    let current = dir
+
+    for (const part of parts) {
+      current = await current.getDirectoryHandle(part)
+    }
+
+    const fileHandle = await current.getFileHandle(fileName)
+    const file = await fileHandle.getFile()
+    const buf = await file.arrayBuffer()
+    return new Uint8Array(buf)
+  } catch {
+    return null
+  }
+}
+
 export async function writeWorkspaceFile(
   path: string,
   content: string
@@ -63,6 +86,55 @@ export async function writeWorkspaceFile(
   const writable = await fileHandle.createWritable()
   await writable.write(content)
   await writable.close()
+}
+
+/** 以二进制写入文件（用于图片等非文本资源） */
+export async function writeWorkspaceFileBytes(
+  path: string,
+  bytes: Uint8Array
+): Promise<void> {
+  const dir = await getWorkspaceHandle()
+  const parts = path.replace(/^\/+/, "").split("/")
+  const fileName = parts.pop()!
+  let current = dir
+
+  for (const part of parts) {
+    current = await current.getDirectoryHandle(part, { create: true })
+  }
+
+  const fileHandle = await current.getFileHandle(fileName, { create: true })
+  const writable = await fileHandle.createWritable()
+  await writable.write(bytes)
+  await writable.close()
+}
+
+/** 判断路径是否为二进制资源（按扩展名） */
+export function isBinaryPath(path: string): boolean {
+  const ext = path.split(".").pop()?.toLowerCase()
+  return [
+    "png",
+    "jpg",
+    "jpeg",
+    "gif",
+    "webp",
+    "ico",
+    "bmp",
+    "woff",
+    "woff2",
+    "ttf",
+    "otf",
+    "eot",
+    "mp3",
+    "wav",
+    "mp4",
+    "webm",
+    "ogg",
+    "pdf",
+    "zip",
+    "gz",
+    "tar",
+    "wasm"
+  ].includes(ext || "")
 }
 
 export async function deleteWorkspaceFile(path: string): Promise<void> {
@@ -161,7 +233,7 @@ function mimeTypeForFilename(filename: string): string {
     woff: "font/woff",
     ttf: "font/ttf",
     txt: "text/plain",
-    log: "text/plain",
+    log: "text/plain"
   }
   return map[ext || ""] || "application/octet-stream"
 }
@@ -169,12 +241,20 @@ function mimeTypeForFilename(filename: string): string {
 export async function exportWorkspaceFile(
   path: string
 ): Promise<{ blob: Blob; filename: string } | null> {
-  const content = await readWorkspaceFile(path)
-  if (content === null) return null
-
   const parts = path.replace(/^\/+/, "").split("/")
   const filename = parts.pop() || "export.txt"
   const mimeType = mimeTypeForFilename(filename)
+
+  // 二进制资源按 bytes 读写，避免文本编码损坏
+  if (isBinaryPath(path)) {
+    const bytes = await readWorkspaceFileBytes(path)
+    if (bytes === null) return null
+    const blob = new Blob([bytes], { type: mimeType })
+    return { blob, filename }
+  }
+
+  const content = await readWorkspaceFile(path)
+  if (content === null) return null
   const blob = new Blob([content], { type: `${mimeType};charset=utf-8` })
 
   return { blob, filename }
@@ -196,6 +276,11 @@ export async function exportWorkspaceDir(
       if (entry.kind === "directory") {
         const subDir = zipDir.folder(entry.name)!
         await addToZip(subDir, fullPath)
+      } else if (isBinaryPath(fullPath)) {
+        const bytes = await readWorkspaceFileBytes(fullPath)
+        if (bytes !== null) {
+          zipDir.file(entry.name, bytes)
+        }
       } else {
         const content = await readWorkspaceFile(fullPath)
         if (content !== null) {

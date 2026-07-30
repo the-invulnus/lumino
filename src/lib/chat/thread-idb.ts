@@ -1,5 +1,6 @@
 import type { OpenAiChatMessage } from "./openai-messages"
 import { openDatabase, STORE_THREADS } from "../db"
+import { t } from "../i18n"
 
 export const DEFAULT_THREAD_ID = "default"
 
@@ -12,22 +13,6 @@ export type ChatThreadRecord = {
   mode?: string
   /** 自定义 Agent 名称（内置模式为 undefined） */
   agentName?: string
-}
-
-export function suggestTitleFromMessages(
-  messages: OpenAiChatMessage[]
-): string | undefined {
-  const user = messages.find((message) => message.role === "user")
-  if (!user || typeof user.content !== "string") {
-    return undefined
-  }
-
-  const text = user.content.trim().replace(/\s+/g, " ")
-  if (!text) {
-    return undefined
-  }
-
-  return text.length > 26 ? `${text.slice(0, 25)}…` : text
 }
 
 export async function getThread(threadId: string): Promise<ChatThreadRecord | undefined> {
@@ -93,7 +78,8 @@ export async function createEmptyThread(): Promise<ChatThreadRecord> {
   const record: ChatThreadRecord = {
     id,
     updatedAt: Date.now(),
-    title: "新会话",
+    // 标题留空，前端展示时用 i18n 的 thread.defaultTitle 兜底（随语言切换）
+    title: undefined,
     messages: []
   }
 
@@ -111,7 +97,7 @@ export async function generateThreadTitle(
   llmSettings: { baseUrl: string; apiKey: string; model: string }
 ): Promise<string> {
   const text = userInput.trim().replace(/\s+/g, " ")
-  if (!text) return "New chat"
+  if (!text) return t("thread.defaultTitle")
 
   const replySnippet = assistantReply.trim().replace(/\s+/g, " ").slice(0, 300)
 
@@ -158,8 +144,9 @@ export async function saveThreadMessages(
   messages: OpenAiChatMessage[]
 ): Promise<void> {
   const existing = await getThread(threadId)
-  // 标题由 generateTitleIfNew 在 agent 完整回复后生成，这里只保留已有标题
-  const title = existing?.title ?? (threadId === DEFAULT_THREAD_ID ? "默认" : "新会话")
+  // 标题由 generateTitleIfNew 在 agent 完整回复后生成，这里只保留已有标题；
+  // 未生成前留空，前端用 i18n 的 thread.defaultTitle 兜底（随语言切换）
+  const title = existing?.title
 
   await putThread({
     id: threadId,

@@ -10,9 +10,14 @@
  * 所有工具的结果直接写入 OPFS，返回文件路径供 agent 用 read_file 读取。
  */
 
-import { writeWorkspaceFile } from "../../fs/workspace"
-import { resolveTabId, executeScriptWithRetry, EVICT_DIR, DOWNLOADS_DIR } from "./browser-utils"
+import { writeWorkspaceFile, writeWorkspaceFileBytes } from "../../fs/workspace"
 import { getAgentWindowId } from "./agent-window"
+import {
+  DOWNLOADS_DIR,
+  EVICT_DIR,
+  executeScriptWithRetry,
+  resolveTabId
+} from "./browser-utils"
 
 // ═══════════════════════════════════════════
 // 公共：将结果保存到 OPFS
@@ -65,9 +70,14 @@ export async function handleScrapeStructure(
         try {
           // html 模式：直接返回运行时 DOM 的 outerHTML 字符串
           if (fmt === "html") {
-            const root = sel ? document.querySelector(sel) : document.documentElement
+            const root = sel
+              ? document.querySelector(sel)
+              : document.documentElement
             if (!root) {
-              return JSON.stringify({ error: "selector_not_found", selector: sel })
+              return JSON.stringify({
+                error: "selector_not_found",
+                selector: sel
+              })
             }
             return (root as Element).outerHTML
           }
@@ -77,7 +87,10 @@ export async function handleScrapeStructure(
           let truncated = false
           let maxDepthReached = false
 
-          function extractNode(el: Element, currentDepth: number): Record<string, unknown> | null {
+          function extractNode(
+            el: Element,
+            currentDepth: number
+          ): Record<string, unknown> | null {
             if (nodeCount >= maxNodes) {
               truncated = true
               return null
@@ -91,9 +104,10 @@ export async function handleScrapeStructure(
             const node: Record<string, unknown> = {
               tag: el.tagName.toLowerCase(),
               id: el.id || null,
-              class: el.className && typeof el.className === "string"
-                ? el.className.trim() || null
-                : null
+              class:
+                el.className && typeof el.className === "string"
+                  ? el.className.trim() || null
+                  : null
             }
 
             if (incText) {
@@ -131,12 +145,13 @@ export async function handleScrapeStructure(
             return node
           }
 
-          const root = sel
-            ? document.querySelector(sel)
-            : document.body
+          const root = sel ? document.querySelector(sel) : document.body
 
           if (!root) {
-            return JSON.stringify({ error: "selector_not_found", selector: sel })
+            return JSON.stringify({
+              error: "selector_not_found",
+              selector: sel
+            })
           }
 
           const tree = extractNode(root, 1)
@@ -185,31 +200,82 @@ export async function handleScrapeStructure(
 /** 默认返回的关键 CSS 属性列表（约 40 个） */
 const DEFAULT_STYLE_PROPERTIES = [
   // 字体/文字
-  "color", "font-family", "font-size", "font-weight", "font-style",
-  "line-height", "letter-spacing", "text-align", "text-decoration",
-  "text-transform", "white-space", "word-break",
+  "color",
+  "font-family",
+  "font-size",
+  "font-weight",
+  "font-style",
+  "line-height",
+  "letter-spacing",
+  "text-align",
+  "text-decoration",
+  "text-transform",
+  "white-space",
+  "word-break",
   // 背景
-  "background-color", "background-image", "background-size",
-  "background-position", "background-repeat",
+  "background-color",
+  "background-image",
+  "background-size",
+  "background-position",
+  "background-repeat",
   // 边框
-  "border-top-width", "border-right-width", "border-bottom-width", "border-left-width",
-  "border-top-color", "border-right-color", "border-bottom-color", "border-left-color",
-  "border-top-style", "border-right-style", "border-bottom-style", "border-left-style",
+  "border-top-width",
+  "border-right-width",
+  "border-bottom-width",
+  "border-left-width",
+  "border-top-color",
+  "border-right-color",
+  "border-bottom-color",
+  "border-left-color",
+  "border-top-style",
+  "border-right-style",
+  "border-bottom-style",
+  "border-left-style",
   "border-radius",
   // 间距
-  "padding-top", "padding-right", "padding-bottom", "padding-left",
-  "margin-top", "margin-right", "margin-bottom", "margin-left",
+  "padding-top",
+  "padding-right",
+  "padding-bottom",
+  "padding-left",
+  "margin-top",
+  "margin-right",
+  "margin-bottom",
+  "margin-left",
   // 布局
-  "display", "position", "top", "right", "bottom", "left",
-  "width", "height", "max-width", "max-height", "min-width", "min-height",
-  "overflow", "overflow-x", "overflow-y",
-  "flex-direction", "flex-wrap", "align-items", "justify-content",
-  "gap", "flex-grow", "flex-shrink",
-  "grid-template-columns", "grid-template-rows",
+  "display",
+  "position",
+  "top",
+  "right",
+  "bottom",
+  "left",
+  "width",
+  "height",
+  "max-width",
+  "max-height",
+  "min-width",
+  "min-height",
+  "overflow",
+  "overflow-x",
+  "overflow-y",
+  "flex-direction",
+  "flex-wrap",
+  "align-items",
+  "justify-content",
+  "gap",
+  "flex-grow",
+  "flex-shrink",
+  "grid-template-columns",
+  "grid-template-rows",
   // 视觉效果
-  "box-shadow", "opacity", "transform", "z-index",
-  "cursor", "pointer-events", "visibility",
-  "object-fit", "object-position"
+  "box-shadow",
+  "opacity",
+  "transform",
+  "z-index",
+  "cursor",
+  "pointer-events",
+  "visibility",
+  "object-fit",
+  "object-position"
 ]
 
 export async function handleScrapeStyles(
@@ -217,7 +283,10 @@ export async function handleScrapeStyles(
 ): Promise<string> {
   const selector = args.selector as string
   if (!selector) {
-    return JSON.stringify({ error: "no_selector", message: "请提供 CSS 选择器" })
+    return JSON.stringify({
+      error: "no_selector",
+      message: "请提供 CSS 选择器"
+    })
   }
 
   const properties = args.properties as string[] | undefined
@@ -243,22 +312,29 @@ export async function handleScrapeStyles(
         rec: string
       ) => {
         try {
-          const propsToGet = (props && props.length > 0) ? props : null
+          const propsToGet = props && props.length > 0 ? props : null
 
-          function extractBoxModel(el: Element, styles: CSSStyleDeclaration): Record<string, unknown> {
+          function extractBoxModel(
+            el: Element,
+            styles: CSSStyleDeclaration
+          ): Record<string, unknown> {
             const rect = el.getBoundingClientRect()
             return {
               content: {
-                width: Math.round(rect.width
-                  - parseFloat(styles.paddingLeft || "0")
-                  - parseFloat(styles.paddingRight || "0")
-                  - parseFloat(styles.borderLeftWidth || "0")
-                  - parseFloat(styles.borderRightWidth || "0")),
-                height: Math.round(rect.height
-                  - parseFloat(styles.paddingTop || "0")
-                  - parseFloat(styles.paddingBottom || "0")
-                  - parseFloat(styles.borderTopWidth || "0")
-                  - parseFloat(styles.borderBottomWidth || "0"))
+                width: Math.round(
+                  rect.width -
+                    parseFloat(styles.paddingLeft || "0") -
+                    parseFloat(styles.paddingRight || "0") -
+                    parseFloat(styles.borderLeftWidth || "0") -
+                    parseFloat(styles.borderRightWidth || "0")
+                ),
+                height: Math.round(
+                  rect.height -
+                    parseFloat(styles.paddingTop || "0") -
+                    parseFloat(styles.paddingBottom || "0") -
+                    parseFloat(styles.borderTopWidth || "0") -
+                    parseFloat(styles.borderBottomWidth || "0")
+                )
               },
               padding: {
                 top: Math.round(parseFloat(styles.paddingTop || "0")),
@@ -300,9 +376,14 @@ export async function handleScrapeStyles(
             const styles = window.getComputedStyle(el)
             const info: Record<string, unknown> = {
               tag: el.tagName.toLowerCase(),
-              selector_hint: el.id ? "#" + CSS.escape(el.id)
-                : el.className && typeof el.className === "string" && el.className.trim()
-                  ? el.tagName.toLowerCase() + "." + el.className.trim().split(/\s+/)[0]
+              selector_hint: el.id
+                ? "#" + CSS.escape(el.id)
+                : el.className &&
+                    typeof el.className === "string" &&
+                    el.className.trim()
+                  ? el.tagName.toLowerCase() +
+                    "." +
+                    el.className.trim().split(/\s+/)[0]
                   : el.tagName.toLowerCase()
             }
 
@@ -312,7 +393,12 @@ export async function handleScrapeStyles(
               info.box_model = extractBoxModel(el, styles)
               info.bbox = (() => {
                 const r = el.getBoundingClientRect()
-                return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }
+                return {
+                  x: Math.round(r.x),
+                  y: Math.round(r.y),
+                  w: Math.round(r.width),
+                  h: Math.round(r.height)
+                }
               })()
             }
 
@@ -320,7 +406,10 @@ export async function handleScrapeStyles(
               const pseudo: Record<string, unknown> = {}
               for (const pseudoEl of incPseudo) {
                 const pseudoStyles = window.getComputedStyle(el, pseudoEl)
-                pseudo[pseudoEl] = extractComputedStyles(pseudoStyles, propsToGet)
+                pseudo[pseudoEl] = extractComputedStyles(
+                  pseudoStyles,
+                  propsToGet
+                )
               }
               info.pseudo = pseudo
             }
@@ -345,7 +434,10 @@ export async function handleScrapeStyles(
 
           const el = document.querySelector(sel)
           if (!el) {
-            return JSON.stringify({ error: "selector_not_found", selector: sel })
+            return JSON.stringify({
+              error: "selector_not_found",
+              selector: sel
+            })
           }
 
           const info = processElement(el)
@@ -357,7 +449,13 @@ export async function handleScrapeStyles(
           })
         }
       },
-      [selector, properties ?? null, includeBoxModel, includePseudo ?? null, recursion],
+      [
+        selector,
+        properties ?? null,
+        includeBoxModel,
+        includePseudo ?? null,
+        recursion
+      ],
       "scrape_styles"
     )
 
@@ -402,7 +500,8 @@ export async function handleScrapeResources(
       (types: string[] | null, incInline: boolean, lim: number) => {
         try {
           const wantAll = !types || types.length === 0
-          const want = (t: string) => wantAll || (types && types.indexOf(t) >= 0)
+          const want = (t: string) =>
+            wantAll || (types && types.indexOf(t) >= 0)
           const output: Record<string, unknown> = {}
           const totals: Record<string, number> = {}
 
@@ -410,7 +509,11 @@ export async function handleScrapeResources(
           if (want("css")) {
             const css: Array<Record<string, unknown>> = []
             try {
-              for (let i = 0; i < document.styleSheets.length && css.length < lim; i++) {
+              for (
+                let i = 0;
+                i < document.styleSheets.length && css.length < lim;
+                i++
+              ) {
                 const ss = document.styleSheets[i]
                 const item: Record<string, unknown> = {
                   href: ss.href || null,
@@ -442,7 +545,9 @@ export async function handleScrapeResources(
                 if (!ss.href && !incInline) continue
                 css.push(item)
               }
-            } catch (_e) { /* ignore */ }
+            } catch (_e) {
+              /* ignore */
+            }
             output.css = css
             totals.css = css.length
           }
@@ -467,7 +572,9 @@ export async function handleScrapeResources(
 
               // background-image
               if (images.length < lim && incInline) {
-                const bgEls = document.querySelectorAll('[style*="background-image"]')
+                const bgEls = document.querySelectorAll(
+                  '[style*="background-image"]'
+                )
                 for (const el of bgEls) {
                   if (images.length >= lim) break
                   const bg = (el as HTMLElement).style.backgroundImage
@@ -480,7 +587,9 @@ export async function handleScrapeResources(
 
               // picture > source
               if (images.length < lim) {
-                const sources = document.querySelectorAll("picture source[srcset]")
+                const sources = document.querySelectorAll(
+                  "picture source[srcset]"
+                )
                 for (const src of sources) {
                   if (images.length >= lim) break
                   const srcset = src.getAttribute("srcset")
@@ -495,10 +604,15 @@ export async function handleScrapeResources(
                 const videos = document.querySelectorAll("video[poster]")
                 for (const v of videos) {
                   if (images.length >= lim) break
-                  images.push({ src: v.getAttribute("poster")!, type: "video_poster" })
+                  images.push({
+                    src: v.getAttribute("poster")!,
+                    type: "video_poster"
+                  })
                 }
               }
-            } catch (_e) { /* ignore */ }
+            } catch (_e) {
+              /* ignore */
+            }
             output.images = images
             totals.images = images.length
           }
@@ -519,7 +633,9 @@ export async function handleScrapeResources(
                   })
                 })
               }
-            } catch (_e) { /* ignore */ }
+            } catch (_e) {
+              /* ignore */
+            }
             output.fonts = fonts
             totals.fonts = fonts.length
           }
@@ -542,14 +658,18 @@ export async function handleScrapeResources(
               }
 
               // msapplication 图标
-              const msIcon = document.querySelector('meta[name="msapplication-TileImage"]')
+              const msIcon = document.querySelector(
+                'meta[name="msapplication-TileImage"]'
+              )
               if (msIcon && icons.length < lim) {
                 icons.push({
                   href: msIcon.getAttribute("content") || null,
                   rel: "msapplication-TileImage"
                 })
               }
-            } catch (_e) { /* ignore */ }
+            } catch (_e) {
+              /* ignore */
+            }
             output.icons = icons
             totals.icons = icons.length
           }
@@ -568,7 +688,9 @@ export async function handleScrapeResources(
                   defer: s.hasAttribute("defer")
                 })
               }
-            } catch (_e) { /* ignore */ }
+            } catch (_e) {
+              /* ignore */
+            }
             output.scripts = scripts
             totals.scripts = scripts.length
           }
@@ -630,16 +752,19 @@ export async function handleFetchResource(
           }
         } else {
           const agentWid = await getAgentWindowId()
-          const query = agentWid != null
-            ? { active: true, windowId: agentWid }
-            : { active: true, currentWindow: true }
+          const query =
+            agentWid != null
+              ? { active: true, windowId: agentWid }
+              : { active: true, currentWindow: true }
           const [activeTab] = await chrome.tabs.query(query)
           if (activeTab?.url) {
             const parsed = new URL(activeTab.url)
             origin = parsed.origin
           }
         }
-      } catch (_e) { /* use default origin */ }
+      } catch (_e) {
+        /* use default origin */
+      }
       resolvedUrl = new URL(url, origin).toString()
     } else {
       resolvedUrl = url
@@ -659,33 +784,63 @@ export async function handleFetchResource(
       })
     }
 
-    const content = await response.text()
     const contentType = response.headers.get("content-type") || "unknown"
 
     // 生成文件名：优先从 URL 路径提取后缀，content-type 兜底
     const urlPath = (() => {
-      try { return new URL(resolvedUrl).pathname } catch { return "" }
+      try {
+        return new URL(resolvedUrl).pathname
+      } catch {
+        return ""
+      }
     })()
-    const pathExt = urlPath.includes(".") ? urlPath.split(".").pop()?.toLowerCase() : undefined
-    const ext = pathExt ? `.${pathExt}`
-      : contentType.includes("css") ? ".css"
-      : contentType.includes("javascript") ? ".js"
-      : contentType.includes("svg") ? ".svg"
-      : contentType.includes("html") ? ".html"
-      : contentType.includes("json") ? ".json"
-      : contentType.includes("font") || contentType.includes("woff") ? ".woff2"
-      : ".txt"
+    const pathExt = urlPath.includes(".")
+      ? urlPath.split(".").pop()?.toLowerCase()
+      : undefined
+    const ext = pathExt
+      ? `.${pathExt}`
+      : contentType.includes("css")
+        ? ".css"
+        : contentType.includes("javascript")
+          ? ".js"
+          : contentType.includes("svg")
+            ? ".svg"
+            : contentType.includes("html")
+              ? ".html"
+              : contentType.includes("json")
+                ? ".json"
+                : contentType.includes("font") || contentType.includes("woff")
+                  ? ".woff2"
+                  : ".txt"
     const urlFileName = pathExt ? urlPath.split("/").pop() : undefined
-    const safeName = urlFileName && urlFileName.length <= 128
-      ? urlFileName
-      : `fetch_resource_${Date.now()}_${btoa(resolvedUrl).replace(/[/+=]/g, "_").slice(0, 32)}${ext}`
+    const safeName =
+      urlFileName && urlFileName.length <= 128
+        ? urlFileName
+        : `fetch_resource_${Date.now()}_${btoa(resolvedUrl).replace(/[/+=]/g, "_").slice(0, 32)}${ext}`
     const path = `${DOWNLOADS_DIR}/${safeName}`
 
-    await writeWorkspaceFile(path, content)
+    // 二进制资源（图片/字体/音视频等）按 bytes 写入，避免文本编码损坏
+    const isBinary =
+      /^(image\/|font\/|audio\/|video\/|application\/(pdf|zip|gzip|x-tar|wasm|octet-stream))/i.test(
+        contentType
+      ) ||
+      /\.(png|jpe?g|gif|webp|ico|bmp|woff2?|ttf|otf|eot|mp3|wav|mp4|webm|ogg|pdf|zip|gz|tar|wasm)$/i.test(
+        path
+      )
+    let size: number
+    if (isBinary) {
+      const buf = await response.arrayBuffer()
+      await writeWorkspaceFileBytes(path, new Uint8Array(buf))
+      size = buf.byteLength
+    } else {
+      const content = await response.text()
+      await writeWorkspaceFile(path, content)
+      size = content.length
+    }
 
     return JSON.stringify({
       url: resolvedUrl,
-      content_size: content.length,
+      content_size: size,
       content_type: contentType,
       saved_to: path
     })

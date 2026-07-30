@@ -1,31 +1,58 @@
 # Lumino
 
-Chrome extension scaffold built with [Plasmo](https://docs.plasmo.com/), React, and TypeScript.
+A multi-mode AI assistant in your browser side panel — research, replicate designs, and automate web pages.
+
+Powered by a self-built agent loop with a rich set of built-in tools for reading web content, manipulating DOM, managing an OPFS file workspace, and integrating with Obsidian.
+
+## Features
+
+- **Multi-Agent Modes** — Chat, Deep Research, Design Replication, Page Automation, plus custom agents you define
+- **Rich Built-in Tools** — Page reading, DOM inspection, form filling, screenshots, file system operations, and more
+- **Obsidian Integration** — Read and write notes via Obsidian Local REST API
+- **OPFS File Workspace** — Built-in file system for storing and editing files during sessions
+- **Three Themes** — Paper, ORYZO, and Fictional color schemes
+- **i18n** — English and Chinese with runtime switching
+- **Privacy First** — API keys stored locally only, never synced to cloud
 
 ## Getting Started
 
-Install dependencies and run the development server:
+### Prerequisites
+
+- Node.js 20+
+- pnpm
+
+### Development
 
 ```bash
+pnpm install
 pnpm dev
 ```
 
-Open your browser and load the appropriate development build. For example, if you are developing for the chrome browser, using manifest v3, use: `build/chrome-mv3-dev`.
+Load the extension from `build/chrome-mv3-dev` in Chrome's `chrome://extensions` page (enable "Developer mode" → "Load unpacked").
 
-You can start editing the popup by modifying `src/popup.tsx`. It should auto-update as you make changes.
-
-For further guidance, [visit our Documentation](https://docs.plasmo.com/)
-
-## Making production build
-
-Run the following:
+### Production Build
 
 ```bash
 pnpm build
+pnpm package   # generates a .zip ready for Chrome Web Store
 ```
 
-This should create a production bundle for your extension, ready to be zipped and published to the stores.
+## Configuration
 
-## Submit to the webstores
+Open the Options page (right-click extension icon → Options) to configure:
 
-The easiest way to deploy your Plasmo extension is to use the built-in [bpp](https://bpp.browser.market) GitHub action. Prior to using this action however, make sure to build your extension and upload the first version to the store to establish the basic credentials. Then, simply follow [this setup instruction](https://docs.plasmo.com/framework/workflows/submit) and you should be on your way for automated submission!
+- **LLM Settings** — OpenAI-compatible API (base URL, API key, model name)
+- **Obsidian Integration** — Enable and configure Obsidian Local REST API access
+- **Custom Agents** — Create agents with custom system prompts and tool subsets
+- **Theme** — Switch between Paper, ORYZO, and Fictional themes
+- **Language** — English / 中文
+
+## Architecture
+
+Built with [Plasmo](https://docs.plasmo.com/) (Chrome Extension framework), React 18 + TypeScript 5.3.
+
+See [CLAUDE.md](./CLAUDE.md) for detailed architecture documentation.
+
+## License
+
+MIT

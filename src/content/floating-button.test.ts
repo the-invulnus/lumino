@@ -5,10 +5,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { OPEN_SIDE_PANEL_MESSAGE } from "../lib/side-panel-bridge"
-import { FLOATING_BUTTON_ID, createFloatingButton, mountFloatingButton } from "./floating-button"
+import {
+  createFloatingButton,
+  FLOATING_BUTTON_ID,
+  mountFloatingButton
+} from "./floating-button"
 
 describe("floating button", () => {
-  const sendMessage = vi.fn()
+  const sendMessage = vi.fn().mockResolvedValue(undefined)
 
   beforeEach(() => {
     document.body.innerHTML = ""
@@ -16,13 +20,19 @@ describe("floating button", () => {
     sendMessage.mockClear()
     vi.stubGlobal("chrome", {
       runtime: {
-        sendMessage: sendMessage
+        sendMessage: sendMessage,
+        onMessage: { addListener: vi.fn() }
       },
       storage: {
         local: {
           get: async () => ({}),
           set: async () => undefined
-        }
+        },
+        sync: {
+          get: (_key: string, cb: (data: Record<string, unknown>) => void) =>
+            cb({})
+        },
+        onChanged: { addListener: vi.fn() }
       }
     })
   })
@@ -37,8 +47,7 @@ describe("floating button", () => {
     expect(button.id).toBe(FLOATING_BUTTON_ID)
     expect(button.className).toContain("lumino-fab")
     expect(button.getAttribute("aria-label")).toBe("Open Lumino side panel")
-    expect(button.textContent).toContain("L")
-    expect(button.querySelector(".lumino-fab__glyph")).not.toBeNull()
+    expect(button.querySelector(".lumino-fab__img")).not.toBeNull()
   })
 
   it("mounts only one button when called repeatedly", () => {

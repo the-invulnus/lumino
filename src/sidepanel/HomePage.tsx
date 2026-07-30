@@ -6,11 +6,10 @@ import { useState, useEffect } from "react"
 import type { AgentConfig } from "../lib/chat/mode-config"
 import type { ChatThreadRecord } from "../lib/chat/thread-idb"
 import { listThreads } from "../lib/chat/thread-idb"
-import { suggestTitleFromMessages } from "../lib/chat/thread-idb"
 import { NavIcon } from "./IconSidebar"
 import { useT } from "../lib/i18n"
 import { formatHistoryDate } from "../lib/format-time"
-import blackCatGif from "data-base64:~black_cat.gif"
+import lumiIcon from "data-base64:~lumi.png"
 
 function CardIcon({ icon }: { icon: string }) {
   const props = { width: 24, height: 24, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const }
@@ -53,7 +52,7 @@ export function HomePage({
         <img
           aria-hidden
           className="lm-home-hero-avatar"
-          src={blackCatGif}
+          src={lumiIcon}
           alt="Lumi"
         />
         <h1 className="lm-home-hero-title">Lumi Knows</h1>
@@ -115,7 +114,7 @@ export function HomePage({
                     </span>
                   )}
                   <span className="lm-home-recent-title">
-                    {thread.title || suggestTitleFromMessages(thread.messages) || t("thread.placeholder")}
+                    {thread.title || t("thread.defaultTitle")}
                   </span>
                   <span className="lm-home-recent-time">{formatHistoryDate(thread.updatedAt)}</span>
                 </button>

@@ -43,7 +43,7 @@ import {
   type AgentErrorMessage
 } from "../lib/side-panel-bridge"
 import { ChatMessageBlock, displayContent, formatMessagePreview } from "./components/ChatMessageBlock"
-import blackCatGif from "data-base64:~black_cat.gif"
+import lumiIcon from "data-base64:~lumi.png"
 
 function SendArrowIcon() {
   return (
@@ -360,7 +360,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
     const assistantMsg = [...msgs].reverse().find((m) => m.role === "assistant" && typeof m.content === "string" && m.content)
     if (!userMsg || !assistantMsg) return
     const existing = await getThread(threadId)
-    if (existing?.title && existing.title !== "新会话") return
+    if (existing?.title) return
     const userInput = typeof userMsg.content === "string" ? userMsg.content : ""
     const reply = typeof assistantMsg.content === "string" ? assistantMsg.content : ""
     generateThreadTitle(userInput, reply, settings).then(async (title) => {
@@ -484,7 +484,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
           <img
             aria-hidden
             className="lm-logo-cat lm-logo-cat--sm"
-            src={blackCatGif}
+            src={lumiIcon}
             alt="Lumi"
           />
           {editingTitle ? (

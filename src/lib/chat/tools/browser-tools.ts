@@ -1,12 +1,12 @@
+import { writeWorkspaceFile, writeWorkspaceFileBytes } from "../../fs/workspace"
 import { getAgentWindowId } from "./agent-window"
-import { writeWorkspaceFile } from "../../fs/workspace"
 import {
-  getActiveTab,
-  resolveTabId,
-  executeScriptWithRetry,
-  QUERY_WITH_TEXT_FN,
   EVICT_DIR,
+  executeScriptWithRetry,
+  getActiveTab,
   MAX_RETRIES,
+  QUERY_WITH_TEXT_FN,
+  resolveTabId,
   RETRY_DELAY_MS
 } from "./browser-utils"
 
@@ -19,7 +19,7 @@ async function waitForTabLoad(tabId: number, timeoutMs = 8_000): Promise<void> {
       if (!tab) return
       if (tab.status === "complete") return
     } catch {
-      return  // tab 不存在
+      return // tab 不存在
     }
     await new Promise((r) => setTimeout(r, 300))
   }
@@ -53,7 +53,11 @@ export async function handleGetPageContent(
         try {
           if (m === "structured" && sel) {
             const el = document.querySelector(sel)
-            if (!el) return JSON.stringify({ error: "selector_not_found", selector: sel })
+            if (!el)
+              return JSON.stringify({
+                error: "selector_not_found",
+                selector: sel
+              })
             const children = Array.from(el.children)
             const items = children.map((c) => ({
               tag: c.tagName,
@@ -70,14 +74,19 @@ export async function handleGetPageContent(
             text = el ? (el as HTMLElement).innerText || "" : ""
           } else {
             const main = document.querySelector("main, article, [role=main]")
-            text = main ? (main as HTMLElement).innerText || "" : document.body.innerText || ""
+            text = main
+              ? (main as HTMLElement).innerText || ""
+              : document.body.innerText || ""
           }
           return text
         } catch (e) {
           return JSON.stringify({
             error: "func_execution_error",
             message: e instanceof Error ? e.message : String(e),
-            stack: e instanceof Error ? e.stack?.split("\n").slice(0, 3).join("\n") : null
+            stack:
+              e instanceof Error
+                ? e.stack?.split("\n").slice(0, 3).join("\n")
+                : null
           })
         }
       },
@@ -93,7 +102,8 @@ export async function handleGetPageContent(
       })
     }
 
-    const fullContent = typeof result === "string" ? result : JSON.stringify(result)
+    const fullContent =
+      typeof result === "string" ? result : JSON.stringify(result)
 
     // 内容在阈值内，直接返回
     if (fullContent.length <= PAGE_CONTENT_MAX_CHARS) {
@@ -104,9 +114,10 @@ export async function handleGetPageContent(
     const preview = fullContent.slice(0, PAGE_CONTENT_MAX_CHARS)
     const previewLines = preview.split("\n")
     const lastLine = previewLines[previewLines.length - 1]
-    const completePreviewLines = lastLine.length > 0 && fullContent[PAGE_CONTENT_MAX_CHARS - 1] !== "\n"
-      ? previewLines.slice(0, -1)
-      : previewLines
+    const completePreviewLines =
+      lastLine.length > 0 && fullContent[PAGE_CONTENT_MAX_CHARS - 1] !== "\n"
+        ? previewLines.slice(0, -1)
+        : previewLines
     const completePreview = completePreviewLines.join("\n")
     const shownLineCount = completePreviewLines.length
 
@@ -123,7 +134,10 @@ export async function handleGetPageContent(
         `[Content truncated. Lines 1-${shownLineCount} shown (${completePreview.length} chars). Full content (${fullContent.length} chars) saved to ${evictPath}. Use read_file with offset=${shownLineCount} to continue.]`
       ].join("\n")
     } catch {
-      return completePreview + `\n\n[Content truncated at ${completePreview.length} chars. Full content (${fullContent.length} chars). OPFS write failed — full content unavailable.]`
+      return (
+        completePreview +
+        `\n\n[Content truncated at ${completePreview.length} chars. Full content (${fullContent.length} chars). OPFS write failed — full content unavailable.]`
+      )
     }
   } catch (error) {
     return JSON.stringify({
@@ -139,9 +153,14 @@ export async function handleGetPageContent(
 export async function handleFillForm(
   args: Record<string, unknown>
 ): Promise<string> {
-  const fields = args.fields as Array<{ selector: string; value: string }> | undefined
+  const fields = args.fields as
+    | Array<{ selector: string; value: string }>
+    | undefined
   if (!fields || fields.length === 0) {
-    return JSON.stringify({ error: "no_fields", message: "请提供要填充的字段列表" })
+    return JSON.stringify({
+      error: "no_fields",
+      message: "请提供要填充的字段列表"
+    })
   }
 
   const submit = args.submit === true
@@ -156,7 +175,10 @@ export async function handleFillForm(
   try {
     const [result] = await chrome.scripting.executeScript({
       target: { tabId },
-      func: (f: Array<{ selector: string; value: string }>, doSubmit: boolean) => {
+      func: (
+        f: Array<{ selector: string; value: string }>,
+        doSubmit: boolean
+      ) => {
         const results: Array<Record<string, unknown>> = []
 
         // 辅助函数：支持 :text("...") 选择器（jQuery/Sizzle 扩展）
@@ -178,13 +200,20 @@ export async function handleFillForm(
           try {
             const el = queryWithText(selector)
             if (!el) {
-              results.push({ selector, success: false, error: "element_not_found" })
+              results.push({
+                selector,
+                success: false,
+                error: "element_not_found"
+              })
               continue
             }
 
             const tag = el.tagName.toLowerCase()
 
-            if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+            if (
+              el instanceof HTMLInputElement ||
+              el instanceof HTMLTextAreaElement
+            ) {
               el.focus()
               el.value = ""
               el.dispatchEvent(new Event("focus", { bubbles: true }))
@@ -192,14 +221,22 @@ export async function handleFillForm(
               el.dispatchEvent(new Event("input", { bubbles: true }))
               el.dispatchEvent(new Event("change", { bubbles: true }))
               el.dispatchEvent(new Event("blur", { bubbles: true }))
-              results.push({ selector, success: true, tag, type: el.type || tag })
+              results.push({
+                selector,
+                success: true,
+                tag,
+                type: el.type || tag
+              })
             } else if (el instanceof HTMLSelectElement) {
               el.focus()
               el.dispatchEvent(new Event("focus", { bubbles: true }))
               // 尝试按 value 或 text 匹配选项
               let matched = false
               for (let i = 0; i < el.options.length; i++) {
-                if (el.options[i].value === value || el.options[i].text === value) {
+                if (
+                  el.options[i].value === value ||
+                  el.options[i].text === value
+                ) {
                   el.selectedIndex = i
                   matched = true
                   break
@@ -209,15 +246,32 @@ export async function handleFillForm(
               el.dispatchEvent(new Event("change", { bubbles: true }))
               el.dispatchEvent(new Event("blur", { bubbles: true }))
               results.push({ selector, success: matched, tag, matched })
-            } else if (el.getAttribute("contenteditable") === "true" || el.getAttribute("contenteditable") === "") {
+            } else if (
+              el.getAttribute("contenteditable") === "true" ||
+              el.getAttribute("contenteditable") === ""
+            ) {
               el.textContent = value
               el.dispatchEvent(new Event("input", { bubbles: true }))
-              results.push({ selector, success: true, tag, contenteditable: true })
+              results.push({
+                selector,
+                success: true,
+                tag,
+                contenteditable: true
+              })
             } else {
-              results.push({ selector, success: false, error: "unsupported_element", tag })
+              results.push({
+                selector,
+                success: false,
+                error: "unsupported_element",
+                tag
+              })
             }
           } catch (e) {
-            results.push({ selector, success: false, error: e instanceof Error ? e.message : String(e) })
+            results.push({
+              selector,
+              success: false,
+              error: e instanceof Error ? e.message : String(e)
+            })
           }
         }
 
@@ -229,7 +283,9 @@ export async function handleFillForm(
               const form = lastField.closest("form")
               if (form) {
                 // 方法 1：触发 form submit 事件
-                form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+                form.dispatchEvent(
+                  new Event("submit", { bubbles: true, cancelable: true })
+                )
                 // 方法 2：查找 form 内的 submit 按钮并点击（兼容 React 等拦截了 submit 事件的框架）
                 const submitBtn = form.querySelector(
                   'button[type="submit"], input[type="submit"], button:not([type])'
@@ -237,13 +293,22 @@ export async function handleFillForm(
                 if (submitBtn) {
                   submitBtn.click()
                 }
-                results.push({ submitted: true, form_action: (form as HTMLFormElement).action || null })
+                results.push({
+                  submitted: true,
+                  form_action: (form as HTMLFormElement).action || null
+                })
               } else {
                 // 不在 form 内，尝试按回车
                 if (lastField instanceof HTMLInputElement) {
-                  lastField.dispatchEvent(new KeyboardEvent("keydown", {
-                    key: "Enter", code: "Enter", keyCode: 13, bubbles: true, cancelable: true
-                  }))
+                  lastField.dispatchEvent(
+                    new KeyboardEvent("keydown", {
+                      key: "Enter",
+                      code: "Enter",
+                      keyCode: 13,
+                      bubbles: true,
+                      cancelable: true
+                    })
+                  )
                   results.push({ submitted: true, via: "enter_key" })
                 } else {
                   results.push({ submitted: false, error: "no_form_found" })
@@ -251,7 +316,10 @@ export async function handleFillForm(
               }
             }
           } catch (e) {
-            results.push({ submitted: false, error: e instanceof Error ? e.message : String(e) })
+            results.push({
+              submitted: false,
+              error: e instanceof Error ? e.message : String(e)
+            })
           }
         }
 
@@ -264,7 +332,9 @@ export async function handleFillForm(
       return JSON.stringify({ error: "execute_script_failed" })
     }
 
-    return typeof result.result === "string" ? result.result : JSON.stringify(result.result)
+    return typeof result.result === "string"
+      ? result.result
+      : JSON.stringify(result.result)
   } catch (error) {
     return JSON.stringify({
       error: "fill_form_failed",
@@ -281,7 +351,10 @@ export async function handleClickElement(
 ): Promise<string> {
   const selector = args.selector as string | undefined
   if (!selector) {
-    return JSON.stringify({ error: "no_selector", message: "请提供 CSS 选择器" })
+    return JSON.stringify({
+      error: "no_selector",
+      message: "请提供 CSS 选择器"
+    })
   }
 
   let tabId: number
@@ -298,7 +371,7 @@ export async function handleClickElement(
         // 将 jQuery/Sizzle :text("...") 选择器转换为原生可用的形式
         let effectiveSel = sel
         let textFilter: string | null = null
-        const textMatch = sel.match(/^(.+):text\(["']([^"']*)["']\)$/);
+        const textMatch = sel.match(/^(.+):text\(["']([^"']*)["']\)$/)
         if (textMatch) {
           effectiveSel = textMatch[1]
           textFilter = textMatch[2]
@@ -318,18 +391,28 @@ export async function handleClickElement(
             el = document.querySelector(effectiveSel)
           }
         } catch (e) {
-          return JSON.stringify({ error: "invalid_selector", selector: sel, message: `CSS selector syntax error: ${e instanceof Error ? e.message : String(e)}` })
+          return JSON.stringify({
+            error: "invalid_selector",
+            selector: sel,
+            message: `CSS selector syntax error: ${e instanceof Error ? e.message : String(e)}`
+          })
         }
 
         if (!el) {
           return JSON.stringify({ error: "element_not_found", selector: sel })
         }
 
-        if (el instanceof HTMLButtonElement ||
-            el instanceof HTMLInputElement ||
-            el instanceof HTMLSelectElement) {
+        if (
+          el instanceof HTMLButtonElement ||
+          el instanceof HTMLInputElement ||
+          el instanceof HTMLSelectElement
+        ) {
           if (el.disabled) {
-            return JSON.stringify({ error: "element_disabled", selector: sel, tag: el.tagName.toLowerCase() })
+            return JSON.stringify({
+              error: "element_disabled",
+              selector: sel,
+              tag: el.tagName.toLowerCase()
+            })
           }
         }
 
@@ -341,9 +424,15 @@ export async function handleClickElement(
         const y = rect.top + rect.height / 2
 
         // 模拟完整点击序列
-        el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, clientX: x, clientY: y }))
-        el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: x, clientY: y }))
-        el.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: x, clientY: y }))
+        el.dispatchEvent(
+          new MouseEvent("mousedown", { bubbles: true, clientX: x, clientY: y })
+        )
+        el.dispatchEvent(
+          new MouseEvent("mouseup", { bubbles: true, clientX: x, clientY: y })
+        )
+        el.dispatchEvent(
+          new MouseEvent("click", { bubbles: true, clientX: x, clientY: y })
+        )
 
         // 如果是链接，也尝试触发导航
         if (el instanceof HTMLAnchorElement && el.href) {
@@ -368,7 +457,9 @@ export async function handleClickElement(
       return JSON.stringify({ error: "execute_script_failed" })
     }
 
-    return typeof result.result === "string" ? result.result : JSON.stringify(result.result)
+    return typeof result.result === "string"
+      ? result.result
+      : JSON.stringify(result.result)
   } catch (error) {
     return JSON.stringify({
       error: "click_element_failed",
@@ -403,24 +494,35 @@ export async function handleScreenshot(
       windowId = undefined
     }
 
-    const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format, quality })
+    const dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
+      format,
+      quality
+    })
 
     if (!dataUrl) {
       return JSON.stringify({ error: "capture_failed" })
     }
 
-    // 将 base64 数据保存到 OPFS，不直接返回给 agent
+    // 解码 data URL 为二进制 bytes，避免文本编码损坏图片
+    const commaIdx = dataUrl.indexOf(",")
+    const base64 = commaIdx >= 0 ? dataUrl.slice(commaIdx + 1) : dataUrl
+    const binStr = atob(base64)
+    const bytes = new Uint8Array(binStr.length)
+    for (let i = 0; i < binStr.length; i++) {
+      bytes[i] = binStr.charCodeAt(i)
+    }
+
     const ext = format === "png" ? "png" : "jpg"
     const timestamp = Date.now()
     const savePath = `/screenshots/screenshot_${timestamp}_tab${tabId}.${ext}`
 
-    await writeWorkspaceFile(savePath, dataUrl)
+    await writeWorkspaceFileBytes(savePath, bytes)
 
     return JSON.stringify({
       tab_id: tabId,
       format,
       quality: format === "jpeg" ? quality : undefined,
-      size_bytes: dataUrl.length,
+      size_bytes: bytes.length,
       saved_to: savePath
     })
   } catch (error) {
@@ -459,7 +561,11 @@ export async function handleInspectElement(
         try {
           function isVisible(el: Element): boolean {
             const style = window.getComputedStyle(el)
-            if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+            if (
+              style.display === "none" ||
+              style.visibility === "hidden" ||
+              style.opacity === "0"
+            ) {
               return false
             }
             const rect = el.getBoundingClientRect()
@@ -474,20 +580,24 @@ export async function handleInspectElement(
               editable: false
             }
 
-            if (el instanceof HTMLButtonElement ||
-                el instanceof HTMLAnchorElement ||
-                (el instanceof HTMLInputElement && (
-                  el.type === "submit" ||
+            if (
+              el instanceof HTMLButtonElement ||
+              el instanceof HTMLAnchorElement ||
+              (el instanceof HTMLInputElement &&
+                (el.type === "submit" ||
                   el.type === "button" ||
-                  el.type === "reset"
-                ))) {
+                  el.type === "reset"))
+            ) {
               info.clickable = true
-              info.disabled = (el as HTMLButtonElement | HTMLInputElement).disabled || false
+              info.disabled =
+                (el as HTMLButtonElement | HTMLInputElement).disabled || false
             }
 
-            if (el instanceof HTMLInputElement ||
-                el instanceof HTMLTextAreaElement ||
-                el instanceof HTMLSelectElement) {
+            if (
+              el instanceof HTMLInputElement ||
+              el instanceof HTMLTextAreaElement ||
+              el instanceof HTMLSelectElement
+            ) {
               info.focusable = true
               if (!(el as HTMLInputElement).disabled) {
                 info.editable = true
@@ -502,31 +612,44 @@ export async function handleInspectElement(
           }
 
           function getLabel(el: Element): string | null {
-            const input = el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+            const input = el as
+              | HTMLInputElement
+              | HTMLTextAreaElement
+              | HTMLSelectElement
             if (input.id) {
-              const labelEl = document.querySelector(`label[for="${CSS.escape(input.id)}"]`)
+              const labelEl = document.querySelector(
+                `label[for="${CSS.escape(input.id)}"]`
+              )
               if (labelEl) return labelEl.textContent?.trim() || null
             }
             const parentLabel = input.closest("label")
             if (parentLabel) return parentLabel.textContent?.trim() || null
             const prev = input.previousElementSibling
-            if (prev?.tagName === "LABEL") return prev.textContent?.trim() || null
+            if (prev?.tagName === "LABEL")
+              return prev.textContent?.trim() || null
             return null
           }
 
           function buildSelectors(el: Element): string[] {
             const selectors: string[] = []
-            const input = el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+            const input = el as
+              | HTMLInputElement
+              | HTMLTextAreaElement
+              | HTMLSelectElement
             if (input.id) selectors.push(`#${CSS.escape(input.id)}`)
 
             const tag = el.tagName.toLowerCase()
 
             if ((input as HTMLInputElement).name) {
-              selectors.push(`${tag}[name="${(input as HTMLInputElement).name}"]`)
+              selectors.push(
+                `${tag}[name="${(input as HTMLInputElement).name}"]`
+              )
             }
 
             if (input instanceof HTMLInputElement && input.type && input.name) {
-              selectors.push(`input[type="${input.type}"][name="${input.name}"]`)
+              selectors.push(
+                `input[type="${input.type}"][name="${input.name}"]`
+              )
             }
 
             const ph = (input as HTMLInputElement).placeholder
@@ -541,9 +664,10 @@ export async function handleInspectElement(
             const role = input.getAttribute("role")
             if (role) selectors.push(tag + '[role="' + role + '"]')
 
-            const cls = input.className && typeof input.className === "string"
-              ? input.className.trim().split(/\s+/).filter(Boolean)
-              : []
+            const cls =
+              input.className && typeof input.className === "string"
+                ? input.className.trim().split(/\s+/).filter(Boolean)
+                : []
             if (cls.length === 1 && cls[0]) {
               selectors.push(tag + "." + CSS.escape(cls[0]))
             }
@@ -557,7 +681,10 @@ export async function handleInspectElement(
               tag,
               text: el.textContent?.trim().slice(0, 80) || null,
               id: el.id || null,
-              class: el.className && typeof el.className === "string" ? el.className.trim() || null : null
+              class:
+                el.className && typeof el.className === "string"
+                  ? el.className.trim() || null
+                  : null
             }
 
             if (el instanceof HTMLAnchorElement) {
@@ -569,17 +696,32 @@ export async function handleInspectElement(
               attrs.alt = el.alt || null
             }
 
-            if (el instanceof HTMLInputElement ||
-                el instanceof HTMLTextAreaElement ||
-                el instanceof HTMLSelectElement) {
-              const input = el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+            if (
+              el instanceof HTMLInputElement ||
+              el instanceof HTMLTextAreaElement ||
+              el instanceof HTMLSelectElement
+            ) {
+              const input = el as
+                | HTMLInputElement
+                | HTMLTextAreaElement
+                | HTMLSelectElement
               attrs.name = (input as HTMLInputElement).name || null
-              attrs.type = tag === "input" ? ((input as HTMLInputElement).type || "text") : tag
-              attrs.placeholder = (input as HTMLInputElement | HTMLTextAreaElement).placeholder || null
+              attrs.type =
+                tag === "input"
+                  ? (input as HTMLInputElement).type || "text"
+                  : tag
+              attrs.placeholder =
+                (input as HTMLInputElement | HTMLTextAreaElement).placeholder ||
+                null
               attrs.required = (input as HTMLInputElement).required || false
-              attrs.value = el instanceof HTMLSelectElement
-                ? (el as HTMLSelectElement).options[(el as HTMLSelectElement).selectedIndex]?.text || el.getAttribute("value") || null
-                : (input as HTMLInputElement).value || null
+              attrs.value =
+                el instanceof HTMLSelectElement
+                  ? (el as HTMLSelectElement).options[
+                      (el as HTMLSelectElement).selectedIndex
+                    ]?.text ||
+                    el.getAttribute("value") ||
+                    null
+                  : (input as HTMLInputElement).value || null
               attrs.label = getLabel(el)
             }
 
@@ -608,7 +750,7 @@ export async function handleInspectElement(
 
           // 辅助函数：支持 :text("...") 选择器（jQuery/Sizzle 扩展）
           function queryWithText(sel2: string): Element | null {
-            const tm = sel2.match(/^(.+):text\(["']([^"\']*)["']\)$/);
+            const tm = sel2.match(/^(.+):text\(["']([^"\']*)["']\)$/)
             if (tm) {
               const candidates = document.querySelectorAll(tm[1])
               for (const c of candidates) {
@@ -627,11 +769,14 @@ export async function handleInspectElement(
           if (sel) {
             target = queryWithText(sel)
           } else {
-            target = document.querySelector("form, [role=form]") ||
-                     document.querySelector("[role=dialog], [role=menu], [role=toolbar]") ||
-                     document.querySelector("nav, [role=navigation]") ||
-                     document.querySelector("main, article, [role=main]") ||
-                     document.body
+            target =
+              document.querySelector("form, [role=form]") ||
+              document.querySelector(
+                "[role=dialog], [role=menu], [role=toolbar]"
+              ) ||
+              document.querySelector("nav, [role=navigation]") ||
+              document.querySelector("main, article, [role=main]") ||
+              document.body
           }
 
           if (!target) {
@@ -646,12 +791,14 @@ export async function handleInspectElement(
           info.total_descendants = target.querySelectorAll("*").length
 
           return JSON.stringify(info)
-
         } catch (e) {
           return JSON.stringify({
             error: "func_execution_error",
             message: e instanceof Error ? e.message : String(e),
-            stack: e instanceof Error ? e.stack?.split("\n").slice(0, 3).join("\n") : null
+            stack:
+              e instanceof Error
+                ? e.stack?.split("\n").slice(0, 3).join("\n")
+                : null
           })
         }
       },
@@ -662,7 +809,11 @@ export async function handleInspectElement(
       const detail = !result
         ? "chrome.scripting.executeScript returned empty"
         : "executeScript result has no result field"
-      console.error("[lumino:tool] inspect_element execute_script_failed:", detail, result)
+      console.error(
+        "[lumino:tool] inspect_element execute_script_failed:",
+        detail,
+        result
+      )
       return JSON.stringify({
         error: "execute_script_failed",
         detail,
@@ -670,7 +821,9 @@ export async function handleInspectElement(
       })
     }
 
-    return typeof result.result === "string" ? result.result : JSON.stringify(result.result)
+    return typeof result.result === "string"
+      ? result.result
+      : JSON.stringify(result.result)
   } catch (error) {
     console.error("[lumino:tool] inspect_element error:", error)
     return JSON.stringify({
@@ -705,11 +858,18 @@ export async function handleNavigate(
     if (existingTabId && existingTabId > 0) {
       // 在已有 tab 上导航，复用不新开
       const agentWindowId = await getAgentWindowId()
-      tab = await chrome.tabs.update(existingTabId, { url: normalizedUrl, active: false })
+      tab = await chrome.tabs.update(existingTabId, {
+        url: normalizedUrl,
+        active: false
+      })
     } else {
       // 新开后台标签页
       const agentWinId = await getAgentWindowId()
-      tab = await chrome.tabs.create({ url: normalizedUrl, active: false, ...(agentWinId != null ? { windowId: agentWinId } : {}) })
+      tab = await chrome.tabs.create({
+        url: normalizedUrl,
+        active: false,
+        ...(agentWinId != null ? { windowId: agentWinId } : {})
+      })
     }
 
     // 等待页面加载完成再返回，避免 agent 拿到 tab_id 后立即调用 get_page_content
@@ -754,7 +914,15 @@ export async function handleScroll(
   try {
     const [result] = await chrome.scripting.executeScript({
       target: { tabId },
-      func: (opts: { to?: string; by?: { x: number; y: number }; percent?: number; selector?: string; direction?: string; by_x?: number; by_y?: number }) => {
+      func: (opts: {
+        to?: string
+        by?: { x: number; y: number }
+        percent?: number
+        selector?: string
+        direction?: string
+        by_x?: number
+        by_y?: number
+      }) => {
         const scrollToPos = (top: number, left: number) => {
           window.scrollTo({ top, left, behavior: "instant" as ScrollBehavior })
         }
@@ -765,7 +933,10 @@ export async function handleScroll(
         if (opts.selector) {
           const el = document.querySelector(opts.selector)
           if (!el) {
-            return JSON.stringify({ error: "selector_not_found", selector: opts.selector })
+            return JSON.stringify({
+              error: "selector_not_found",
+              selector: opts.selector
+            })
           }
           el.scrollIntoView({ behavior: "instant", block: "start" })
           method = "selector"
@@ -775,14 +946,29 @@ export async function handleScroll(
           const vh = window.innerHeight
           const delta = Math.round(vh * 0.75)
           if (dir === "down") {
-            window.scrollBy({ left: 0, top: delta, behavior: "instant" as ScrollBehavior })
+            window.scrollBy({
+              left: 0,
+              top: delta,
+              behavior: "instant" as ScrollBehavior
+            })
           } else if (dir === "up") {
-            window.scrollBy({ left: 0, top: -delta, behavior: "instant" as ScrollBehavior })
+            window.scrollBy({
+              left: 0,
+              top: -delta,
+              behavior: "instant" as ScrollBehavior
+            })
           }
           method = "direction_" + dir
-        } else if (typeof opts.by_x === "number" || typeof opts.by_y === "number") {
+        } else if (
+          typeof opts.by_x === "number" ||
+          typeof opts.by_y === "number"
+        ) {
           // 像素滚动
-          window.scrollBy({ left: opts.by_x ?? 0, top: opts.by_y ?? 0, behavior: "instant" as ScrollBehavior })
+          window.scrollBy({
+            left: opts.by_x ?? 0,
+            top: opts.by_y ?? 0,
+            behavior: "instant" as ScrollBehavior
+          })
           method = "by"
         } else if (opts.to === "top") {
           scrollToPos(0, 0)
@@ -792,14 +978,22 @@ export async function handleScroll(
           method = "to_bottom"
         } else if (typeof opts.percent === "number") {
           const pct = Math.max(0, Math.min(100, opts.percent))
-          const maxY = document.documentElement.scrollHeight - window.innerHeight
+          const maxY =
+            document.documentElement.scrollHeight - window.innerHeight
           scrollToPos(Math.round((pct / 100) * maxY), 0)
           method = "percent"
         } else if (opts.by && (opts.by.x !== 0 || opts.by.y !== 0)) {
-          window.scrollBy({ left: opts.by.x ?? 0, top: opts.by.y ?? 0, behavior: "instant" as ScrollBehavior })
+          window.scrollBy({
+            left: opts.by.x ?? 0,
+            top: opts.by.y ?? 0,
+            behavior: "instant" as ScrollBehavior
+          })
           method = "by"
         } else {
-          return JSON.stringify({ error: "no_scroll_target", hint: "需要指定 direction、to、by、by_x/by_y、percent 或 selector 之一" })
+          return JSON.stringify({
+            error: "no_scroll_target",
+            hint: "需要指定 direction、to、by、by_x/by_y、percent 或 selector 之一"
+          })
         }
 
         return JSON.stringify({
@@ -811,22 +1005,26 @@ export async function handleScroll(
           viewport_height: window.innerHeight
         })
       },
-      args: [{
-        to: args.to as string | undefined,
-        by: args.by as { x: number; y: number } | undefined,
-        percent: args.percent as number | undefined,
-        selector: args.selector as string | undefined,
-        direction: args.direction as string | undefined,
-        by_x: args.x as number | undefined,
-        by_y: args.y as number | undefined
-      }]
+      args: [
+        {
+          to: args.to as string | undefined,
+          by: args.by as { x: number; y: number } | undefined,
+          percent: args.percent as number | undefined,
+          selector: args.selector as string | undefined,
+          direction: args.direction as string | undefined,
+          by_x: args.x as number | undefined,
+          by_y: args.y as number | undefined
+        }
+      ]
     })
 
     if (!result || !result.result) {
       return JSON.stringify({ error: "execute_script_failed" })
     }
 
-    return typeof result.result === "string" ? result.result : JSON.stringify(result.result)
+    return typeof result.result === "string"
+      ? result.result
+      : JSON.stringify(result.result)
   } catch (error) {
     return JSON.stringify({
       error: "scroll_failed",
@@ -843,7 +1041,11 @@ export async function handlePressKey(
 ): Promise<string> {
   const key = args.key as string | undefined
   if (!key) {
-    return JSON.stringify({ error: "no_key", message: "请提供按键名称，如 Enter、Escape、Tab、ArrowDown、a、Control+a 等" })
+    return JSON.stringify({
+      error: "no_key",
+      message:
+        "请提供按键名称，如 Enter、Escape、Tab、ArrowDown、a、Control+a 等"
+    })
   }
 
   let tabId: number
@@ -859,12 +1061,12 @@ export async function handlePressKey(
 
   // 修饰键映射
   const modifierMap: Record<string, string> = {
-    "Control": "ctrlKey",
-    "Ctrl": "ctrlKey",
-    "Shift": "shiftKey",
-    "Alt": "altKey",
-    "Meta": "metaKey",
-    "Cmd": "metaKey"
+    Control: "ctrlKey",
+    Ctrl: "ctrlKey",
+    Shift: "shiftKey",
+    Alt: "altKey",
+    Meta: "metaKey",
+    Cmd: "metaKey"
   }
 
   try {
@@ -872,10 +1074,12 @@ export async function handlePressKey(
       target: { tabId },
       func: (opts: { key: string; modifiers: string[]; selector?: string }) => {
         const modMap: Record<string, string> = {
-          "Control": "ctrlKey", "Ctrl": "ctrlKey",
-          "Shift": "shiftKey",
-          "Alt": "altKey",
-          "Meta": "metaKey", "Cmd": "metaKey"
+          Control: "ctrlKey",
+          Ctrl: "ctrlKey",
+          Shift: "shiftKey",
+          Alt: "altKey",
+          Meta: "metaKey",
+          Cmd: "metaKey"
         }
 
         const init: KeyboardEventInit = {
@@ -892,30 +1096,33 @@ export async function handlePressKey(
 
         // 特殊 code 映射
         const codeMap: Record<string, string> = {
-          "Enter": "Enter",
-          "Escape": "Escape",
-          "Tab": "Tab",
-          "Backspace": "Backspace",
-          "Delete": "Delete",
-          "ArrowUp": "ArrowUp",
-          "ArrowDown": "ArrowDown",
-          "ArrowLeft": "ArrowLeft",
-          "ArrowRight": "ArrowRight",
-          "Home": "Home",
-          "End": "End",
-          "PageUp": "PageUp",
-          "PageDown": "PageDown",
+          Enter: "Enter",
+          Escape: "Escape",
+          Tab: "Tab",
+          Backspace: "Backspace",
+          Delete: "Delete",
+          ArrowUp: "ArrowUp",
+          ArrowDown: "ArrowDown",
+          ArrowLeft: "ArrowLeft",
+          ArrowRight: "ArrowRight",
+          Home: "Home",
+          End: "End",
+          PageUp: "PageUp",
+          PageDown: "PageDown",
           " ": "Space",
-          "Space": "Space"
+          Space: "Space"
         }
-        init.code = codeMap[opts.key] || ("Key" + opts.key.toUpperCase())
+        init.code = codeMap[opts.key] || "Key" + opts.key.toUpperCase()
 
         let target: EventTarget = document
 
         if (opts.selector) {
           const el = document.querySelector(opts.selector)
           if (!el) {
-            return JSON.stringify({ error: "selector_not_found", selector: opts.selector })
+            return JSON.stringify({
+              error: "selector_not_found",
+              selector: opts.selector
+            })
           }
           target = el
         } else {
@@ -923,29 +1130,41 @@ export async function handlePressKey(
           target = document.activeElement || document.body
         }
 
-        target.dispatchEvent(new KeyboardEvent("keydown", init as KeyboardEventInit))
-        target.dispatchEvent(new KeyboardEvent("keypress", init as KeyboardEventInit))
-        target.dispatchEvent(new KeyboardEvent("keyup", init as KeyboardEventInit))
+        target.dispatchEvent(
+          new KeyboardEvent("keydown", init as KeyboardEventInit)
+        )
+        target.dispatchEvent(
+          new KeyboardEvent("keypress", init as KeyboardEventInit)
+        )
+        target.dispatchEvent(
+          new KeyboardEvent("keyup", init as KeyboardEventInit)
+        )
 
         return JSON.stringify({
           pressed: true,
           key: opts.key,
           modifiers: opts.modifiers,
-          target: opts.selector || ((document.activeElement?.tagName || "body").toLowerCase())
+          target:
+            opts.selector ||
+            (document.activeElement?.tagName || "body").toLowerCase()
         })
       },
-      args: [{
-        key: mainKey,
-        modifiers: parts,
-        selector: args.selector as string | undefined
-      }]
+      args: [
+        {
+          key: mainKey,
+          modifiers: parts,
+          selector: args.selector as string | undefined
+        }
+      ]
     })
 
     if (!result || !result.result) {
       return JSON.stringify({ error: "execute_script_failed" })
     }
 
-    return typeof result.result === "string" ? result.result : JSON.stringify(result.result)
+    return typeof result.result === "string"
+      ? result.result
+      : JSON.stringify(result.result)
   } catch (error) {
     return JSON.stringify({
       error: "press_key_failed",
@@ -962,10 +1181,19 @@ export async function handleCloseTab(
 ): Promise<string> {
   const tabIds = args.tab_ids as number[] | undefined
   if (!tabIds || !Array.isArray(tabIds) || tabIds.length === 0) {
-    return JSON.stringify({ error: "missing_tab_ids", message: "关闭标签页需要提供有效的 tab_ids 列表" })
+    return JSON.stringify({
+      error: "missing_tab_ids",
+      message: "关闭标签页需要提供有效的 tab_ids 列表"
+    })
   }
 
-  const results: Array<{ tab_id: number; title: string; url: string; closed: boolean; error?: string }> = []
+  const results: Array<{
+    tab_id: number
+    title: string
+    url: string
+    closed: boolean
+    error?: string
+  }> = []
 
   for (const tabId of tabIds) {
     try {
@@ -993,8 +1221,8 @@ export async function handleCloseTab(
   }
 
   return JSON.stringify({
-    closed_count: results.filter(r => r.closed).length,
-    failed_count: results.filter(r => !r.closed).length,
+    closed_count: results.filter((r) => r.closed).length,
+    failed_count: results.filter((r) => !r.closed).length,
     results
   })
 }

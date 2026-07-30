@@ -10,15 +10,9 @@
  * 核心 Agent 循环逻辑在 src/lib/llm/agent-loop.ts 中，不与 Lumino 业务耦合。
  */
 
+import { runAgentLoop as coreRunAgentLoop } from "../llm/agent-loop"
 import { LlmClient } from "../llm/llm-client"
-import {
-  runAgentLoop as coreRunAgentLoop
-} from "../llm/agent-loop"
-import type {
-  LlmMessage,
-  LlmSettings,
-  LuminoTool
-} from "../llm/llm-types"
+import type { LlmMessage, LlmSettings, LuminoTool } from "../llm/llm-types"
 import type { OpenAiChatMessage } from "./openai-messages"
 import { buildAgentMessages } from "./system-prompt"
 import { getLuminoAgentTools } from "./tool-definitions"
@@ -27,7 +21,7 @@ const MAX_AGENT_STEPS = 100
 
 function buildUserInputWithTime(userInput: string): string {
   const now = new Date()
-  const timeStr = now.toISOString() + " (" + now.toLocaleString("en-US", { timeZone: "Asia/Shanghai" }) + ")"
+  const timeStr = now.toISOString()
   return `[Current Time: ${timeStr}]\n\n${userInput}`
 }
 
@@ -45,8 +39,17 @@ export type AgentLoopInput = {
   }
 }
 
-export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMessage[]> {
-  const { settings, historyMessages, userInput, onMessagesUpdate, signal, agentConfig } = input
+export async function runAgentLoop(
+  input: AgentLoopInput
+): Promise<OpenAiChatMessage[]> {
+  const {
+    settings,
+    historyMessages,
+    userInput,
+    onMessagesUpdate,
+    signal,
+    agentConfig
+  } = input
 
   // 1. 构建系统提示词
   const systemMessages = await buildAgentMessages(
@@ -59,13 +62,13 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMes
     .join("\n\n")
 
   // 2. 获取工具列表
-  const toolFilter = agentConfig?.tools && agentConfig.tools.length > 0
-    ? agentConfig.tools
-    : undefined
+  const toolFilter =
+    agentConfig?.tools && agentConfig.tools.length > 0
+      ? agentConfig.tools
+      : undefined
   const tools: LuminoTool[] = await getLuminoAgentTools(toolFilter)
 
-  // 3. 创建 LlmClient（配置 thinking:disabled + 自定义 fetch 日志）
-  let fetchCallCount = 0
+  // 3. 创建 LlmClient（配置 thinking:disabled）
   const client = new LlmClient({
     baseUrl: settings.baseUrl,
     apiKey: settings.apiKey,
@@ -74,12 +77,16 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMes
   })
 
   // 4. 初始消息：重试时 historyMessages 已包含完整历史，直接使用；否则追加新 user 消息
-  const initialMessages: LlmMessage[] = historyMessages.map((m) => m as LlmMessage)
+  const initialMessages: LlmMessage[] = historyMessages.map(
+    (m) => m as LlmMessage
+  )
   const accumulatedMessages: OpenAiChatMessage[] = [...historyMessages]
 
   if (userInput) {
     const isNewThread = historyMessages.length === 0
-    const enrichedInput = isNewThread ? buildUserInputWithTime(userInput) : userInput
+    const enrichedInput = isNewThread
+      ? buildUserInputWithTime(userInput)
+      : userInput
     initialMessages.push({ role: "user", content: enrichedInput })
     accumulatedMessages.push({ role: "user", content: enrichedInput })
   }
@@ -93,14 +100,9 @@ export async function runAgentLoop(input: AgentLoopInput): Promise<OpenAiChatMes
     maxSteps: MAX_AGENT_STEPS,
     signal,
     fetcher: async (url, init) => {
-      if (signal?.aborted) throw new DOMException("用户中止了请求", "AbortError")
-      fetchCallCount++
-      const res = await fetch(url, { ...init, signal })
-      // 日志记录
-      const cloned = res.clone()
-      const resText = await cloned.text()
-      console.log(`[lumino:agent] 🔽 HTTP #${fetchCallCount} status=${res.status}, body=`, resText.slice(0, 3000))
-      return res
+      if (signal?.aborted)
+        throw new DOMException("用户中止了请求", "AbortError")
+      return fetch(url, { ...init, signal })
     },
     onStepFinish: async (step) => {
       // 将 step 结果追加到 UI 消息数组
