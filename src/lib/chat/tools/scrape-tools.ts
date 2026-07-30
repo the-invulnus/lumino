@@ -174,7 +174,7 @@ export async function handleScrapeStructure(
     )
 
     // html 模式返回的是 raw HTML 字符串，用 .html 扩展名
-    const ext = format === "html" ? ".html" : ".json"
+    const ext = format === "html" ? "html" : "json"
 
     if (!result) {
       return JSON.stringify({

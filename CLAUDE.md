@@ -177,7 +177,7 @@ const tool = luminoTool({
 |------|--------|------|
 | 文件系统 | `ls`, `read_file`, `write_file`, `edit_file`, `glob`, `grep`, `rm`, `export` | `tools/fs-tools.ts` |
 | 浏览器系统 | `current_page`, `tabs` | `tools/system-tools.ts` |
-| 页面阅读 | `get_page_content` | `tools/browser-tools.ts` |
+| 页面阅读 | `get_page_content`（text 模式用 Mozilla Readability 提取正文，去除导航/广告噪声；非文章页 fallback 到 `main/article` innerText） | `tools/browser-tools.ts` + `assets`（`Readability.js` 经 `web_accessible_resources` 注入） |
 | 浏览器交互 | `inspect_element`, `fill_form`, `click_element`, `screenshot`, `scroll`, `press_key`, `navigate`, `close_tab` | `tools/browser-tools.ts` |
 | 页面爬取 | `scrape_structure`, `scrape_styles`, `scrape_resources`, `fetch_resource` | `tools/scrape-tools.ts` |
 | PDF | `read_pdf`（在 offscreen document 用 pdf.js 提取文本，支持 path/url 两种来源） | `tools/pdf-tools.ts` + `tabs/offscreen.tsx` + `lib/offscreen-pdf-bridge.ts` |

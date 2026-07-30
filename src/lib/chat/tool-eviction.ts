@@ -5,6 +5,7 @@ export const TOOLS_EXCLUDED_FROM_EVICTION = new Set([
   "current_page",
   "tabs",
   "ls",
+  "read_file",
   "rm",
   "write_file",
   "edit_file",
@@ -24,32 +25,6 @@ const EVICT_DIR = "/large_tool_results"
 
 /** Chrome alarm 名称，用于定时清理 */
 export const EVICT_CLEANUP_ALARM = "lumino_evict_cleanup"
-
-/**
- * 生成大工具结果的预览摘要。
- * 对纯文本：保留前 2000 字符
- * 对带行号输出（read_file/grep content）：保留前 200 行
- */
-export function createContentPreview(content: string): string {
-  // 检测是否为带行号的 read_file/grep content 输出
-  // 每行以 6 位右对齐数字 + 两个空格开头
-  const hasLineNumbers = /^\s*\d{1,6}  /.test(content)
-
-  if (hasLineNumbers) {
-    const lines = content.split("\n")
-    const previewLines = lines.slice(0, 200)
-    if (previewLines.length < lines.length) {
-      previewLines.push("[Preview truncated: content evicted to OPFS]")
-    }
-    return previewLines.join("\n")
-  }
-
-  if (content.length > 2000) {
-    return content.slice(0, 2000) + "\n[Preview truncated: content evicted to OPFS]"
-  }
-
-  return content
-}
 
 /**
  * 将完整内容写入 OPFS 并返回可读的路径引用。
@@ -86,14 +61,10 @@ export async function maybeEvictToolResult(
   }
 
   try {
-    const preview = createContentPreview(content)
     const evictPath = await evictToOpfs(content, toolCallId, toolName)
+    const totalLines = content.split("\n").length
 
-    return [
-      preview,
-      "",
-      `[Large result evicted. Full output (${content.length} chars) written to ${evictPath}. Use read_file to read it.]`
-    ].join("\n")
+    return `[Large result evicted. Full output (${content.length} chars, ${totalLines} lines) written to ${evictPath}. Use read_file to read it.]`
   } catch {
     // 驱逐失败时回退返回原始结果，避免丢失工具调用结果
     return content

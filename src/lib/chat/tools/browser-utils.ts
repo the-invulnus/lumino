@@ -17,6 +17,21 @@ export const MAX_RETRIES = 2
 export const RETRY_DELAY_MS = 300
 
 /**
+ * 向标签页注入脚本文件（如 assets/Readability.js）。
+ * 幂等：重复注入同一文件无害，Chrome 会去重。
+ * 用于需要依赖库的 executeScript 场景——先注入库文件，再用 executeScript({func}) 调用。
+ */
+export async function injectScriptFiles(
+  tabId: number,
+  files: string[]
+): Promise<void> {
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files
+  })
+}
+
+/**
  * 获取 agent 窗口的活跃标签页
  */
 export function getActiveTab(): Promise<chrome.tabs.Tab> {

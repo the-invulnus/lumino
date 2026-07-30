@@ -4,6 +4,7 @@ import {
   EVICT_DIR,
   executeScriptWithRetry,
   getActiveTab,
+  injectScriptFiles,
   MAX_RETRIES,
   QUERY_WITH_TEXT_FN,
   resolveTabId,
@@ -47,38 +48,136 @@ export async function handleGetPageContent(
   }
 
   try {
+    // text 模式且未指定 selector 时，注入 Readability + turndown 库用于正文提取并转 Markdown
+    const useReadability = mode === "text" && !selector
+    if (useReadability) {
+      try {
+        await injectScriptFiles(tabId, ["Readability.js", "turndown.browser.umd.js"])
+      } catch {
+        // 注入失败（受限制页面等）不阻塞，下方 func 会 fallback 到 innerText
+      }
+    }
+
     const result = await executeScriptWithRetry(
       tabId,
-      (m: string, sel: string | null) => {
+      (m: string, sel: string | null, useRead: boolean) => {
         try {
-          if (m === "structured" && sel) {
-            const el = document.querySelector(sel)
-            if (!el)
-              return JSON.stringify({
-                error: "selector_not_found",
-                selector: sel
-              })
-            const children = Array.from(el.children)
-            const items = children.map((c) => ({
-              tag: c.tagName,
-              text: (c as HTMLElement).innerText?.slice(0, 500) || "",
-              href: (c as HTMLAnchorElement).href || null
-            }))
-            return JSON.stringify({ selector: sel, count: items.length, items })
+          if (m === "structured") {
+            if (sel) {
+              // 有 selector：提取指定区域的直接子元素结构
+              const el = document.querySelector(sel)
+              if (!el)
+                return JSON.stringify({
+                  error: "selector_not_found",
+                  selector: sel
+                })
+              const children = Array.from(el.children)
+              const items = children.map((c) => ({
+                tag: c.tagName,
+                text: (c as HTMLElement).innerText?.slice(0, 500) || "",
+                href: (c as HTMLAnchorElement).href || null
+              }))
+              return JSON.stringify({ selector: sel, count: items.length, items })
+            }
+
+            // 无 selector：提取整个页面的骨架，每行一个 JSON 对象，含唯一 CSS 路径
+            // 收集语义区块（header/nav/main/article/section/aside/footer/figure/form）、标题（h1-h6）、链接
+            const SEMANTIC = new Set(["HEADER","NAV","MAIN","ARTICLE","SECTION","ASIDE","FOOTER","FIGURE","FORM"])
+            const HEADINGS = new Set(["H1","H2","H3","H4","H5","H6"])
+            const lines: string[] = []
+            const seenLinks = new Set<string>()
+            let linkCount = 0
+            const MAX_NODES = 300
+            const MAX_LINKS = 60
+            const MAX_TEXT = 80
+
+            // 生成唯一 CSS 路径（nth-child，避免歧义）
+            function cssPath(node: Element): string {
+              const parts: string[] = []
+              let cur: Element | null = node
+              while (cur && cur !== document.body) {
+                const tag = cur.tagName.toLowerCase()
+                let nth = 1
+                let prev = cur.previousElementSibling
+                while (prev) { if (prev.tagName === cur!.tagName) nth++; prev = prev.previousElementSibling }
+                if (cur.id) { parts.unshift("#" + cur.id); break }
+                parts.unshift(tag + ":nth-child(" + nth + ")")
+                cur = cur.parentElement
+              }
+              return "body > " + parts.join(" > ")
+            }
+
+            function walk(node: Element) {
+              if (lines.length >= MAX_NODES) return
+              const tag = node.tagName
+              const isSemantic = SEMANTIC.has(tag)
+              const isHeading = HEADINGS.has(tag)
+              const isLink = tag === "A"
+              const href = (node as HTMLAnchorElement).href || ""
+
+              if (isLink) {
+                if (!href || href.startsWith("javascript:") || seenLinks.has(href) || linkCount >= MAX_LINKS) return
+                seenLinks.add(href)
+                linkCount++
+                const text = ((node as HTMLElement).innerText || "").trim().slice(0, MAX_TEXT).replace(/"/g, "'")
+                if (text) lines.push(JSON.stringify({ selector: cssPath(node), tag: "a", text, href }))
+                return
+              }
+              if (isHeading) {
+                const text = (node as HTMLElement).innerText?.trim().slice(0, MAX_TEXT).replace(/"/g, "'") || ""
+                if (text) lines.push(JSON.stringify({ selector: cssPath(node), tag: tag.toLowerCase(), text }))
+                return
+              }
+              if (isSemantic) {
+                const text = ((node as HTMLElement).innerText?.split("\n")[0] || "").trim().slice(0, MAX_TEXT).replace(/"/g, "'")
+                const childCount = Array.from(node.children).filter(c => SEMANTIC.has(c.tagName) || HEADINGS.has(c.tagName) || c.tagName === "A").length
+                lines.push(JSON.stringify({ selector: cssPath(node), tag: tag.toLowerCase(), text, children: childCount }))
+              }
+              for (const child of Array.from(node.children)) {
+                walk(child)
+              }
+            }
+            walk(document.body)
+            return lines.join("\n")
           }
 
           // text 模式（默认）
-          let text: string
           if (sel) {
             const el = document.querySelector(sel)
-            text = el ? (el as HTMLElement).innerText || "" : ""
+            const text = el ? (el as HTMLElement).innerText || "" : ""
+            return text
+          } else if (useRead && typeof (window as any).Readability !== "undefined") {
+            // 用 Readability 提取正文 HTML，再用 turndown 转 Markdown（保留标题/段落/列表/代码块格式）
+            // 两个库都注入到页面，全程在页面 DOM 环境跑（SW 无 document，turndown 不能在 SW 跑）
+            try {
+              const doc = document.cloneNode(true) as Document
+              const reader = new (window as any).Readability(doc)
+              const article = reader.parse()
+              if (article && article.content && article.textContent && article.textContent.trim()) {
+                if (typeof (window as any).TurndownService !== "undefined") {
+                  const td = new (window as any).TurndownService({
+                    headingStyle: "atx",
+                    codeBlockStyle: "fenced",
+                    bulletListMarker: "-"
+                  })
+                  td.remove(["style", "script"])
+                  const markdown = td.turndown(article.content).trim()
+                  return article.title ? `# ${article.title}\n\n${markdown}` : markdown
+                }
+                // turndown 未注入，fallback 到 textContent
+                return article.textContent.trim()
+              }
+              // Readability 判定为非文章页或解析为空，fallback 到 innerText
+              const main = document.querySelector("main, article, [role=main]")
+              return main ? (main as HTMLElement).innerText || "" : document.body.innerText || ""
+            } catch {
+              const main = document.querySelector("main, article, [role=main]")
+              return main ? (main as HTMLElement).innerText || "" : document.body.innerText || ""
+            }
           } else {
             const main = document.querySelector("main, article, [role=main]")
-            text = main
-              ? (main as HTMLElement).innerText || ""
-              : document.body.innerText || ""
+            return main ? (main as HTMLElement).innerText || "" : document.body.innerText || ""
           }
-          return text
         } catch (e) {
           return JSON.stringify({
             error: "func_execution_error",
@@ -90,7 +189,7 @@ export async function handleGetPageContent(
           })
         }
       },
-      [mode, selector ?? null],
+      [mode, selector ?? null, useReadability],
       "get_page_content"
     )
 
@@ -102,6 +201,8 @@ export async function handleGetPageContent(
       })
     }
 
+    // Readability + turndown 路径已在注入 func 内转成 Markdown 字符串返回；
+    // fallback 路径返回纯文本 innerText。统一作为 fullContent 处理。
     const fullContent =
       typeof result === "string" ? result : JSON.stringify(result)
 

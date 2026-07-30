@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@mozilla/readability": "^0.6.0",
     "dompurify": "^3.2.4",
     "jszip": "^3.10.1",
     "marked": "^18.0.4",
@@ -33,6 +34,17 @@
     ],
     "host_permissions": [
       "<all_urls>"
+    ],
+    "web_accessible_resources": [
+      {
+        "resources": [
+          "@mozilla/readability/Readability.js",
+          "turndown/lib/turndown.browser.umd.js"
+        ],
+        "matches": [
+          "<all_urls>"
+        ]
+      }
     ]
   },
   "devDependencies": {
