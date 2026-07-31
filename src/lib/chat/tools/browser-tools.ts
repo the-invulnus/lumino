@@ -1,7 +1,6 @@
-import { writeWorkspaceFile, writeWorkspaceFileBytes } from "../../fs/workspace"
+import { writeWorkspaceFileBytes } from "../../fs/workspace"
 import { getAgentWindowId } from "./agent-window"
 import {
-  EVICT_DIR,
   executeScriptWithRetry,
   getActiveTab,
   injectScriptFiles,
@@ -30,9 +29,6 @@ async function waitForTabLoad(tabId: number, timeoutMs = 8_000): Promise<void> {
 // 提取当前页面文本内容，支持两种模式。
 // 完整内容始终通过 executeScript 获取，然后在 handleGetPageContent 中
 // 决定是否需要 evict 到 OPFS。
-
-/** get_page_content 的截断阈值（字符数） */
-const PAGE_CONTENT_MAX_CHARS = 10_000
 
 export async function handleGetPageContent(
   args: Record<string, unknown>
@@ -201,45 +197,7 @@ export async function handleGetPageContent(
       })
     }
 
-    // Readability + turndown 路径已在注入 func 内转成 Markdown 字符串返回；
-    // fallback 路径返回纯文本 innerText。统一作为 fullContent 处理。
-    const fullContent =
-      typeof result === "string" ? result : JSON.stringify(result)
-
-    // 内容在阈值内，直接返回
-    if (fullContent.length <= PAGE_CONTENT_MAX_CHARS) {
-      return fullContent
-    }
-
-    // 内容超过阈值：完整内容写入 OPFS，只返回前 N 个字符 + 行号 hint
-    const preview = fullContent.slice(0, PAGE_CONTENT_MAX_CHARS)
-    const previewLines = preview.split("\n")
-    const lastLine = previewLines[previewLines.length - 1]
-    const completePreviewLines =
-      lastLine.length > 0 && fullContent[PAGE_CONTENT_MAX_CHARS - 1] !== "\n"
-        ? previewLines.slice(0, -1)
-        : previewLines
-    const completePreview = completePreviewLines.join("\n")
-    const shownLineCount = completePreviewLines.length
-
-    const timestamp = Date.now()
-    const sanitizedMode = mode.replace(/[^a-zA-Z0-9_-]/g, "_")
-    const evictPath = `${EVICT_DIR}/page_content_${timestamp}_${sanitizedMode}.txt`
-
-    try {
-      await writeWorkspaceFile(evictPath, fullContent)
-
-      return [
-        completePreview,
-        "",
-        `[Content truncated. Lines 1-${shownLineCount} shown (${completePreview.length} chars). Full content (${fullContent.length} chars) saved to ${evictPath}. Use read_file with offset=${shownLineCount} to continue.]`
-      ].join("\n")
-    } catch {
-      return (
-        completePreview +
-        `\n\n[Content truncated at ${completePreview.length} chars. Full content (${fullContent.length} chars). OPFS write failed — full content unavailable.]`
-      )
-    }
+    return typeof result === "string" ? result : JSON.stringify(result)
   } catch (error) {
     return JSON.stringify({
       error: "get_page_content_failed",

@@ -10,8 +10,6 @@ export const TOOLS_EXCLUDED_FROM_EVICTION = new Set([
   "write_file",
   "edit_file",
   "export"
-  // get_page_content 已移除（删除了 full_html 模式后仅返回文本，无需特权排除）
-  // scrape_* 工具直接写 OPFS，返回路径字符串极短，自然不触发 eviction
 ])
 
 /** 结果超过此字符数时触发驱逐（≈2500 tokens） */
