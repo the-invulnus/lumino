@@ -697,6 +697,24 @@ export const ChatView = forwardRef<ChatViewHandle, {
                   )}
                   <div className="lm-chat-actions">
                     {msg.role === "user" && !isEditingThis ? (
+                      <button aria-label={t("chat.action.regenerate")} className="lm-chat-action-btn"
+                        disabled={sendInFlightMapRef.current[activeThreadId]}
+                        onClick={() => {
+                          // 保留当前 user 消息及以上的所有消息，删除其后内容，用此 user 消息重新请求
+                          const newHistory = messages.slice(0, msgIndex)
+                          saveThreadMessages(activeThreadId, newHistory).catch(() => {})
+                          doSend(newHistory, displayContent(formatMessagePreview(msg)))
+                        }}
+                        title={t("chat.action.regenerate")} type="button"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="23 4 23 10 17 10" />
+                          <polyline points="1 20 1 14 7 14" />
+                          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                        </svg>
+                      </button>
+                    ) : null}
+                    {msg.role === "user" && !isEditingThis ? (
                       <button aria-label={t("chat.action.editMessage")} className="lm-chat-action-btn"
                         disabled={sendInFlightMapRef.current[activeThreadId]}
                         onClick={() => { setEditingIndex(msgIndex); setEditingText(displayContent(formatMessagePreview(msg))) }}

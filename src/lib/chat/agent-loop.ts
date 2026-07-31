@@ -109,15 +109,27 @@ export async function runAgentLoop(
     onStepFinish: async (step) => {
       // 将 step 结果追加到 UI 消息数组
       if (step.toolCalls && step.toolCalls.length > 0) {
-        accumulatedMessages.push({
-          role: "assistant",
-          content: step.text,
-          tool_calls: step.toolCalls.map((tc) => ({
-            id: tc.toolCallId,
-            type: "function" as const,
-            function: { name: tc.toolName, arguments: JSON.stringify(tc.input) }
-          }))
-        })
+        // assistant 消息（含 tool_calls）去重：以首个 tool_call_id 作为该 step 的标识，
+        // 同一 step 会被回调多次（tool_calls 发起时一次 + 每个工具完成时各一次），
+        // 仅在首次推送时插入 assistant 消息。
+        const firstCallId = step.toolCalls[0].toolCallId
+        const assistantExists = accumulatedMessages.some(
+          (m) =>
+            m.role === "assistant" &&
+            Array.isArray(m.tool_calls) &&
+            m.tool_calls.some((tc) => tc.id === firstCallId)
+        )
+        if (!assistantExists) {
+          accumulatedMessages.push({
+            role: "assistant",
+            content: step.text,
+            tool_calls: step.toolCalls.map((tc) => ({
+              id: tc.toolCallId,
+              type: "function" as const,
+              function: { name: tc.toolName, arguments: JSON.stringify(tc.input) }
+            }))
+          })
+        }
       }
 
       if (step.toolResults && step.toolResults.length > 0) {

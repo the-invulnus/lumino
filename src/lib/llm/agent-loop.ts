@@ -45,13 +45,18 @@ export interface AgentLoopInput {
 export interface AgentStepResult {
   /** 当前 step 的文本输出（可能为 null） */
   text: string | null
-  /** 工具调用列表 */
+  /** 工具调用列表（整个 step 内所有 tool_calls，回调时始终携带完整列表） */
   toolCalls?: Array<{
     toolCallId: string
     toolName: string
     input: Record<string, unknown>
   }>
-  /** 工具执行结果列表 */
+  /**
+   * 工具执行结果列表（随执行进度增量增长）。
+   * - tool_calls 刚发起、尚未执行任何 tool 时为空数组
+   * - 每个 tool 执行完后追加一条
+   * - 全部执行完时与 toolCalls 等长
+   */
   toolResults?: Array<{
     toolCallId: string
     toolName: string
@@ -150,6 +155,16 @@ export async function runAgentLoop(
     // 执行每个 tool call
     const stepToolResults: AgentStepResult["toolResults"] = []
 
+    // 工具调用已发起、尚未执行任何工具 → 立即推送一次，
+    // 让前端先渲染「执行中」的工具调用框（toolResults 为空数组）。
+    if (onStepFinish) {
+      await onStepFinish({
+        text: response.text,
+        toolCalls: stepToolCalls,
+        toolResults: []
+      })
+    }
+
     for (const tc of response.toolCalls) {
       const toolName = tc.function.name
       const tool = toolMap.get(toolName)
@@ -189,15 +204,15 @@ export async function runAgentLoop(
         toolName,
         output: result
       })
-    }
 
-    // 每步回调
-    if (onStepFinish) {
-      await onStepFinish({
-        text: response.text,
-        toolCalls: stepToolCalls,
-        toolResults: stepToolResults
-      })
+      // 每个工具执行完 → 推送一次，前端据此把对应工具框从「执行中」切换为「已完成」
+      if (onStepFinish) {
+        await onStepFinish({
+          text: response.text,
+          toolCalls: stepToolCalls,
+          toolResults: [...stepToolResults]
+        })
+      }
     }
   }
 
