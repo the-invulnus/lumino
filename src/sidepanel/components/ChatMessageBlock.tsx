@@ -1,20 +1,25 @@
 import { Fragment, useState } from "react"
 import { marked } from "marked"
 import DOMPurify from "dompurify"
+import "katex/dist/katex.min.css"
+import { renderLatexInText, ALLOWED_KATEX_TAGS, ALLOWED_KATEX_ATTR } from "../../lib/katex-markdown"
 import type { OpenAiChatMessage } from "../../lib/chat/openai-messages"
 import { exportWorkspaceFile } from "../../lib/fs/workspace"
 import { useT } from "../../lib/i18n"
 import { LumiToolCall } from "./LumiToolCall"
 
 function renderMarkdown(text: string): JSX.Element {
-  const rawHtml = marked.parse(text, { async: false }) as string
+  const textWithLatex = renderLatexInText(text)
+  const rawHtml = marked.parse(textWithLatex, { async: false }) as string
   // 消毒：LLM 回复（或被 prompt injection）可能含 <script>/<img onerror> 等，
   // side panel 运行在扩展上下文，XSS 等于扩展被接管，必须过滤。
   // trim 末尾换行防止 white-space: pre-wrap 产生底部空行
   const html = DOMPurify.sanitize(rawHtml.trimEnd(), {
     USE_PROFILES: { html: true },
     FORBID_TAGS: ["script", "style"],
-    FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover"]
+    FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover"],
+    ADD_TAGS: ALLOWED_KATEX_TAGS,
+    ADD_ATTR: ALLOWED_KATEX_ATTR
   })
   return (
     <div
