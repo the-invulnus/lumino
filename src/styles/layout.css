@@ -1375,7 +1375,7 @@ textarea {
 .lm-tool-tooltip { position: fixed; transform: translate(12px, 12px); max-width: 240px; padding: var(--lumi-space-4) var(--lumi-space-5); border-radius: var(--lumi-radius-control); font-size: var(--lumi-text-sm); line-height: var(--lumi-leading-snug); pointer-events: none; z-index: 100; }
 
 /* — 滚动到底按钮（用户上滚后有新消息时显示） — */
-.lm-scroll-bottom-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: none; border-radius: 50%; cursor: pointer; position: absolute; z-index: 5; bottom: 12px; left: 50%; transform: translateX(-50%); }
+.lm-scroll-bottom-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: none; border-radius: 50%; cursor: pointer; position: sticky; z-index: 5; bottom: 8px; margin-left: auto; margin-right: auto; margin-top: -40px; flex-shrink: 0; }
 
 /* — Tool selector — */
 .lm-tool-selector { display: flex; flex-direction: column; gap: 10px; }
