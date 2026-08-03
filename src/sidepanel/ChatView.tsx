@@ -362,7 +362,8 @@ export const ChatView = forwardRef<ChatViewHandle, {
     if (!userMsg || !assistantMsg) return
     const existing = await getThread(threadId)
     if (existing?.title) return
-    const userInput = typeof userMsg.content === "string" ? userMsg.content : ""
+    const userInputRaw = typeof userMsg.content === "string" ? userMsg.content : ""
+    const userInput = displayContent(userInputRaw)
     const reply = typeof assistantMsg.content === "string" ? assistantMsg.content : ""
     generateThreadTitle(userInput, reply, settings).then(async (title) => {
       const record = await getThread(threadId)
