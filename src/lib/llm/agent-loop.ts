@@ -16,7 +16,7 @@ import type {
 } from "./llm-types"
 import { maybeEvictToolResult } from "../chat/tool-eviction"
 
-const DEFAULT_MAX_STEPS = 100
+const DEFAULT_MAX_STEPS = Infinity
 
 // ═══════════════ 类型 ═══════════════
 
@@ -104,8 +104,7 @@ export async function runAgentLoop(
 
   let stepCount = 0
 
-  while (stepCount < maxSteps) {
-    // 检查中止
+  while (stepCount < maxSteps) {    // 检查中止
     if (signal?.aborted) {
       throw new DOMException("用户中止了请求", "AbortError")
     }
@@ -216,8 +215,8 @@ export async function runAgentLoop(
     }
   }
 
-  // 达到步数上限时追加提示
-  if (stepCount >= maxSteps) {
+  // 达到显式步数上限时追加提示（maxSteps 为 Infinity 时不会走到这里）
+  if (stepCount >= maxSteps && maxSteps !== Infinity) {
     const lastMsg = messages[messages.length - 1]
     const hasFinalText = lastMsg?.role === "assistant" && typeof lastMsg.content === "string" && lastMsg.content
     if (!hasFinalText) {

@@ -1,7 +1,7 @@
 {
   "name": "lumino",
   "displayName": "Lumino: From Chat to Done — Connect Browser to Your Work.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A free AI assistant for deep research, knowledge management, web replication, browser automation, etc. — powered by your own LLM.",
   "author": "the invulnus",
   "scripts": {

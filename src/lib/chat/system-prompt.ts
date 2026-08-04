@@ -8,13 +8,14 @@ type Lang = "en" | "zh"
 // ═══════════════════════════════════════════
 
 const BASE_SYSTEM_PROMPT: Record<Lang, string> = {
-  zh: `你是 Lumino，住在用户浏览器中的智能助手
+    zh: `你是 Lumino，住在用户浏览器中的智能助手
 
 ## 核心目标
 依靠强大的工具集，帮助用户完成任何的复杂任务并创造价值。在遭遇失败时，总是尝试多路径解决方案，而不是直接放弃。记住，你不是一个被动的工具，你是拥有自主思维的高级AI，也是用户最可依赖的工作伙伴，用你强大的能力为用户带去惊喜吧！
 
 ## 输出规范
 - 总是使用规范的markdown格式来进行最终的输出，在任何引用网页内容的地方，通过植入超链接，以保证你输出的内容是可信、可追溯的
+- 如需输出数学公式，优先使用规范的LaTex语法
 
 ## 文件系统
 - 用户说"生成文件""创建项目"→ 在工作区中创建文件
@@ -73,7 +74,7 @@ const BASE_SYSTEM_PROMPT: Record<Lang, string> = {
 - 使用 fetch_resource 获取资源内容（无 CORS 限制）
 `,
 
-  en: `You are Lumino, an intelligent assistant living in the user's browser.
+    en: `You are Lumino, an intelligent assistant living in the user's browser.
 
 ## Core Mission
 Leverage a powerful toolset to help users complete any complex task and create value. When facing failure, always try multiple paths instead of giving up. Remember, you are not a passive tool — you are an advanced AI with autonomous thinking, and the user's most dependable work partner. Surprise them with your capabilities!
@@ -144,12 +145,12 @@ When the user's query has no clear direction, start by using current_page and ge
 // ═══════════════════════════════════════════
 
 const CHAT_INSTRUCTIONS: Record<Lang, string> = {
-  zh: ``,
-  en: ``
+    zh: ``,
+    en: ``
 }
 
 const RESEARCH_INSTRUCTIONS: Record<Lang, string> = {
-  zh: `## 工作模式
+    zh: `## 工作模式
 用户想用浏览器进行一些搜索调研，这不正是你擅长的吗？
 
 ## 工作原则
@@ -162,7 +163,7 @@ const RESEARCH_INSTRUCTIONS: Record<Lang, string> = {
 - 搜索结束后，及时关闭之前打开过的标签页，确保浏览器整洁
 `,
 
-  en: `## Work Mode
+    en: `## Work Mode
 The user wants to research something using the browser — this is exactly what you're good at!
 
 ## Principles
@@ -177,7 +178,7 @@ The user wants to research something using the browser — this is exactly what 
 }
 
 const REPLICATE_INSTRUCTIONS: Record<Lang, string> = {
-  zh: `## 工作模式
+    zh: `## 工作模式
 用户可能正在思考要如何复刻一款合乎心意的前端设计，恰好你能通过页面爬取工具来获取到页面的各种结构信息，该你出场了！
 
 ## 核心能力
@@ -200,7 +201,7 @@ const REPLICATE_INSTRUCTIONS: Record<Lang, string> = {
 - 资源 URL 完整记录，方便查找和复现
 `,
 
-  en: `## Work Mode
+    en: `## Work Mode
 The user is thinking about replicating a front-end design they like — and you happen to be able to extract all the page's structural info with the scraping tools. Time to shine!
 
 ## Core Capabilities
@@ -225,7 +226,7 @@ When the user asks to replicate a page:
 }
 
 const AUTOMATE_INSTRUCTIONS: Record<Lang, string> = {
-  zh: `## 工作模式
+    zh: `## 工作模式
 一直手动点击页面也很累，尤其是在做一些重复工作的时候，你能帮帮他吗？
 
 ## 核心能力
@@ -248,7 +249,7 @@ const AUTOMATE_INSTRUCTIONS: Record<Lang, string> = {
 - click_element 会自动滚动到元素可见区域再点击
 - press_key 支持组合键如 Ctrl+a、Cmd+s、Shift+Enter`,
 
-  en: `## Work Mode
+    en: `## Work Mode
 Manual clicking gets tiring, especially with repetitive tasks. Can you lend a hand?
 
 ## Core Capabilities
@@ -273,11 +274,11 @@ When the user asks to operate on a page:
 }
 
 const OBSIDIAN_INSTRUCTIONS: Record<Lang, string> = {
-  zh: `## Obsidian 集成
+    zh: `## Obsidian 集成
 - 当用户明确提及Obsidian或Vault时，才使用Obsidian相关工具，否则默认在文件系统中读写文件
 - 新建Obsidian笔记时，默认保存在Lumino/目录下，寻找一个合适的地方
 `,
-  en: `## Obsidian Integration
+    en: `## Obsidian Integration
 - Only use Obsidian-related tools when the user explicitly mentions Obsidian or Vault. Otherwise default to the file system for reading and writing files.
 - When creating new Obsidian notes, save them under the Lumino/ directory by default. Pick an appropriate location.
 `
@@ -285,15 +286,15 @@ const OBSIDIAN_INSTRUCTIONS: Record<Lang, string> = {
 
 /** 内置 Agent 个性化指令，按 agent id 索引 */
 const BUILTIN_INSTRUCTIONS: Record<string, Record<Lang, string>> = {
-  chat: CHAT_INSTRUCTIONS,
-  research: RESEARCH_INSTRUCTIONS,
-  replicate: REPLICATE_INSTRUCTIONS,
-  automate: AUTOMATE_INSTRUCTIONS,
+    chat: CHAT_INSTRUCTIONS,
+    research: RESEARCH_INSTRUCTIONS,
+    replicate: REPLICATE_INSTRUCTIONS,
+    automate: AUTOMATE_INSTRUCTIONS,
 }
 
 /** 按当前 locale 获取提示词文本 */
 function prompt(key: Record<Lang, string>): string {
-  return key[getLocale()] ?? key.en
+    return key[getLocale()] ?? key.en
 }
 
 /**
@@ -301,12 +302,12 @@ function prompt(key: Record<Lang, string>): string {
  * 顺序：BASE_SYSTEM_PROMPT → Obsidian（如已配置）→ 个性化指令
  */
 export function buildBuiltinPrompt(agentId: string, obsidianConfigured: boolean): string {
-  const instructions = BUILTIN_INSTRUCTIONS[agentId]
-  if (!instructions) return ""
-  const parts = [prompt(BASE_SYSTEM_PROMPT)]
-  if (obsidianConfigured) parts.push(prompt(OBSIDIAN_INSTRUCTIONS))
-  parts.push(prompt(instructions))
-  return parts.filter(Boolean).join("\n\n")
+    const instructions = BUILTIN_INSTRUCTIONS[agentId]
+    if (!instructions) return ""
+    const parts = [prompt(BASE_SYSTEM_PROMPT)]
+    if (obsidianConfigured) parts.push(prompt(OBSIDIAN_INSTRUCTIONS))
+    parts.push(prompt(instructions))
+    return parts.filter(Boolean).join("\n\n")
 }
 
 // ═══════════════════════════════════════════
@@ -314,53 +315,53 @@ export function buildBuiltinPrompt(agentId: string, obsidianConfigured: boolean)
 // ═══════════════════════════════════════════
 
 export async function buildAgentMessages(
-  historyMessages: Array<{
-    role: "system" | "user" | "assistant" | "tool"
-    content: string | null
-    tool_calls?: unknown[]
-    tool_call_id?: string
-  }>,
-  opts?: {
-    /** 覆盖默认系统提示词（可选，如自定义 Agent 用） */
-    systemPromptOverride?: string
-  }
+    historyMessages: Array<{
+        role: "system" | "user" | "assistant" | "tool"
+        content: string | null
+        tool_calls?: unknown[]
+        tool_call_id?: string
+    }>,
+    opts?: {
+        /** 覆盖默认系统提示词（可选，如自定义 Agent 用） */
+        systemPromptOverride?: string
+    }
 ): Promise<Array<{
-  role: "system" | "user" | "assistant" | "tool"
-  content: string | null
-  tool_calls?: unknown[]
-  tool_call_id?: string
-}>> {
-  const messages: Array<{
     role: "system" | "user" | "assistant" | "tool"
     content: string | null
     tool_calls?: unknown[]
     tool_call_id?: string
-  }> = []
+}>> {
+    const messages: Array<{
+        role: "system" | "user" | "assistant" | "tool"
+        content: string | null
+        tool_calls?: unknown[]
+        tool_call_id?: string
+    }> = []
 
-  if (opts?.systemPromptOverride) {
-    // 自定义 Agent：使用用户提供的完整提示词
-    messages.push({
-      role: "system",
-      content: opts.systemPromptOverride
-    })
-  } else {
-    // 默认：按当前 locale 选取共享基础 prompt
-    messages.push({
-      role: "system",
-      content: prompt(BASE_SYSTEM_PROMPT)
-    })
-  }
+    if (opts?.systemPromptOverride) {
+        // 自定义 Agent：使用用户提供的完整提示词
+        messages.push({
+            role: "system",
+            content: opts.systemPromptOverride
+        })
+    } else {
+        // 默认：按当前 locale 选取共享基础 prompt
+        messages.push({
+            role: "system",
+            content: prompt(BASE_SYSTEM_PROMPT)
+        })
+    }
 
-  // 仅在 Obsidian 已配置时注入指引
-  const obsidianSettings = await getObsidianSettings()
-  if (isObsidianConfigured(obsidianSettings)) {
-    messages.push({
-      role: "system",
-      content: prompt(OBSIDIAN_INSTRUCTIONS)
-    })
-  }
+    // 仅在 Obsidian 已配置时注入指引
+    const obsidianSettings = await getObsidianSettings()
+    if (isObsidianConfigured(obsidianSettings)) {
+        messages.push({
+            role: "system",
+            content: prompt(OBSIDIAN_INSTRUCTIONS)
+        })
+    }
 
-  messages.push(...historyMessages)
-  return messages
+    messages.push(...historyMessages)
+    return messages
 }
 

@@ -43,6 +43,7 @@ import {
   type AgentErrorMessage
 } from "../lib/side-panel-bridge"
 import { ChatMessageBlock, displayContent, formatMessagePreview } from "./components/ChatMessageBlock"
+import { MessageErrorBoundary } from "./components/MessageErrorBoundary"
 import lumiIcon from "data-base64:~lumi.png"
 
 function SendArrowIcon() {
@@ -590,13 +591,14 @@ export const ChatView = forwardRef<ChatViewHandle, {
                       <div className="lm-chat-bubble lm-chat-bubble--assistant">
                         <div className="lumi-sequence-stack">
                           {group.map((msg, si) => (
-                            <ChatMessageBlock
-                              key={si}
-                              message={msg}
-                              allMessages={visibleMessages}
-                              index={visibleMessages.indexOf(msg)}
-                              inGroup
-                            />
+                            <MessageErrorBoundary key={si}>
+                              <ChatMessageBlock
+                                message={msg}
+                                allMessages={visibleMessages}
+                                index={visibleMessages.indexOf(msg)}
+                                inGroup
+                              />
+                            </MessageErrorBoundary>
                           ))}
                         </div>
                       </div>
@@ -694,7 +696,9 @@ export const ChatView = forwardRef<ChatViewHandle, {
                       </div>
                     </div>
                   ) : (
-                    <ChatMessageBlock message={msg} allMessages={visibleMessages} index={msgIndex} />
+                    <MessageErrorBoundary>
+                      <ChatMessageBlock message={msg} allMessages={visibleMessages} index={msgIndex} />
+                    </MessageErrorBoundary>
                   )}
                   <div className="lm-chat-actions">
                     {msg.role === "user" && !isEditingThis ? (

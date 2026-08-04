@@ -9,18 +9,25 @@ import { useT } from "../../lib/i18n"
 import { LumiToolCall } from "./LumiToolCall"
 
 function renderMarkdown(text: string): JSX.Element {
-  const textWithLatex = renderLatexInText(text)
-  const rawHtml = marked.parse(textWithLatex, { async: false }) as string
-  // 消毒：LLM 回复（或被 prompt injection）可能含 <script>/<img onerror> 等，
-  // side panel 运行在扩展上下文，XSS 等于扩展被接管，必须过滤。
-  // trim 末尾换行防止 white-space: pre-wrap 产生底部空行
-  const html = DOMPurify.sanitize(rawHtml.trimEnd(), {
-    USE_PROFILES: { html: true },
-    FORBID_TAGS: ["script", "style"],
-    FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover"],
-    ADD_TAGS: ALLOWED_KATEX_TAGS,
-    ADD_ATTR: ALLOWED_KATEX_ATTR
-  })
+  let html: string
+  try {
+    const textWithLatex = renderLatexInText(text)
+    const rawHtml = marked.parse(textWithLatex, { async: false }) as string
+    // 消毒：LLM 回复（或被 prompt injection）可能含 <script>/<img onerror> 等，
+    // side panel 运行在扩展上下文，XSS 等于扩展被接管，必须过滤。
+    // trim 末尾换行防止 white-space: pre-wrap 产生底部空行
+    html = DOMPurify.sanitize(rawHtml.trimEnd(), {
+      USE_PROFILES: { html: true },
+      FORBID_TAGS: ["script", "style"],
+      FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover"],
+      ADD_TAGS: ALLOWED_KATEX_TAGS,
+      ADD_ATTR: ALLOWED_KATEX_ATTR
+    })
+  } catch (err) {
+    console.warn("[lumino] renderMarkdown 失败，退回纯文本:", err)
+    // 渲染失败时退回纯文本，不做 Markdown/LaTeX 解析
+    html = text.replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  }
   return (
     <div
       className="lm-chat-md"
