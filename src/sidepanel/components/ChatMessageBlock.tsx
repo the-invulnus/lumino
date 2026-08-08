@@ -110,21 +110,21 @@ export function ChatMessageBlock({
       ? text.split(/\n{2,}/).filter((p) => p.trim().length > 0)
       : []
 
+    // 渲染顺序：先渲染全部 content 段落，再渲染全部工具调用卡片。
+    // OpenAI 协议中一个 assistant 消息的 content 与 tool_calls 是并行的——
+    // 模型先写完整文本，再同时发起多个工具调用，不存在「段落 ↔ 工具」的交错对应，
+    // 交错排列会把工具卡夹在 content 的 \n\n 段落中间，破坏阅读顺序。
     const inner = hasTools ? (
       <div className="lumi-sequence-stack">
-        {toolCalls!.map((call, i) => (
-          <Fragment key={call.id}>
-            {i < paragraphs.length ? (
-              renderMarkdown(paragraphs[i])
-            ) : null}
-            <LumiToolCall
-              call={call}
-              result={toolResults[call.id] ?? null}
-            />
-          </Fragment>
-        ))}
-        {paragraphs.slice(toolCalls!.length).map((part, i) => (
+        {paragraphs.map((part, i) => (
           <Fragment key={`md-${i}`}>{renderMarkdown(part)}</Fragment>
+        ))}
+        {toolCalls!.map((call) => (
+          <LumiToolCall
+            key={call.id}
+            call={call}
+            result={toolResults[call.id] ?? null}
+          />
         ))}
       </div>
     ) : (
