@@ -69,7 +69,7 @@ export const zh: Record<string, string> = {
   "history.delete": "删除",
 
   // ── 设置页导航 ──
-  "option.nav.llm": "模型连接",
+  "option.nav.llm": "模型",
   "option.nav.obsidian": "Obsidian",
   "option.nav.agents": "智能体",
   "option.nav.general": "通用",
@@ -77,6 +77,21 @@ export const zh: Record<string, string> = {
   // LLM 面板
   "option.llm.title": "模型连接",
   "option.llm.desc": "配置 OpenAI 兼容 API，连接完成后 Agent 将通过此 API 与模型通信。",
+
+  // 思考配置（thinking mode）
+  "option.thinking.title": "思考模式配置",
+  "option.thinking.desc": "每个模式对应一组请求体字段，请按你的模型配置对应 JSON。配置后可在 Agent 对话时选择使用哪个模式。",
+  "option.thinking.reset": "重置",
+  "option.thinking.resetConfirm": "重置将覆盖你当前的思考模式配置，是否继续？",
+  "option.thinking.label": "标签",
+  "option.thinking.rename": "重命名",
+  "option.thinking.configure": "配置请求体",
+  "option.thinking.remove": "删除",
+  "option.thinking.add": "添加模式",
+  "option.thinking.save": "保存",
+  "option.thinking.cancel": "取消",
+  "option.thinking.bodyInvalidJson": "JSON 非法——修复后才能保存此模式",
+  "option.thinking.bodyMustObject": "请求体必须是 JSON 对象（不能是数组或基本值）",
 
   // Obsidian 面板
   "option.obsidian.title": "Obsidian 集成",
@@ -169,6 +184,10 @@ export const zh: Record<string, string> = {
   "toolcall.loadingSkill": "加载技能：{name}",
   "toolcall.download": "下载 {path}",
   "toolcall.result": "结果 · {name}",
+
+  // ── 推理过程展示 ──
+  "reasoning.title": "思考过程",
+  "thinking.modeLabel": "思考模式",
 
   // ── 悬浮按钮 ──
   "floatButton.ariaLabel": "打开 Lumino 侧边栏",

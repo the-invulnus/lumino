@@ -23,9 +23,12 @@ export interface LlmConfig {
   temperature?: number
   /** top_p 采样（0-1） */
   topP?: number
-  /** thinking 控制（deepseek 等推理模型需要） */
-  thinking?: { type: "enabled" | "disabled"; budget_tokens?: number }
-  /** 额外的请求体字段（透传给 API） */
+  /**
+   * 模型思考 mode 的请求体附加字段（由 settings.resolveThinkingBody 产出）。
+   * undefined 或空对象 = 不注入任何字段（等价 auto，跟随模型默认）。
+   */
+  thinkingBody?: Record<string, unknown>
+  /** 额外的请求体字段（透传给 API，优先级最高） */
   extraBody?: Record<string, unknown>
 }
 
@@ -79,6 +82,8 @@ export type LlmMessage =
       content: string | null
       tool_calls?: LlmToolCall[]
       name?: string
+      /** 推理内容（snake_case 对齐 API 响应字段，透传到持久化层） */
+      reasoning_content?: string
     }
   | {
       role: "tool"
@@ -118,6 +123,12 @@ export interface LlmResponse {
   text: string | null
   /** 工具调用列表（无工具调用时为 undefined） */
   toolCalls?: LlmToolCall[]
+  /**
+   * 推理内容（部分推理模型返回，如 DeepSeek-R1 的 message.reasoning_content）。
+   * 仅当模型实际返回时存在，与请求体的 thinking 配置解耦。
+   * 命名用驼峰符合本文件 TS 惯例；构造 LlmMessage 时映射回 snake_case 的 reasoning_content。
+   */
+  reasoningContent?: string
   /** 消耗的 token 数（可选，用于日志） */
   usage?: {
     promptTokens: number

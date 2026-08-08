@@ -24,6 +24,8 @@ export type StartAgentMessage = {
       tools: string[]
       isBuiltin: boolean
     }
+    /** 选中的 thinking mode id（对应全局 ThinkingConfig.modes[].id）。不传则用 defaultModeId */
+    thinkingModeId?: string
   }
 }
 
@@ -83,6 +85,8 @@ export type RetryAgentMessage = {
       tools: string[]
       isBuiltin: boolean
     }
+    /** 选中的 thinking mode id（对应全局 ThinkingConfig.modes[].id）。不传则用 defaultModeId */
+    thinkingModeId?: string
   }
 }
 

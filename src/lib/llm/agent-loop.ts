@@ -45,6 +45,8 @@ export interface AgentLoopInput {
 export interface AgentStepResult {
   /** 当前 step 的文本输出（可能为 null） */
   text: string | null
+  /** 推理内容（仅当模型实际返回 reasoning_content 时存在） */
+  reasoningContent?: string
   /** 工具调用列表（整个 step 内所有 tool_calls，回调时始终携带完整列表） */
   toolCalls?: Array<{
     toolCallId: string
@@ -123,12 +125,20 @@ export async function runAgentLoop(
     // 无 tool_calls → Agent 完成
     if (!response.toolCalls || response.toolCalls.length === 0) {
       if (response.text) {
-        messages.push({ role: "assistant", content: response.text })
+        messages.push({
+          role: "assistant",
+          content: response.text,
+          // 仅当模型实际返回推理内容时才携带该字段（解耦 thinking 配置）
+          ...(response.reasoningContent
+            ? { reasoning_content: response.reasoningContent }
+            : {})
+        })
       }
       // 最后一次 step 回调
       if (onStepFinish) {
         await onStepFinish({
           text: response.text,
+          reasoningContent: response.reasoningContent,
           toolCalls: undefined,
           toolResults: undefined
         })
@@ -140,7 +150,11 @@ export async function runAgentLoop(
     const assistantMsg: LlmMessage = {
       role: "assistant",
       content: response.text,
-      tool_calls: response.toolCalls
+      tool_calls: response.toolCalls,
+      // 仅当模型实际返回推理内容时才携带该字段（解耦 thinking 配置）
+      ...(response.reasoningContent
+        ? { reasoning_content: response.reasoningContent }
+        : {})
     }
     messages.push(assistantMsg)
 
@@ -159,6 +173,7 @@ export async function runAgentLoop(
     if (onStepFinish) {
       await onStepFinish({
         text: response.text,
+        reasoningContent: response.reasoningContent,
         toolCalls: stepToolCalls,
         toolResults: []
       })
@@ -208,6 +223,7 @@ export async function runAgentLoop(
       if (onStepFinish) {
         await onStepFinish({
           text: response.text,
+          reasoningContent: response.reasoningContent,
           toolCalls: stepToolCalls,
           toolResults: [...stepToolResults]
         })

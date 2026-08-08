@@ -27,17 +27,19 @@ import {
 } from "../lib/chat/thread-idb"
 import type { AgentConfig } from "../lib/chat/mode-config"
 import type { LlmSettings } from "../lib/llm/llm-types"
-import { getLlmSettings, hasCompleteLlmSettings } from "../lib/settings"
+import { hasCompleteLlmSettings, type ThinkingConfig } from "../lib/settings"
 import { useT } from "../lib/i18n"
 import { formatRelativeTime } from "../lib/format-time"
 import {
   START_AGENT_MESSAGE,
   STOP_AGENT_MESSAGE,
+  RETRY_AGENT_MESSAGE,
   AGENT_PROGRESS_MESSAGE,
   AGENT_COMPLETE_MESSAGE,
   AGENT_ERROR_MESSAGE,
   type StartAgentMessage,
   type StopAgentMessage,
+  type RetryAgentMessage,
   type AgentProgressMessage,
   type AgentCompleteMessage,
   type AgentErrorMessage
@@ -57,8 +59,8 @@ function SendArrowIcon() {
       strokeLinejoin="round"
       strokeWidth="2.25"
       viewBox="0 0 24 24">
-      <path d="M5 12h14" />
-      <path d="m13 6 6 6-6 6" />
+      <path d="M12 19V5" />
+      <path d="m5 12 7-7 7 7" />
     </svg>
   )
 }
@@ -73,6 +75,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
   agent: AgentConfig
   onBack: () => void
   settings: LlmSettings
+  thinkingConfig: ThinkingConfig
   initialThreadId?: string
   onOpenHistory: () => void
   threadErrors: Record<string, string>
@@ -81,6 +84,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
   agent,
   onBack,
   settings,
+  thinkingConfig,
   initialThreadId,
   onOpenHistory,
   threadErrors,
@@ -91,6 +95,17 @@ export const ChatView = forwardRef<ChatViewHandle, {
   const [messages, setMessages] = useState<OpenAiChatMessage[]>([])
   const [draft, setDraft] = useState("")
   const draftRef = useRef(draft)
+  // 当前选中的 thinking mode id；空 = 跟随默认（不传 → background 用 defaultModeId）
+  const [selectedThinkingModeId, setSelectedThinkingModeId] = useState("")
+  const [thinkingMenuOpen, setThinkingMenuOpen] = useState(false)
+  // thinkingConfig 变化时重置选中态，保证默认 mode 优先
+  const thinkingConfigSignature = useMemo(
+    () => JSON.stringify(thinkingConfig.modes.map((m) => m.id)),
+    [thinkingConfig]
+  )
+  useEffect(() => {
+    setSelectedThinkingModeId(thinkingConfig.defaultModeId ?? "")
+  }, [thinkingConfigSignature, thinkingConfig.defaultModeId])
     const [loadingThreadIds, setLoadingThreadIds] = useState<Set<string>>(new Set())
   const [isHydrating, setIsHydrating] = useState(true)
   const [editingIndex, setEditingIndex] = useState<number>(-1)
@@ -304,7 +319,15 @@ export const ChatView = forwardRef<ChatViewHandle, {
 
     const startPayload = {
       type: START_AGENT_MESSAGE,
-      payload: { threadId, historyMessages, userInput, windowId: win.id, mode: agent.id, agentConfig: agentConfigPayload }
+      payload: {
+        threadId,
+        historyMessages,
+        userInput,
+        windowId: win.id,
+        mode: agent.id,
+        agentConfig: agentConfigPayload,
+        thinkingModeId: selectedThinkingModeId || undefined
+      }
     } as StartAgentMessage
 
     async function sendStartWithRetry(): Promise<void> {
@@ -799,14 +822,19 @@ export const ChatView = forwardRef<ChatViewHandle, {
               onClick={() => {
                 onThreadErrorsChange(prev => { const next = {...prev}; delete next[activeThreadId]; return next })
                 if (!activeThreadId) return
-                chrome.runtime.sendMessage({
-                  type: "lumino/retry-agent",
-                  payload: {
-                    threadId: activeThreadId,
-                    mode: agent.id,
-                    agentConfig: { systemPrompt: agent.systemPrompt, tools: agent.tools, isBuiltin: agent.isBuiltin }
-                  }
-                }).catch(() => {})
+                void chrome.windows.getCurrent().then((win) => {
+                  const payload = {
+                    type: RETRY_AGENT_MESSAGE,
+                    payload: {
+                      threadId: activeThreadId,
+                      windowId: win.id,
+                      mode: agent.id,
+                      agentConfig: { systemPrompt: agent.systemPrompt, tools: agent.tools, isBuiltin: agent.isBuiltin },
+                      thinkingModeId: selectedThinkingModeId || undefined
+                    }
+                  } as RetryAgentMessage
+                  chrome.runtime.sendMessage(payload).catch(() => {})
+                })
                 sendInFlightMapRef.current[activeThreadId] = true
                 setLoadingThreadIds((prev) => new Set(prev).add(activeThreadId))
               }}
@@ -818,39 +846,81 @@ export const ChatView = forwardRef<ChatViewHandle, {
         ) : null}
 
         <div className="lm-composer">
-          <textarea
-            ref={composerRef}
-            aria-label={t("chat.composerAria")}
-            className="lm-input lm-input--composer"
-            disabled={isHydrating}
-            onChange={(event) => {
-              setDraft(event.target.value)
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-                event.preventDefault()
-                void sendUserMessage()
-              }
-            }}
-            placeholder={t("chat.placeholder")}
-            rows={1}
-            value={draft}
-          />
-          <button
-            aria-busy={isLoading}
-            aria-label={isLoading ? t("chat.stop") : t("chat.send")}
-            className={`lm-composer-send${isLoading ? " lm-composer-send--stop" : ""}`}
-            disabled={isHydrating || (!isLoading && !draft.trim())}
-            onClick={() => { isLoading ? handleStop() : void sendUserMessage() }}
-            type="button">
-            {isLoading ? (
-              <svg aria-hidden className="lm-stop-icon" fill="currentColor" viewBox="0 0 24 24">
-                <rect x="6" y="6" width="12" height="12" rx="1.5" />
-              </svg>
-            ) : (
-              <SendArrowIcon />
-            )}
-          </button>
+          <div className="lm-composer__shell">
+            <textarea
+              ref={composerRef}
+              aria-label={t("chat.composerAria")}
+              className="lm-input lm-input--composer"
+              disabled={isHydrating}
+              onChange={(event) => {
+                setDraft(event.target.value)
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                  event.preventDefault()
+                  void sendUserMessage()
+                }
+              }}
+              placeholder={t("chat.placeholder")}
+              rows={1}
+              value={draft}
+            />
+            <div className="lm-composer__toolbar">
+              {thinkingConfig.modes.length > 0 && (
+                <div className="lm-composer-thinking">
+                  <button
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={thinkingMenuOpen}
+                    className="lm-composer-thinking__trigger"
+                    onClick={() => setThinkingMenuOpen((v) => !v)}
+                  >
+                    <span className="lm-composer-thinking__value">
+                      {thinkingConfig.modes.find((m) => m.id === selectedThinkingModeId)?.label ?? thinkingConfig.defaultModeId}
+                    </span>
+                  </button>
+                  {thinkingMenuOpen && (
+                    <>
+                      <div className="lm-composer-thinking__overlay" onClick={() => setThinkingMenuOpen(false)} />
+                      <div className="lm-composer-thinking__menu" role="listbox">
+                        {thinkingConfig.modes.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            role="option"
+                            aria-selected={m.id === selectedThinkingModeId}
+                            className={`lm-composer-thinking__item${m.id === selectedThinkingModeId ? " lm-composer-thinking__item--active" : ""}`}
+                            onClick={() => {
+                              setSelectedThinkingModeId(m.id)
+                              setThinkingMenuOpen(false)
+                            }}
+                          >
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              <div className="lm-composer__spacer" />
+              <button
+                aria-busy={isLoading}
+                aria-label={isLoading ? t("chat.stop") : t("chat.send")}
+                className={`lm-composer-send${isLoading ? " lm-composer-send--stop" : ""}`}
+                disabled={isHydrating || (!isLoading && !draft.trim())}
+                onClick={() => { isLoading ? handleStop() : void sendUserMessage() }}
+                type="button">
+                {isLoading ? (
+                  <svg aria-hidden className="lm-stop-icon" fill="currentColor" viewBox="0 0 24 24">
+                    <rect x="6" y="6" width="12" height="12" rx="1.5" />
+                  </svg>
+                ) : (
+                  <SendArrowIcon />
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 

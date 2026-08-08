@@ -21,7 +21,7 @@ import {
   type AgentRunningStateMessage,
   type SidepanelStateMessage
 } from "./lib/side-panel-bridge"
-import { getLlmSettings } from "./lib/settings"
+import { getLlmSettings, getThinkingConfig, resolveThinkingBody } from "./lib/settings"
 import { runAgentLoop } from "./lib/chat/agent-loop"
 import { registerAllTools } from "./lib/chat/tool-registry"
 import { cleanupEvictedFiles, EVICT_CLEANUP_ALARM } from "./lib/chat/tool-eviction"
@@ -77,7 +77,8 @@ async function executeAgentInBackground(
   historyMessages: OpenAiChatMessage[],
   userInput: string,
   mode?: string,
-  agentConfig?: { systemPrompt: string; tools: string[]; isBuiltin: boolean }
+  agentConfig?: { systemPrompt: string; tools: string[]; isBuiltin: boolean },
+  thinkingModeId?: string
 ) {
   const abortController = new AbortController()
   await registerAllTools()
@@ -94,6 +95,8 @@ async function executeAgentInBackground(
     }
 
     const settings = await getLlmSettings()
+    const thinkingConfig = await getThinkingConfig()
+    const thinkingBody = resolveThinkingBody(thinkingConfig, thinkingModeId)
 
     const result = await runAgentLoop({
       settings,
@@ -103,6 +106,7 @@ async function executeAgentInBackground(
       signal: abortController.signal,
       mode,
       agentConfig,
+      thinkingBody,
       onMessagesUpdate: async (msgs) => {
         if (abortController.signal.aborted) return
         await saveThreadMessages(threadId, msgs)
@@ -183,7 +187,7 @@ function setupMessageHandlers(): void {
 
     // ---- Side Panel → SW：启动 agent ----
     if (message?.type === START_AGENT_MESSAGE) {
-      const { threadId, historyMessages, userInput, windowId, mode, agentConfig } = (message as StartAgentMessage).payload
+      const { threadId, historyMessages, userInput, windowId, mode, agentConfig, thinkingModeId } = (message as StartAgentMessage).payload
 
       if (windowId != null) {
         void setAgentWindowId(windowId)
@@ -202,14 +206,15 @@ function setupMessageHandlers(): void {
         historyMessages as OpenAiChatMessage[],
         userInput,
         mode,
-        agentConfig
+        agentConfig,
+        thinkingModeId
       )
       return
     }
 
     // ---- Side Panel → SW：重试 agent（错误后从上一条消息继续） ----
     if (message?.type === RETRY_AGENT_MESSAGE) {
-      const { threadId, windowId, mode, agentConfig } = (message as RetryAgentMessage).payload
+      const { threadId, windowId, mode, agentConfig, thinkingModeId } = (message as RetryAgentMessage).payload
 
       if (runningAgents.has(threadId)) {
         sendResponse({ received: true, duplicate: true })
@@ -221,7 +226,7 @@ function setupMessageHandlers(): void {
       }
 
       sendResponse({ received: true })
-      void executeAgentInBackground(threadId, [], "", mode, agentConfig)
+      void executeAgentInBackground(threadId, [], "", mode, agentConfig, thinkingModeId)
       return
     }
 

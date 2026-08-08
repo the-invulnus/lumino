@@ -6,7 +6,11 @@ import {
   saveLlmSettings,
   type ObsidianSettings,
   getObsidianSettings,
-  saveObsidianSettings
+  saveObsidianSettings,
+  DEFAULT_THINKING_CONFIG,
+  getThinkingConfig,
+  saveThinkingConfig,
+  type ThinkingConfig
 } from "./lib/settings"
 import "./styles/components.css"
 import { applyTheme, getTheme } from "./lib/theme"
@@ -68,6 +72,17 @@ const TOOL_GROUPS: { labelKey: string; tools: { name: string; descKey: string }[
 function IndexOptions() {
   const [settings, setSettings] = useState<LlmSettings>({ baseUrl: "", apiKey: "", model: "" })
   const [obsidianSettings, setObsidianSettings] = useState<ObsidianSettings>({ enabled: false, apiKey: "", baseUrl: "http://127.0.0.1:27123" })
+  const [thinkingConfig, setThinkingConfig] = useState<ThinkingConfig>(DEFAULT_THINKING_CONFIG)
+  const [thinkingDirty, setThinkingDirty] = useState(false)
+  const [thinkingBodyError, setThinkingBodyError] = useState<string | null>(null)
+  /** 正在重命名的 mode 下标（-1 = 无） */
+  const [editingNameIndex, setEditingNameIndex] = useState(-1)
+  const [nameDraft, setNameDraft] = useState("")
+  /** 正在编辑 JSON body 的 mode 下标（-1 = 无，>0 时显示模态框） */
+  const [editingBodyIndex, setEditingBodyIndex] = useState(-1)
+  const [bodyDraft, setBodyDraft] = useState("")
+  /** 重置思考配置的确认弹框 */
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [status, setStatus] = useState("")
   const [isSaving, setIsSaving] = useState(false)
   const [customAgents, setCustomAgents] = useState<AgentConfig[]>([])
@@ -92,12 +107,14 @@ function IndexOptions() {
       getLlmSettings().catch(() => ({ baseUrl: "", apiKey: "", model: "" })),
       getObsidianSettings().catch(() => ({ enabled: false, apiKey: "", baseUrl: "http://127.0.0.1:27123" })),
       getTheme(),
-      loadCustomAgents()
-    ]).then(([s, o, theme, agents]) => {
+      loadCustomAgents(),
+      getThinkingConfig()
+    ]).then(([s, o, theme, agents, tc]) => {
       setSettings(s)
       setObsidianSettings(o)
       applyTheme(theme)
       setCustomAgents(agents)
+      setThinkingConfig(tc)
     })
   }, [])
 
@@ -107,6 +124,8 @@ function IndexOptions() {
     try {
       await saveLlmSettings(settings)
       await saveObsidianSettings(obsidianSettings)
+      await saveThinkingConfig(thinkingConfig)
+      setThinkingDirty(false)
       setSettings(await getLlmSettings())
       setStatus(t("option.saved"))
       setTimeout(() => setStatus(""), 2000)
@@ -120,6 +139,111 @@ function IndexOptions() {
   async function changeLocale(next: Locale) {
     setLocale(next)
     await setStoredLocale(next)
+  }
+
+  // ── 思考配置（thinking mode）编辑 ──
+
+  function updateThinkingMode(index: number, patch: Partial<ThinkingConfig["modes"][number]>) {
+    setThinkingConfig((prev) => {
+      const modes = prev.modes.map((m, i) => (i === index ? { ...m, ...patch } : m))
+      return { ...prev, modes }
+    })
+    setThinkingDirty(true)
+  }
+
+  /** 重命名：提交后退出编辑态 */
+  function commitRename(index: number) {
+    const label = nameDraft.trim()
+    if (label) updateThinkingMode(index, { label })
+    setEditingNameIndex(-1)
+    setNameDraft("")
+  }
+
+  /** 打开 JSON body 编辑模态 */
+  function openBodyEditor(index: number) {
+    const body = thinkingConfig.modes[index]?.body ?? {}
+    setBodyDraft(JSON.stringify(body, null, 2))
+    setThinkingBodyError(null)
+    setEditingBodyIndex(index)
+  }
+
+  /** 保存 JSON body：合法且为对象才写入 */
+  function commitBody() {
+    if (editingBodyIndex < 0) return
+    const trimmed = bodyDraft.trim()
+    setThinkingBodyError(null)
+    if (trimmed === "") {
+      updateThinkingMode(editingBodyIndex, { body: {} })
+      setEditingBodyIndex(-1)
+      return
+    }
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        updateThinkingMode(editingBodyIndex, { body: parsed as Record<string, unknown> })
+        setEditingBodyIndex(-1)
+      } else {
+        setThinkingBodyError("option.thinking.bodyMustObject")
+      }
+    } catch {
+      setThinkingBodyError("option.thinking.bodyInvalidJson")
+    }
+  }
+
+  function cancelBody() {
+    setEditingBodyIndex(-1)
+    setThinkingBodyError(null)
+  }
+
+  function addThinkingMode() {
+    setThinkingConfig((prev) => {
+      const base = "thinking-extra"
+      let id = base
+      let n = 2
+      while (prev.modes.some((m) => m.id === id)) { id = `${base}-${n++}` }
+      return {
+        modes: [...prev.modes, { id, label: toTitleCase(id), body: { thinking: { type: "enabled" } } }],
+        defaultModeId: prev.defaultModeId
+      }
+    })
+    setThinkingDirty(true)
+  }
+
+  /** 首字母大写：thinking-extra → Thinking-Extra */
+  function toTitleCase(s: string): string {
+    return s
+      .split("-")
+      .map((part) => (part ? part[0].toUpperCase() + part.slice(1) : part))
+      .join("-")
+  }
+
+  function removeThinkingMode(index: number) {
+    setThinkingConfig((prev) => {
+      const removed = prev.modes[index]
+      const modes = prev.modes.filter((_, i) => i !== index)
+      if (modes.length === 0) return { ...DEFAULT_THINKING_CONFIG }
+      // 移除默认档位时回退到第一个（保留 defaultModeId 数据字段，UI 不再暴露）
+      const defaultModeId = prev.defaultModeId === removed?.id
+        ? modes[0].id
+        : prev.defaultModeId
+      return { modes, defaultModeId }
+    })
+    setThinkingDirty(true)
+  }
+
+  /** 打开重置确认弹框 */
+  function resetThinkingConfig() {
+    setShowResetConfirm(true)
+  }
+
+  /** 确认重置为默认配置（覆盖现有自定义档位） */
+  function doResetThinkingConfig() {
+    setThinkingConfig(structuredClone(DEFAULT_THINKING_CONFIG))
+    setThinkingBodyError(null)
+    setEditingNameIndex(-1)
+    setEditingBodyIndex(-1)
+    setThinkingDirty(true)
+    setShowResetConfirm(false)
   }
 
   function resetAgentForm() {
@@ -258,6 +382,94 @@ function IndexOptions() {
                 <span className="lm-label">Model</span>
                 <input className="lm-input" onChange={(e) => setSettings((p) => ({ ...p, model: e.target.value }))} placeholder="gpt-4o-mini" value={settings.model} />
               </label>
+
+              {/* 思考配置（thinking mode）：默认 4 档，可增删，每个 mode 的 body 直接编辑 JSON */}
+              <div className="lm-options-divider" />
+              <div className="lm-thinking-header">
+                <h3 className="lm-options-subtitle">{t("option.thinking.title")}</h3>
+                <button
+                  type="button"
+                  className="lm-thinking-reset"
+                  onClick={resetThinkingConfig}
+                >
+                  {t("option.thinking.reset")}
+                </button>
+              </div>
+              <p className="lm-options-panel-desc">{t("option.thinking.desc")}</p>
+
+              <div className="lm-thinking-modes">
+                {thinkingConfig.modes.map((mode, i) => (
+                  <div key={mode.id} className="lm-thinking-mode">
+                    <span className="lm-thinking-mode__dot" aria-hidden />
+                    {editingNameIndex === i ? (
+                      <input
+                        autoFocus
+                        className="lm-input lm-thinking-mode__name"
+                        value={nameDraft}
+                        onChange={(e) => setNameDraft(e.target.value)}
+                        onBlur={() => commitRename(i)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitRename(i)
+                          if (e.key === "Escape") { setEditingNameIndex(-1); setNameDraft("") }
+                        }}
+                      />
+                    ) : (
+                      <span className="lm-thinking-mode__label">{mode.label}</span>
+                    )}
+                    <div className="lm-thinking-mode__actions">
+                      <button
+                        type="button"
+                        className="lm-thinking-mode__btn"
+                        title={t("option.thinking.rename")}
+                        aria-label={t("option.thinking.rename")}
+                        onClick={() => { setEditingNameIndex(i); setNameDraft(mode.label) }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="lm-thinking-mode__btn"
+                        title={t("option.thinking.configure")}
+                        aria-label={t("option.thinking.configure")}
+                        onClick={() => openBodyEditor(i)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="16 18 22 12 16 6" />
+                          <polyline points="8 6 2 12 8 18" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="lm-thinking-mode__btn lm-thinking-mode__btn--danger"
+                        title={t("option.thinking.remove")}
+                        aria-label={t("option.thinking.remove")}
+                        onClick={() => removeThinkingMode(i)}
+                        disabled={thinkingConfig.modes.length <= 1}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="lm-thinking-mode__add"
+                  title={t("option.thinking.add")}
+                  aria-label={t("option.thinking.add")}
+                  onClick={addThinkingMode}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 5v14" />
+                    <path d="M5 12h14" />
+                  </svg>
+                </button>
+              </div>
+
               {status ? <span className="lm-options-status">{status}</span> : null}
             </div>
           )}
@@ -402,6 +614,73 @@ function IndexOptions() {
               )}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* thinking mode body JSON 编辑模态 */}
+      {editingBodyIndex >= 0 && (
+        <div className="lm-confirm-overlay lm-confirm-overlay--active" onClick={cancelBody}>
+          <div className="lm-confirm-card lm-thinking-modal" onClick={(e) => e.stopPropagation()}>
+            <textarea
+              autoFocus
+              className="lm-textarea lm-thinking-mode__body"
+              rows={7}
+              spellCheck={false}
+              value={bodyDraft}
+              onChange={(e) => setBodyDraft(e.target.value)}
+              onKeyDown={(e) => {
+                // Tab 插入缩进（JSON 用 2 空格），避免焦点跳到下一个控件
+                if (e.key === "Tab") {
+                  e.preventDefault()
+                  const el = e.currentTarget
+                  const start = el.selectionStart
+                  const end = el.selectionEnd
+                  const next = bodyDraft.slice(0, start) + "  " + bodyDraft.slice(end)
+                  setBodyDraft(next)
+                  requestAnimationFrame(() => {
+                    el.selectionStart = el.selectionEnd = start + 2
+                  })
+                }
+              }}
+            />
+            {thinkingBodyError ? (
+              <p className="lm-options-error">{t(thinkingBodyError)}</p>
+            ) : null}
+            <div className="lm-confirm-actions">
+              <button type="button" className="lm-confirm-btn lm-confirm-btn--cancel" onClick={cancelBody}>
+                {t("option.thinking.cancel")}
+              </button>
+              <button type="button" className="lm-confirm-btn lm-confirm-btn--primary" onClick={commitBody}>
+                {t("option.thinking.save")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 重置思考配置确认弹框 */}
+      <div
+        className={`lm-confirm-overlay${showResetConfirm ? " lm-confirm-overlay--active" : ""}`}
+        onClick={() => showResetConfirm && setShowResetConfirm(false)}
+      >
+        <div className="lm-confirm-card" onClick={(e) => e.stopPropagation()}>
+          <p className="lm-confirm-msg">{t("option.thinking.resetConfirm")}</p>
+          <div className="lm-confirm-actions">
+            <button
+              type="button"
+              className="lm-confirm-btn lm-confirm-btn--cancel"
+              onClick={() => setShowResetConfirm(false)}
+            >
+              {t("option.thinking.cancel")}
+            </button>
+            <button
+              type="button"
+              className="lm-confirm-btn lm-confirm-btn--danger"
+              onClick={doResetThinkingConfig}
+            >
+              {t("option.thinking.reset")}
+            </button>
+          </div>
         </div>
       </div>
     </main>

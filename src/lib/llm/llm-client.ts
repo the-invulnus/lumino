@@ -36,6 +36,8 @@ type OpenAiChatCompletionResponse = {
       role?: string
       content?: string | null
       tool_calls?: LlmToolCall[]
+      /** 推理内容（DeepSeek-R1 等 OpenAI 兼容 API 返回） */
+      reasoning_content?: string
     }
   }>
   usage?: {
@@ -81,6 +83,7 @@ export class LlmClient {
     return {
       text: raw.content ?? null,
       toolCalls: raw.tool_calls,
+      reasoningContent: raw.reasoning_content,
       usage: data?.usage ? {
         promptTokens: data.usage.prompt_tokens ?? 0,
         completionTokens: data.usage.completion_tokens ?? 0,
@@ -136,6 +139,7 @@ export class LlmClient {
       let buffer = ""
 
       let fullContent = ""
+      let fullReasoning = ""
       const toolCallAccumulators = new Map<number, {
         id: string
         name: string
@@ -172,6 +176,12 @@ export class LlmClient {
             const textDelta: string = delta.content || ""
             if (textDelta) {
               fullContent += textDelta
+            }
+
+            // 推理内容增量（DeepSeek-R1 等流式返回 delta.reasoning_content）
+            const reasoningDelta: string = delta.reasoning_content || ""
+            if (reasoningDelta) {
+              fullReasoning += reasoningDelta
             }
 
             // tool_calls 增量
@@ -232,7 +242,8 @@ export class LlmClient {
 
       return {
         text: fullContent || null,
-        toolCalls: toolCalls.length > 0 ? toolCalls : undefined
+        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+        reasoningContent: fullReasoning || undefined
       }
     } finally {
       clearTimeout(timeoutId)
@@ -270,9 +281,11 @@ export class LlmClient {
     if (this.config.topP !== undefined) {
       body.top_p = this.config.topP
     }
-    if (this.config.thinking) {
-      body.thinking = this.config.thinking
+    // 模型思考 mode 附加字段（浅合并；空/undefined = 不注入，等价 auto）
+    if (this.config.thinkingBody && Object.keys(this.config.thinkingBody).length > 0) {
+      Object.assign(body, this.config.thinkingBody)
     }
+    // extraBody 最后合并、优先级最高（保留现状语义）
     if (this.config.extraBody) {
       Object.assign(body, this.config.extraBody)
     }

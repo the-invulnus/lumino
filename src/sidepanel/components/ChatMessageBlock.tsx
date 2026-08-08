@@ -7,6 +7,7 @@ import type { OpenAiChatMessage } from "../../lib/chat/openai-messages"
 import { exportWorkspaceFile } from "../../lib/fs/workspace"
 import { useT } from "../../lib/i18n"
 import { LumiToolCall } from "./LumiToolCall"
+import { ReasoningBlock } from "./ReasoningBlock"
 
 function renderMarkdown(text: string): JSX.Element {
   let html: string
@@ -110,12 +111,19 @@ export function ChatMessageBlock({
       ? text.split(/\n{2,}/).filter((p) => p.trim().length > 0)
       : []
 
-    // 渲染顺序：先渲染全部 content 段落，再渲染全部工具调用卡片。
+    // 推理过程（仅当模型实际返回 reasoning_content 时存在）
+    const reasoning = message.reasoning_content
+    const reasoningBlock = reasoning ? (
+      <ReasoningBlock content={reasoning} />
+    ) : null
+
+    // 渲染顺序：推理过程 → 全部 content 段落 → 全部工具调用卡片。
     // OpenAI 协议中一个 assistant 消息的 content 与 tool_calls 是并行的——
     // 模型先写完整文本，再同时发起多个工具调用，不存在「段落 ↔ 工具」的交错对应，
     // 交错排列会把工具卡夹在 content 的 \n\n 段落中间，破坏阅读顺序。
     const inner = hasTools ? (
       <div className="lumi-sequence-stack">
+        {reasoningBlock}
         {paragraphs.map((part, i) => (
           <Fragment key={`md-${i}`}>{renderMarkdown(part)}</Fragment>
         ))}
@@ -128,7 +136,10 @@ export function ChatMessageBlock({
         ))}
       </div>
     ) : (
-      renderMarkdown(text)
+      <Fragment>
+        {reasoningBlock}
+        {renderMarkdown(text)}
+      </Fragment>
     )
 
     if (inGroup) return <>{inner}</>

@@ -319,6 +319,15 @@
   opacity: 1;
 }
 
+/* Reasoning block chevron rotation */
+.lumi-reasoning__chevron {
+  transition: transform var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry);
+}
+
+.lumi-reasoning__chevron--open {
+  transform: rotate(90deg);
+}
+
 /* ================================================
    Composer
    ================================================ */
@@ -328,16 +337,110 @@
   margin-top: 8px;
 }
 
-/* Textarea itself is the rounded container. Send button overlays inside, bottom-right. */
+/* 白色圆角外壳：整体包裹 textarea + 工具栏（参考 DeepSeek 输入框构造） */
+.lm-composer__shell {
+  background: #ffffff;
+  border: 1px solid var(--lumi-border-strong);
+  border-radius: 18px;
+  box-shadow: var(--lumi-shadow-panel-strong);
+  transition: border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+
+.lm-composer__shell:focus-within {
+  border-color: var(--lumi-accent-b);
+}
+
+/* 思考 mode 下拉（工具栏左侧，向上弹出，无标签文字） */
+.lm-composer-thinking {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.lm-composer-thinking__trigger {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  height: 30px; /* 与发送按钮等高，避免垂直居中时下方留白不均 */
+  background: transparent;
+  border: 1px solid var(--lumi-border);
+  border-radius: 18px;
+  color: var(--lumi-text);
+  font-size: var(--lumi-text-sm);
+  font-weight: var(--lumi-weight-medium);
+  padding: 0 12px;
+  cursor: pointer;
+  transition: background-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+
+.lm-composer-thinking__trigger:hover {
+  background-color: rgba(38, 49, 72, 0.06);
+  border-color: var(--lumi-border-strong);
+}
+
+.lm-composer-thinking__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+/* 菜单向上弹出（锚定在 trigger 上方） */
+.lm-composer-thinking__menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #ffffff; /* 与输入框外壳背景一致 */
+  border: 1px solid var(--lumi-border-strong);
+  border-radius: var(--lumi-radius-input);
+  box-shadow: var(--lumi-shadow-panel-strong);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.lm-composer-thinking__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 7px 10px;
+  border-radius: var(--lumi-radius-input);
+  color: var(--lumi-text);
+  font-size: var(--lumi-text-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lm-composer-thinking__item:hover {
+  background: var(--lumi-well);
+}
+
+.lm-composer-thinking__item--active {
+  background: var(--lumi-well);
+  color: var(--lumi-accent-a);
+  font-weight: var(--lumi-weight-semibold);
+}
+
+/* 点击关闭的遮罩（覆盖整个面板，菜单之上、全局之下） */
+.lm-composer-thinking__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+}
+
+/* Textarea inside the shell: transparent, no border — shell provides the rounded frame. */
 .lm-input.lm-input--composer {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  position: relative;
-  background: #ffffff;
-  border: 1px solid var(--lumi-border-strong);
-  border-radius: var(--lumi-radius-card);
-  box-shadow: var(--lumi-shadow-panel-strong);
+  background: transparent;
+  border: none;
   color: var(--lumi-text);
   font-family: inherit;
   font-size: var(--lumi-text-base);
@@ -345,11 +448,9 @@
   min-height: 44px;
   max-height: 160px;
   overflow-y: hidden;  /* 单行默认隐藏滚动；多行时 JS 切为 auto */
-  padding: 12px 16px;
+  padding: 12px 16px 0;
   resize: none;
   outline: none;
-  transition: border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
-              box-shadow var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
 }
 
 .lm-input.lm-input--composer:focus {
@@ -384,8 +485,8 @@
 /* Send button: absolutely placed inside the textarea, always bottom-right */
 .lm-composer-send {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -418,8 +519,8 @@
 
 /* Send button in stop mode: gentle breathing on the stop icon */
 .lm-stop-icon {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   animation: lumi-breath 2s var(--lumi-motion-ease-entry) infinite;
 }
 
@@ -861,6 +962,67 @@
 }
 
 .lumi-tool-call__chevron { color: var(--lumi-text-faint); }
+
+/* ── 推理过程区块（轻量引用样式：斜体淡色 + 左侧竖线，默认收起）── */
+.lumi-reasoning {
+  width: 100%;
+}
+
+.lumi-reasoning__trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--lumi-text-soft);
+  font-size: var(--lumi-text-sm);
+  font-family: var(--lumi-font);
+  transition: color 180ms var(--lumi-ease-spring);
+}
+
+.lumi-reasoning__trigger:hover { color: var(--lumi-text); }
+
+.lumi-reasoning__icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--lumi-text-faint);
+}
+
+.lumi-reasoning__name {
+  /* 与工具名一致的字体样式 */
+  font-family: var(--lumi-mono);
+  font-size: var(--lumi-text-sm);
+  font-weight: var(--lumi-weight-semibold);
+  line-height: var(--lumi-leading-relaxed);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lumi-reasoning__chevron {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--lumi-text-faint);
+}
+
+.lumi-reasoning__detail {
+  margin: 6px 0 0 8px;
+  padding-left: 10px;
+  border-left: 2px solid var(--lumi-border-strong);
+  font-family: var(--lumi-mono);
+  font-size: var(--lumi-text-sm);
+  font-style: italic;
+  color: var(--lumi-text-soft);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+}
 
 .lumi-tool-call__detail {
   background: var(--lumi-well);

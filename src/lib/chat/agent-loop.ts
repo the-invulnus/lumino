@@ -4,7 +4,7 @@
  * 负责：
  * 1. 构建系统提示词（buildAgentMessages）
  * 2. 获取工具列表（getLuminoAgentTools）
- * 3. 创建 LlmClient（配置 thinking:disabled + 日志）
+ * 3. 创建 LlmClient（thinking 由 background 解析好的 thinkingBody 驱动，缺省 = 跟随模型默认）
  * 4. 调用核心 runAgentLoop() 并管理消息累积
  *
  * 核心 Agent 循环逻辑在 src/lib/llm/agent-loop.ts 中，不与 Lumino 业务耦合。
@@ -38,6 +38,8 @@ export type AgentLoopInput = {
     tools: string[]
     isBuiltin: boolean
   }
+  /** 模型思考 mode 的请求体附加字段（由 background 解析好传入）。undefined = 不注入 */
+  thinkingBody?: Record<string, unknown>
 }
 
 export async function runAgentLoop(
@@ -49,7 +51,8 @@ export async function runAgentLoop(
     userInput,
     onMessagesUpdate,
     signal,
-    agentConfig
+    agentConfig,
+    thinkingBody
   } = input
 
   // 1. 构建系统提示词
@@ -70,12 +73,12 @@ export async function runAgentLoop(
     : agentConfig?.tools
   const tools: LuminoTool[] = await getLuminoAgentTools(toolFilter)
 
-  // 3. 创建 LlmClient（配置 thinking:disabled）
+  // 3. 创建 LlmClient（thinking 由 background 解析好的 thinkingBody 驱动，缺省 = 跟随模型默认）
   const client = new LlmClient({
     baseUrl: settings.baseUrl,
     apiKey: settings.apiKey,
     model: settings.model,
-    thinking: { type: "disabled" }
+    thinkingBody
   })
 
   // 4. 初始消息：重试时 historyMessages 已包含完整历史，直接使用；否则追加新 user 消息
@@ -127,7 +130,11 @@ export async function runAgentLoop(
               id: tc.toolCallId,
               type: "function" as const,
               function: { name: tc.toolName, arguments: JSON.stringify(tc.input) }
-            }))
+            })),
+            // 仅当模型实际返回推理内容时才携带该字段（解耦 thinking 配置）
+            ...(step.reasoningContent
+              ? { reasoning_content: step.reasoningContent }
+              : {})
           })
         }
       }
@@ -147,7 +154,14 @@ export async function runAgentLoop(
       }
 
       if (!step.toolCalls?.length && !step.toolResults?.length && step.text) {
-        accumulatedMessages.push({ role: "assistant", content: step.text })
+        accumulatedMessages.push({
+          role: "assistant",
+          content: step.text,
+          // 仅当模型实际返回推理内容时才携带该字段（解耦 thinking 配置）
+          ...(step.reasoningContent
+            ? { reasoning_content: step.reasoningContent }
+            : {})
+        })
       }
 
       if (onMessagesUpdate) await onMessagesUpdate(accumulatedMessages)

@@ -10,7 +10,7 @@ import { getAllAgents, getBuiltinAgents } from "../lib/chat/builtin-agents"
 import { getLastActiveMode, setLastActiveMode } from "../lib/chat/mode-config"
 import { getThread, deleteThread } from "../lib/chat/thread-idb"
 import type { LlmSettings } from "../lib/llm/llm-types"
-import { getLlmSettings } from "../lib/settings"
+import { getLlmSettings, getThinkingConfig, THINKING_CONFIG_KEY, type ThinkingConfig } from "../lib/settings"
 import { applyTheme, getTheme } from "../lib/theme"
 import { initLocaleFromStorage } from "../lib/i18n"
 import { HomePage } from "./HomePage"
@@ -25,6 +25,7 @@ export function App() {
   const [currentAgentId, setCurrentAgentId] = useState<string | null>(null)
   const [currentAgent, setCurrentAgent] = useState<AgentConfig | null>(null)
   const [settings, setSettings] = useState<LlmSettings>({ baseUrl: "", apiKey: "", model: "" })
+  const [thinkingConfig, setThinkingConfig] = useState<ThinkingConfig>({ modes: [], defaultModeId: "" })
   const [runningAgentIds, setRunningAgentIds] = useState<Set<string>>(new Set())
   const [isReady, setIsReady] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -37,11 +38,12 @@ export function App() {
   useEffect(() => {
     // 恢复语言（默认 en），子组件 useT() 会随事件重渲染
     void initLocaleFromStorage()
-    Promise.all([getLlmSettings(), getTheme(), getAllAgents()])
-      .then(([s, theme, loadedAgents]) => {
+    Promise.all([getLlmSettings(), getTheme(), getAllAgents(), getThinkingConfig()])
+      .then(([s, theme, loadedAgents, tconfig]) => {
         setSettings(s)
         applyTheme(theme)
         setAgents(loadedAgents)
+        setThinkingConfig(tconfig)
 
         // 恢复上次模式
         const lastMode = getLastActiveMode()
@@ -78,6 +80,10 @@ export function App() {
         // LLM 凭证在 local
         if (SETTINGS_KEYS.some((key) => key in changes)) {
           getLlmSettings().then(setSettings).catch(() => {})
+        }
+        // 思考配置在 local（与模型耦合），变化时实时刷新
+        if (THINKING_CONFIG_KEY in changes) {
+          getThinkingConfig().then(setThinkingConfig).catch(() => {})
         }
         // 语言切换：local 中的 lumino_locale 变化时由 i18n 事件处理，此处无需额外动作
       }
@@ -210,6 +216,7 @@ export function App() {
                   agent={currentAgent}
                   onBack={handleGoHome}
                   settings={settings}
+                  thinkingConfig={thinkingConfig}
                   initialThreadId={pendingThreadId}
                   onOpenHistory={handleOpenHistory}
                   threadErrors={threadErrors}

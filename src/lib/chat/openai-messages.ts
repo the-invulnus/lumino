@@ -32,6 +32,12 @@ export type OpenAiChatMessage =
       tool_calls?: OpenAiToolCall[]
       refusal?: string | null
       name?: string
+      /**
+       * 推理内容（部分 OpenAI 兼容 API，如 DeepSeek-R1，在 message 上返回）。
+       * 仅当模型实际返回时存在——存储与展示逻辑不依赖请求体的 thinking 配置，
+       * 只根据此字段是否出现来决定是否渲染推理区块。
+       */
+      reasoning_content?: string
     }
   | {
       role: "tool"

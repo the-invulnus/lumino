@@ -205,6 +205,8 @@ textarea {
   max-width: 1100px;
   height: 100%;
   margin: 0 auto;
+  /* 右边界线：让内容区与右侧背景区分开，避免白色区域融入背景 */
+  box-shadow: 1px 0 0 0 var(--lumi-border);
 }
 
 /* — Sidepanel layout — */
@@ -492,21 +494,35 @@ textarea {
   margin-bottom: 8px;
 }
 
-/* — Composer — */
+/* — Composer — 白色圆角外壳整体包裹：上=输入框，下=工具栏（思考下拉 + 发送） */
 .lm-composer {
+  flex-shrink: 0;
+}
+
+.lm-composer__shell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.lm-composer__toolbar {
   display: flex;
   flex-direction: row;
-  flex-shrink: 0;
-  gap: 8px;
   align-items: center;
+  gap: 8px;
+  padding: 2px 12px 6px;
+}
+
+.lm-composer__spacer {
+  flex: 1;
 }
 
 .lm-input--composer {
-  /* textarea IS the container. Send button overlays inside. */
+  /* textarea IS the input area inside the shell */
 }
 
 .lm-composer-send {
-  /* flex item within .lm-composer row */
+  /* flex item within .lm-composer__toolbar row */
 }
 
 /* — Side nav — */
@@ -1283,6 +1299,248 @@ textarea {
   padding-top: 4px;
 }
 
+.lm-options-divider {
+  height: 1px;
+  background: var(--lumi-border);
+  margin: 4px 0;
+}
+
+.lm-options-subtitle {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--lumi-text-primary);
+}
+
+.lm-options-error {
+  font-size: 12px;
+  color: var(--lumi-danger-text);
+  margin: 0;
+}
+
+/* — Thinking mode 编辑器（容器式列表：一行 = 名称 + 三个图标按钮）— */
+.lm-thinking-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lm-thinking-reset {
+  margin-left: auto;
+  padding: 4px 12px;
+  border: 1px solid var(--lumi-border);
+  border-radius: var(--lumi-radius-control);
+  background: var(--lumi-surface-solid);
+  color: var(--lumi-text-soft);
+  font-size: var(--lumi-text-sm);
+  font-weight: var(--lumi-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+
+.lm-thinking-reset:hover {
+  background: var(--lumi-well);
+  border-color: var(--lumi-border-strong);
+  color: var(--lumi-text);
+}
+.lm-thinking-modes {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--lumi-border);
+  border-radius: var(--lumi-radius-control);
+  background: var(--lumi-tile);
+  padding: 6px;
+  gap: 2px;
+}
+
+/* 固定行高，编辑态切换时行高不变（span ↔ input 等宽） */
+.lm-thinking-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 4px;
+  border-radius: var(--lumi-radius-control);
+}
+
+.lm-thinking-mode:hover {
+  background: var(--lumi-well);
+}
+
+/* 左侧列表项圆点（表示这是一个档位条目） */
+.lm-thinking-mode__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lumi-text-faint);
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+/* 名称：非编辑态为纯文本，行高与 input 一致 */
+.lm-thinking-mode__label {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--lumi-text-base);
+  font-weight: var(--lumi-weight-medium);
+  color: var(--lumi-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 36px;
+}
+
+/* 重命名输入框（白底、紧凑高度，与行高一致） */
+.lm-thinking-mode__name {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 10px;
+  background: #ffffff;
+}
+
+/* 行内图标按钮（编辑 / 配置 / 删除） */
+.lm-thinking-mode__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.lm-thinking-mode__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--lumi-radius-control);
+  color: var(--lumi-text-faint);
+  cursor: pointer;
+  transition: background-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+
+.lm-thinking-mode__btn:hover:not(:disabled) {
+  background: var(--lumi-surface-solid);
+  color: var(--lumi-text);
+}
+
+.lm-thinking-mode__btn--danger:hover:not(:disabled) {
+  background: var(--lumi-danger-bg);
+  color: var(--lumi-danger-text);
+}
+
+.lm-thinking-mode__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* body JSON 编辑区（模态框内，白底） */
+.lm-thinking-mode__body {
+  font-family: var(--lumi-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+  background: #ffffff;
+  width: 100%;
+}
+
+.lm-textarea--error {
+  border-color: var(--lumi-danger-text);
+}
+
+/* 添加档位按钮（纯图标，容器内底部，紧贴上面一行） */
+.lm-thinking-mode__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin: 2px 0 0 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--lumi-radius-control);
+  color: var(--lumi-text-soft);
+  cursor: pointer;
+  transition: background-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+
+.lm-thinking-mode__add:hover {
+  background: var(--lumi-well);
+  color: var(--lumi-text);
+}
+
+/* JSON 编辑模态框（Options 全页固定定位，复用 lm-confirm-overlay 视觉） */
+.lm-options-root .lm-confirm-overlay {
+  position: fixed;
+}
+
+/* 双 class 特异性，压过 .lm-confirm-card 的 width: 220px */
+.lm-confirm-card.lm-thinking-modal {
+  width: 340px;
+  max-width: 92vw;
+  text-align: left;
+}
+
+/* 弹框底部按钮：所有 confirm 弹框统一（取消 / 主色 / 红色危险） */
+.lm-thinking-modal .lm-confirm-actions {
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.lm-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 76px;
+  height: 34px;
+  padding: 0 18px;
+  border-radius: var(--lumi-radius-control);
+  font-size: var(--lumi-text-base);
+  font-weight: var(--lumi-weight-semibold);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+
+.lm-confirm-btn--cancel {
+  background: var(--lumi-surface-solid);
+  border-color: var(--lumi-border-strong);
+  color: var(--lumi-text);
+}
+
+.lm-confirm-btn--cancel:hover {
+  background: var(--lumi-well);
+}
+
+.lm-confirm-btn--primary {
+  background: var(--lumi-accent-a);
+  color: #ffffff;
+}
+
+.lm-confirm-btn--primary:hover {
+  filter: brightness(1.08);
+}
+
+.lm-confirm-btn--danger {
+  background: #e5484d;
+  color: #ffffff;
+}
+
+.lm-confirm-btn--danger:hover {
+  background: #d42e33;
+}
+
 /* — Agent cards — */
 .lm-custom-agents-list { display: flex; flex-direction: column; gap: 6px; }
 
@@ -1733,8 +1991,8 @@ textarea {
 }
 
 .lm-primary-icon {
-  height: 16px;
-  width: 16px;
+  height: 13px;
+  width: 13px;
 }
 
 .lm-primary-button:focus-visible {

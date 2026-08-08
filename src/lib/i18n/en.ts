@@ -78,6 +78,21 @@ export const en: Record<string, string> = {
   "option.llm.title": "Model Connection",
   "option.llm.desc": "Configure an OpenAI-compatible API. Once connected, the agent will talk to the model through this API.",
 
+  // 思考配置（thinking mode）
+  "option.thinking.title": "Thinking Mode Config",
+  "option.thinking.desc": "Each mode corresponds to a set of request-body fields. Configure the JSON to match your model, then pick a mode during agent chat.",
+  "option.thinking.reset": "Reset",
+  "option.thinking.resetConfirm": "Reset will overwrite your current thinking mode config. Continue?",
+  "option.thinking.label": "Label",
+  "option.thinking.rename": "Rename",
+  "option.thinking.configure": "Configure request body",
+  "option.thinking.remove": "Remove",
+  "option.thinking.add": "Add mode",
+  "option.thinking.save": "Save",
+  "option.thinking.cancel": "Cancel",
+  "option.thinking.bodyInvalidJson": "Invalid JSON — mode body not saved until fixed",
+  "option.thinking.bodyMustObject": "Body must be a JSON object (not array/primitive)",
+
   // Obsidian 面板
   "option.obsidian.title": "Obsidian Integration",
   "option.obsidian.desc": "Connect to the Obsidian Local REST API so the agent can read and write your vault directly.",
@@ -169,6 +184,10 @@ export const en: Record<string, string> = {
   "toolcall.loadingSkill": "Loading skill: {name}",
   "toolcall.download": "Download {path}",
   "toolcall.result": "Result · {name}",
+
+  // ── 推理过程展示 ──
+  "reasoning.title": "Thinking",
+  "thinking.modeLabel": "Thinking mode",
 
   // ── 悬浮按钮 ──
   "floatButton.ariaLabel": "Open Lumino side panel",
