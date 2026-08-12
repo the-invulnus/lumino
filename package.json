@@ -1,13 +1,13 @@
 {
   "name": "lumino",
-  "displayName": "Lumino: From Chat to Done — Connect Browser to Your Work.",
-  "version": "1.0.1",
+  "displayName": "Lumino: Browse and Build with AI Agent",
+  "version": "1.0.2",
   "description": "A free AI assistant for deep research, knowledge management, web replication, browser automation, etc. — powered by your own LLM.",
   "author": "the invulnus",
   "scripts": {
     "dev": "NODE_OPTIONS='--no-deprecation' plasmo dev",
     "build": "NODE_OPTIONS='--no-deprecation' plasmo build",
-    "package": "NODE_OPTIONS='--no-deprecation' plasmo package",
+    "package": "NODE_OPTIONS='--no-deprecation' plasmo build && cd build/chrome-mv3-prod && rm -f ../chrome-mv3-prod.zip && zip -rq ../chrome-mv3-prod.zip . && cd ../..",
     "test": "vitest run"
   },
   "dependencies": {

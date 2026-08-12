@@ -6,7 +6,7 @@ Copy-paste ready content for the Chrome Web Store Developer Dashboard.
 
 ## Name (75 chars max)
 
-Lumino: From Chat to Done — Connect Browser to Your Work.
+Lumino: Browse and Build with AI Agent.
 
 ---
 

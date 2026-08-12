@@ -35,8 +35,9 @@
 /* Active/press feedback */
 .lm-composer-send:active:not(:disabled),
 .lm-primary-button:active:not(:disabled),
-.lm-secondary-button:active:not(:disabled) {
-  transform: scale(0.96);
+.lm-secondary-button:active:not(:disabled),
+.lm-chat-action-btn:active {
+  transform: scale(0.9);
 }
 
 /* Focus ring animation */

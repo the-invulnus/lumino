@@ -114,6 +114,8 @@ export const ChatView = forwardRef<ChatViewHandle, {
   const [titleDraft, setTitleDraft] = useState("")
   const [userScrolledUp, setUserScrolledUp] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasNewMessages = useRef(false)  // 避免首次挂载就显示"新消息"按钮
   const scrollAnchorRef = useRef<HTMLDivElement>(null)
   const chatScrollRef = useRef<HTMLDivElement>(null)
@@ -123,6 +125,12 @@ export const ChatView = forwardRef<ChatViewHandle, {
   const draftMapRef = useRef<Record<string, string>>({})
 
   const t = useT()
+
+  const triggerCopyFeedback = useCallback((id: string) => {
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    setCopiedId(id)
+    copyTimerRef.current = setTimeout(() => setCopiedId(null), 1500)
+  }, [])
 
   // 自动增高：重置为 auto 再取 scrollHeight，受 min/max-height 约束。
   // 抽成函数 + layoutEffect 在 draft 变化时统一调用，保证首屏、输入、
@@ -464,17 +472,6 @@ export const ChatView = forwardRef<ChatViewHandle, {
     return out
   }, [visibleMessages])
 
-  // 取最后一条 assistant 消息的文本内容（复制时使用，不含工具调用结果）
-  const lastAssistantText = useMemo(() => {
-    for (let i = visibleMessages.length - 1; i >= 0; i--) {
-      const m = visibleMessages[i]
-      if (m.role === "assistant" && typeof m.content === "string" && m.content) {
-        return m.content
-      }
-    }
-    return ""
-  }, [visibleMessages])
-
   const isConfigured = hasCompleteLlmSettings(settings)
   const isLoading = loadingThreadIds.has(activeThreadId)
   const currentThread = threads.find((t) => t.id === activeThreadId)
@@ -648,9 +645,20 @@ export const ChatView = forwardRef<ChatViewHandle, {
                           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                         </svg>
                       </button>
-                      <button aria-label={t("chat.action.copyMessage")} className="lm-chat-action-btn"
+                      <button aria-label={t("chat.action.copyMessage")} className={`lm-chat-action-btn${copiedId === `group-${gIdx}` ? " lm-chat-action-btn--copied" : ""}`}
                         onClick={() => {
-                          if (lastAssistantText) navigator.clipboard.writeText(lastAssistantText).catch(() => {})
+                          let text = ""
+                          for (let i = group.length - 1; i >= 0; i--) {
+                            const m = group[i]
+                            if (m.role === "assistant" && typeof m.content === "string" && m.content) {
+                              text = displayContent(m.content)
+                              break
+                            }
+                          }
+                          if (text) {
+                            navigator.clipboard.writeText(text).catch(() => {})
+                            triggerCopyFeedback(`group-${gIdx}`)
+                          }
                         }}
                         title={t("chat.action.copy")} type="button"
                       >
@@ -754,9 +762,13 @@ export const ChatView = forwardRef<ChatViewHandle, {
                         </svg>
                       </button>
                     ) : null}
-                    <button aria-label={t("chat.action.copyMessage")} className="lm-chat-action-btn"
+                    <button aria-label={t("chat.action.copyMessage")} className={`lm-chat-action-btn${copiedId === `msg-${gIdx}` ? " lm-chat-action-btn--copied" : ""}`}
                       onClick={() => {
-                        if (lastAssistantText) navigator.clipboard.writeText(lastAssistantText).catch(() => {})
+                        const text = displayContent(formatMessagePreview(msg))
+                        if (text) {
+                          navigator.clipboard.writeText(text).catch(() => {})
+                          triggerCopyFeedback(`msg-${gIdx}`)
+                        }
                       }}
                       title={t("chat.action.copy")} type="button"
                     >

@@ -400,6 +400,10 @@ textarea {
   flex-shrink: 0;
 }
 
+.lm-chat-action-btn--copied {
+  color: #22c55e;
+}
+
 .lm-chat-row-wrapper--user {
   display: flex;
   flex-direction: column;
