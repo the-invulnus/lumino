@@ -53,39 +53,36 @@ You can also create **custom agents** with your own system prompts and tool subs
 
 ### Option 1: Chrome Web Store
 
-*Coming soon. Stay tuned!*
+<a href="https://chromewebstore.google.com/detail/lumino-browse-and-build-w/pgmojincedjeggjgfafpkbmloiiinplj"><img src="https://user-images.githubusercontent.com/585534/107280622-91a8ea80-6a26-11eb-8d07-77c548b28665.png" alt="Available in the Chrome Web Store" height="48" /></a>
 
-> Once published, you can install Lumino directly from the Chrome Web Store with one click — no build step required.
+Or search for **"Lumino"** in the [Chrome Web Store](https://chromewebstore.google.com/).
 
-### Option 2: Build from Source
+### Option 2: Install from Release (No Build Required)
+
+1. Go to the [Releases](https://github.com/the-invulnus/lumino/releases) page
+2. Download the latest `.zip` file
+3. Open `chrome://extensions` in Chrome
+4. Enable **Developer mode** (toggle in the top-right corner)
+5. Drag and drop the `.zip` file onto the page, or click **Load unpacked** and select the unzipped folder
+6. The Lumino icon appears in your toolbar — click it to open the side panel
+
+### Option 3: Build from Source
 
 #### Prerequisites
 
 - **Node.js** 20+
 - **pnpm** 9+
 
-#### Steps
+#### Build & Install
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/the-invulnus/lumino.git
 cd lumino
-
-# 2. Install dependencies
 pnpm install
-
-# 3. Build the extension
 pnpm build
 ```
 
-The build output is in `build/chrome-mv3-prod/`.
-
-#### Load in Chrome
-
-1. Open `chrome://extensions` in Chrome
-2. Enable **Developer mode** (toggle in the top-right corner)
-3. Click **Load unpacked** and select the `build/chrome-mv3-prod/` folder
-4. The Lumino icon appears in your toolbar — click it to open the side panel
+Then load the `build/chrome-mv3-prod/` folder as an unpacked extension in `chrome://extensions`.
 
 #### Development
 
@@ -93,7 +90,7 @@ The build output is in `build/chrome-mv3-prod/`.
 pnpm dev
 ```
 
-Then load the `build/chrome-mv3-dev` directory as an unpacked extension. Changes to source files trigger automatic rebuilds.
+Load the `build/chrome-mv3-dev` directory as an unpacked extension. Changes to source files trigger automatic rebuilds.
 
 ## Configuration
 
