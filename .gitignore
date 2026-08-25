@@ -39,6 +39,22 @@ docs/
 # agent skills
 .agents/
 
+# IDE / editor
+.cursor/
+.claude/settings.json
+.claude/settings.local.json
+
+# temp files
+*.bak
+*.orig
+demo-ring-mask.html
+skills-lock.json
+pg/
+DESIGN.md
+DESIGN_REDESIGN.md
+PRIVACY.md
+STORE_LISTING.md
+
 # bpp - http://bpp.browser.market/
 keys.json
 
