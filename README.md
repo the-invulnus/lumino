@@ -53,9 +53,9 @@ You can also create **custom agents** with your own system prompts and tool subs
 
 ### Option 1: Chrome Web Store
 
-*Coming soon. Stay tuned!*
+<a href="https://chromewebstore.google.com/detail/lumino-browse-and-build-w/pgmojincedjeggjgfafpkbmloiiinplj"><img src="https://user-images.githubusercontent.com/585534/107280622-91a8ea80-6a26-11eb-8d07-77c548b28665.png" alt="Available in the Chrome Web Store" height="48" /></a>
 
-> Once published, you can install Lumino directly from the Chrome Web Store with one click — no build step required.
+Or search for **"Lumino"** in the [Chrome Web Store](https://chromewebstore.google.com/).
 
 ### Option 2: Build from Source
 
