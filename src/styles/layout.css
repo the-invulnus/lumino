@@ -1,0 +1,2188 @@
+/* ═══════════════════════════════════════════════
+   Lumino Layout — Structural rules (theme-agnostic)
+
+   display / flex / position / z-index / overflow /
+   width / height / box-sizing / pointer-events /
+   animation keyframes / resets
+
+   Never changes per theme. Imports tokens.css for
+   variables used in component layer only.
+   ═══════════════════════════════════════════════ */
+@import "./tokens.css";
+
+/* — Base resets — */
+body {
+  margin: 0;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+/* — Shell — */
+.lm-shell {
+  box-sizing: border-box;
+  min-height: 100%;
+  /* 最外层裁剪边界：防止任何内容溢出 panel 视口。保留。 */
+  overflow: hidden;
+  position: relative;
+}
+
+.lm-sidepanel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 100%;
+  min-width: 340px;
+  /* 次外层裁剪边界。保留：配合 padding 限定内容区，blob 装饰由 .lm-ambient 自管。 */
+  overflow: hidden;
+  padding: 8px 0 10px;
+  width: 100%;
+}
+
+.lm-options {
+  min-height: 100dvh;
+}
+
+/* — Ambient blobs — */
+.lm-ambient {
+  inset: 0;
+  /* 必需：裁剪 blob 装饰圆，防止溢出铺满视口。保留。 */
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+/* Noise texture overlay */
+.lm-ambient::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+  opacity: var(--lumi-mood-noise-opacity, 0.02);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.lm-blob {
+  border-radius: 50%;
+  position: absolute;
+  will-change: transform;
+}
+
+/* Extra blobs for richer movement */
+.lm-blob--d {
+  animation: lumi-drift-d 30s var(--lumi-ease-spring) infinite alternate;
+  background: radial-gradient(circle, var(--lumi-blob-a) 0%, transparent 65%);
+  filter: blur(var(--lumi-mood-blur-intensity, 56px));
+  opacity: calc(var(--lumi-mood-blob-opacity, 0.16) * 0.5);
+  height: 160px;
+  width: 160px;
+  left: 40%;
+  bottom: 20%;
+}
+
+.lm-blob--e {
+  animation: lumi-drift-e 34s var(--lumi-ease-spring) infinite alternate;
+  background: radial-gradient(circle, var(--lumi-blob-b) 0%, transparent 65%);
+  filter: blur(var(--lumi-mood-blur-intensity, 56px));
+  opacity: calc(var(--lumi-mood-blob-opacity, 0.16) * 0.5);
+  height: 140px;
+  width: 140px;
+  right: 30%;
+  bottom: 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lm-blob {
+    animation: none !important;
+  }
+}
+
+.lm-blob--a {
+  animation: lumi-drift-a 28s var(--lumi-ease-spring) infinite alternate;
+  height: 220px;
+  right: -40px;
+  top: -60px;
+  width: 220px;
+}
+
+.lm-blob--b {
+  animation: lumi-drift-b 32s var(--lumi-ease-spring) infinite alternate;
+  bottom: -30%;
+  height: 280px;
+  left: -15%;
+  width: 280px;
+}
+
+.lm-blob--c {
+  animation: lumi-drift-c 36s var(--lumi-ease-spring) infinite alternate;
+  height: 180px;
+  right: 10%;
+  top: 40%;
+  width: 180px;
+}
+
+/* Options page blob overrides */
+.lm-options .lm-blob {
+  border-radius: 50%;
+  position: absolute;
+  will-change: transform;
+}
+
+.lm-options .lm-blob--a {
+  height: 200px;
+  right: -8%;
+  top: -4%;
+  width: 200px;
+}
+
+.lm-options .lm-blob--b {
+  bottom: -12%;
+  height: 240px;
+  left: -12%;
+  width: 240px;
+}
+
+.lm-options .lm-blob--c {
+  height: 160px;
+  right: 14%;
+  top: 48%;
+  width: 160px;
+}
+
+/* — Bezel cards — */
+.lm-bezel-outer {
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+}
+
+.lm-bezel-inner {
+  /* layout container only */
+}
+
+.lm-sidepanel .lm-bezel-outer {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  max-width: 100%;
+  min-height: 0;
+}
+
+.lm-bezel-outer--side {
+  min-height: 0;
+}
+
+.lm-bezel-inner--side {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+/* — Options page root — */
+.lm-options-root {
+  position: relative;
+  height: 100dvh;
+  display: flex;
+}
+
+.lm-options-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  max-width: 1100px;
+  height: 100%;
+  margin: 0 auto;
+  /* 右边界线：让内容区与右侧背景区分开，避免白色区域融入背景 */
+  box-shadow: 1px 0 0 0 var(--lumi-border);
+}
+
+/* — Sidepanel layout — */
+.lm-sidepanel-layout-row {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  /* 不设 overflow: hidden — 悬浮导航栏/输入框的阴影需向外扩散。
+     flex 子项溢出由各子项自管的 min-* 与内部滚动控制。 */
+}
+
+.lm-sidepanel-layout {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+  /* 不设 overflow: hidden — 输入框/composer 的浮起阴影需向下扩散，裁剪会产生硬边「假角」。 */
+  padding: 8px 10px;
+}
+
+/* — Sidepanel header — */
+.lm-sp-header {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.lm-sp-brand {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.lm-sp-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+
+/* — Options header — */
+.lm-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.lm-brand {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+
+
+/* — Chat panel — */
+.lm-chat-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.lm-chat-panel .lm-chat-scroll {
+  flex: 1 1 auto;
+  gap: 0;
+  max-height: none;
+  min-height: 120px;
+  overflow-x: hidden;
+  padding: 10px 2px;
+}
+
+.lm-chat-scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0;
+  max-height: min(58vh, 500px);
+  min-height: 160px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 8px;
+  position: relative;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.lm-chat-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.lm-chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lm-chat-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 2px;
+}
+
+.lm-chat-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--lumi-border-strong);
+}
+
+.lm-chat-scroll:hover {
+  scrollbar-color: var(--lumi-border-strong) transparent;
+}
+
+.lm-chat-scroll .lm-chat-row--user {
+  margin-bottom: 12px;
+}
+
+.lm-chat-scroll .lm-chat-row--assistant + .lm-chat-row--assistant {
+  margin-top: 0;
+}
+
+.lm-chat-hint {
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.lm-chat-panel .lm-chat-hint {
+  padding: 12px 8px;
+}
+
+.lm-chat-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 100%;
+}
+
+.lm-chat-row--user {
+  align-items: flex-end;
+}
+
+.lm-chat-row--assistant {
+  align-items: flex-start;
+}
+
+.lm-chat-row--tool {
+  align-items: stretch;
+}
+
+/* 消息操作按钮 — 放在气泡底部，固定高度避免布局跳动 */
+.lm-chat-actions {
+  align-items: center;
+  display: flex;
+  gap: 2px;
+  height: 22px;
+  opacity: 0;
+  transition: opacity 180ms var(--lumi-ease-spring);
+  visibility: hidden;
+}
+
+.lm-chat-row-wrapper:hover .lm-chat-actions {
+  opacity: 1;
+  visibility: visible;
+}
+
+.lm-chat-action-btn {
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--lumi-text-faint);
+  cursor: pointer;
+  display: flex;
+  padding: 4px;
+}
+
+.lm-chat-action-btn:hover {
+  color: var(--lumi-text-soft);
+}
+
+.lm-chat-action-btn:last-child:hover {
+  color: #c03e3e;
+}
+
+.lm-chat-action-btn svg {
+  flex-shrink: 0;
+}
+
+.lm-chat-action-btn--copied {
+  color: #22c55e;
+}
+
+.lm-chat-row-wrapper--user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.lm-chat-row-wrapper--assistant {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.lm-chat-row--system {
+  align-items: stretch;
+}
+
+.lm-chat-bubble {
+  max-width: 100%;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.lm-chat-panel .lm-chat-bubble {
+  max-width: 94%;
+}
+
+.lm-chat-bubble--assistant .lm-chat-bubble {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  width: 100%;
+}
+
+.lm-chat-md {
+  white-space: pre-wrap;
+  padding-block: 4px;
+}
+
+.lm-chat-md > * { margin: 0; }
+.lm-chat-md > * + * { margin-top: 0.5em; }
+.lm-chat-md ul, .lm-chat-md ol { padding-left: 1.25em; }
+.lm-chat-md li > p { margin: 0; }
+.lm-chat-md pre {
+  padding: 8px 10px;
+  overflow-x: auto;
+}
+.lm-chat-md pre code {
+  background: none; padding: 0;
+}
+.lm-chat-md table {
+  border-collapse: collapse; width: 100%;
+}
+.lm-chat-md th, .lm-chat-md td {
+  border: 1px solid var(--lumi-border-strong); padding: 5px 8px; text-align: left;
+}
+.lm-chat-md th {
+  font-weight: 600;
+}
+.lm-chat-md blockquote {
+  margin: 0; padding: 0 10px;
+}
+
+.lm-chat-json {
+  max-height: 120px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.lm-chat-system,
+.lm-chat-tool-body {
+  margin: 0;
+  max-height: 140px;
+  overflow: auto;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+}
+
+.lm-chat-tools {
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.lm-chat-tools ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.lm-chat-tools li {
+  margin-bottom: 8px;
+}
+
+/* — Composer — 白色圆角外壳整体包裹：上=输入框，下=工具栏（思考下拉 + 发送） */
+.lm-composer {
+  flex-shrink: 0;
+}
+
+.lm-composer__shell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.lm-composer__toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 12px 6px;
+}
+
+.lm-composer__spacer {
+  flex: 1;
+}
+
+.lm-input--composer {
+  /* textarea IS the input area inside the shell */
+}
+
+.lm-composer-send {
+  /* flex item within .lm-composer__toolbar row */
+}
+
+/* — Side nav — */
+/* — 右侧图标导航栏（悬浮样式） — */
+.lm-icon-sidebar {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 1px;
+  overflow-y: auto;
+  /* 悬浮：上下右留出间距，加大圆角 */
+  margin: 8px 8px 8px 0;
+  padding: 10px 6px;
+  scrollbar-width: none;
+  width: 52px;
+}
+
+.lm-icon-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.lm-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 2px;
+  border-radius: var(--lumi-radius-control);
+  width: 100%;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.lm-nav-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--lumi-radius-control);
+  transition: all 0.2s;
+}
+
+.lm-nav-icon-box svg {
+  width: 18px;
+  height: 18px;
+}
+
+.lm-nav-label {
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: 600;
+  margin-top: 2px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.lm-nav-spacer {
+  flex: 1;
+}
+
+.lm-nav-running-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: lumi-dot-blink 1s ease-in-out infinite;
+}
+
+/* — 首页 — */
+.lm-home-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0 16px;
+  scrollbar-width: none;
+}
+
+.lm-home-page::-webkit-scrollbar {
+  display: none;
+}
+
+.lm-home-hero {
+  text-align: center;
+  padding: 24px 0 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.lm-home-hero-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.lm-home-hero-title {
+  font-family: "Playfair Display", "Georgia", "Times New Roman", serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.lm-home-hero-sub {
+  font-size: 14px;
+  margin: 0;
+}
+
+.lm-home-hero-tagline {
+  font-size: 17px;
+  font-weight: var(--lumi-weight-semibold);
+  line-height: var(--lumi-leading-snug);
+  margin: 0;
+}
+
+.lm-home-hero-desc {
+  font-size: 12.5px;
+  line-height: var(--lumi-leading-relaxed);
+  margin: 0;
+  margin-bottom: 4px;
+  max-width: 340px;
+}
+
+.lm-home-hero-cta {
+  font-size: 12px;
+  margin: 0;
+}
+
+.lm-home-section {
+  padding: 0 2px;
+  margin-top: 16px;
+}
+
+.lm-home-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 8px 4px;
+}
+
+.lm-home-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 0 4px;
+  margin-bottom: 8px;
+}
+
+.lm-home-section-head .lm-home-section-title {
+  margin: 0;
+}
+
+.lm-home-history-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--lumi-radius-control);
+  border: none;
+  background: var(--lumi-surface);
+  box-shadow: var(--lumi-shadow-panel);
+  cursor: pointer;
+  color: var(--lumi-text-soft);
+  transition: background-color 0.15s, color 0.15s, transform 0.15s var(--lumi-motion-ease-bounce);
+}
+
+.lm-home-history-btn:hover {
+  background: var(--lumi-tile-hover);
+  color: var(--lumi-text-primary);
+  transform: translateY(-1px);
+}
+
+.lm-home-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.lm-home-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px;
+  border-radius: var(--lumi-radius-card);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  background: none;
+  font: inherit;
+  color: inherit;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.lm-home-card:hover {
+  transform: translateY(-1px);
+}
+
+.lm-home-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--lumi-radius-control);
+}
+
+.lm-home-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lm-home-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.lm-home-card-desc {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* Quick prompts */
+.lm-home-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lm-home-prompt-chip {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: var(--lumi-radius-control);
+  border: none;
+  background: var(--lumi-surface);
+  box-shadow: var(--lumi-shadow-panel);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  color: inherit;
+  transition: all 0.15s;
+}
+
+.lm-home-prompt-chip:hover {
+  background: var(--lumi-tile-hover);
+}
+
+/* Recent threads */
+.lm-home-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lm-home-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--lumi-radius-control);
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: background-color 0.15s;
+}
+
+.lm-home-recent-item:hover {
+  background: var(--lumi-tile-hover);
+}
+
+.lm-home-recent-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--lumi-radius-control);
+  background: var(--lumi-well);
+  color: var(--lumi-text-soft);
+}
+
+.lm-home-recent-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.lm-home-recent-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lm-home-recent-time {
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+/* — ChatView — */
+.lm-chat-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  /* 不设 overflow: hidden — composer 底部阴影需向下扩散。滚动由 .lm-chat-scroll 自管。 */
+}
+
+.lm-chat-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 8px 4px 4px;
+}
+
+.lm-chat-view-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lm-logo-cat--sm {
+  width: 26px;
+  height: 26px;
+}
+
+.lm-chat-view-mode-name {
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: var(--lumi-radius-control);
+  padding: 2px 6px;
+  transition: background-color 0.15s;
+}
+
+.lm-chat-view-mode-name:hover {
+  background: var(--lumi-tile-hover);
+}
+
+.lm-chat-view-title-input {
+  font-size: 15px;
+  font-weight: 700;
+  border: 1px solid var(--lumi-accent-a);
+  border-radius: var(--lumi-radius-control);
+  padding: 2px 6px;
+  background: var(--lumi-surface);
+  color: var(--lumi-text-primary);
+  outline: none;
+  width: 200px;
+  font-family: inherit;
+}
+
+.lm-chat-view-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lm-chat-view-new-btn,
+.lm-chat-view-history-btn,
+.lm-chat-view-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--lumi-radius-control);
+  border: none;
+  background: var(--lumi-surface);
+  box-shadow: var(--lumi-shadow-panel);
+  cursor: pointer;
+  color: var(--lumi-text-soft);
+  transition: background-color 0.15s, color 0.15s, transform 0.15s var(--lumi-motion-ease-bounce);
+}
+
+.lm-chat-view-new-btn:hover,
+.lm-chat-view-history-btn:hover,
+.lm-chat-view-delete-btn:hover {
+  background: var(--lumi-tile-hover);
+  color: var(--lumi-text-primary);
+  transform: translateY(-1px);
+}
+
+.lm-chat-view-new-btn:active,
+.lm-chat-view-history-btn:active,
+.lm-chat-view-delete-btn:active {
+  transform: translateY(0);
+}
+
+/* — History Panel — */
+.lm-history-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(45, 38, 34, 0.18);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--lumi-motion-duration-medium) var(--lumi-motion-ease-entry),
+              visibility 0s linear var(--lumi-motion-duration-medium);
+  z-index: 90;
+  backdrop-filter: blur(2px);
+}
+
+.lm-history-overlay--active {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--lumi-motion-duration-medium) var(--lumi-motion-ease-entry),
+              visibility 0s;
+}
+
+.lm-history-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 340px;
+  height: 100%;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform var(--lumi-motion-duration-medium) var(--lumi-motion-ease-entry),
+              opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry),
+              visibility 0s linear var(--lumi-motion-duration-medium);
+}
+
+.lm-history-panel--open {
+  transform: translateX(0);
+  opacity: 1;
+  visibility: visible;
+  transition: transform var(--lumi-motion-duration-medium) var(--lumi-motion-ease-entry),
+              opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry),
+              visibility 0s;
+}
+
+.lm-history-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--lumi-border);
+}
+
+.lm-history-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.lm-history-panel-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  transition: background-color 0.2s;
+}
+
+.lm-history-panel-close:hover {
+  background: var(--lumi-hover-bg);
+}
+
+.lm-history-panel-search {
+  padding: 10px 16px 14px;
+  flex-shrink: 0;
+}
+
+.lm-history-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--lumi-border-strong);
+  border-radius: var(--lumi-radius-card);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+
+.lm-history-panel-list {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 16px 16px;
+}
+
+.lm-history-panel-empty {
+  text-align: center;
+  padding: 24px 0;
+  font-size: 13px;
+}
+
+.lm-history-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--lumi-radius-card);
+  cursor: pointer;
+  margin-bottom: 8px;
+  border: 1px solid var(--lumi-border);
+  background: var(--lumi-tile);
+  box-shadow: 0 1px 2px rgba(45, 38, 34, 0.04), 0 4px 14px -6px rgba(45, 38, 34, 0.08);
+  transition: background-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              box-shadow var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              transform var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+
+.lm-history-item:hover {
+  background: var(--lumi-tile);
+  box-shadow: var(--lumi-shadow-elevated);
+  transform: translateY(-1px);
+}
+
+.lm-history-item--active {
+  background: var(--lumi-tile-hover);
+  box-shadow: var(--lumi-shadow-elevated);
+}
+
+.lm-history-item-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  width: 40px;
+}
+
+.lm-history-item-agent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--lumi-radius-control);
+}
+
+.lm-history-item-agent svg {
+  width: 18px;
+  height: 18px;
+}
+
+.lm-history-item-agent-label {
+  font-size: 8px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 40px;
+}
+
+.lm-history-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lm-history-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lm-history-item-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lm-history-item-date {
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.lm-history-item-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.lm-history-item-preview > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lm-history-item-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+  color: inherit;
+}
+
+.lm-history-item:hover .lm-history-item-delete,
+.lm-history-item--active .lm-history-item-delete {
+  opacity: 1;
+}
+
+.lm-history-item-delete:hover {
+  color: var(--lumi-danger-text);
+}
+
+/* — Options: two-column layout — */
+.lm-options-layout {
+  display: flex;
+  gap: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+/* — Left nav — */
+.lm-options-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 172px;
+  min-width: 172px;
+  flex-shrink: 0;
+  padding: 24px 16px 20px;
+  border-right: 1px solid var(--lumi-border);
+  background: var(--lumi-surface-solid);
+}
+
+.lm-options-nav-brand {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0 12px 20px;
+  color: var(--lumi-text-faint);
+}
+
+.lm-options-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--lumi-radius-control);
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  color: var(--lumi-text-soft);
+  transition: all 0.15s;
+}
+
+.lm-options-nav-item:hover {
+  background: var(--lumi-tile-hover);
+  color: var(--lumi-text-primary);
+}
+
+.lm-options-nav-item--active {
+  background: var(--lumi-surface);
+  color: var(--lumi-accent-a);
+  font-weight: 600;
+}
+
+.lm-options-nav-spacer {
+  flex: 1;
+}
+
+.lm-options-save-btn {
+  margin-top: 8px;
+  padding: 10px 14px;
+  border-radius: var(--lumi-radius-control);
+  border: none;
+  background: var(--lumi-accent-a, #a78bfa);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.lm-options-save-btn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.lm-options-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* — Right content — */
+.lm-options-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 32px 36px;
+}
+
+.lm-options-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.lm-options-panel-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--lumi-text-primary);
+}
+
+.lm-options-panel-desc {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--lumi-text-faint);
+  margin: 0;
+}
+
+.lm-options-status {
+  font-size: 12px;
+  color: var(--lumi-accent-a);
+  padding-top: 4px;
+}
+
+.lm-options-divider {
+  height: 1px;
+  background: var(--lumi-border);
+  margin: 4px 0;
+}
+
+.lm-options-subtitle {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--lumi-text-primary);
+}
+
+.lm-options-error {
+  font-size: 12px;
+  color: var(--lumi-danger-text);
+  margin: 0;
+}
+
+/* — Thinking mode 编辑器（容器式列表：一行 = 名称 + 三个图标按钮）— */
+.lm-thinking-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lm-thinking-reset {
+  margin-left: auto;
+  padding: 4px 12px;
+  border: 1px solid var(--lumi-border);
+  border-radius: var(--lumi-radius-control);
+  background: var(--lumi-surface-solid);
+  color: var(--lumi-text-soft);
+  font-size: var(--lumi-text-sm);
+  font-weight: var(--lumi-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+
+.lm-thinking-reset:hover {
+  background: var(--lumi-well);
+  border-color: var(--lumi-border-strong);
+  color: var(--lumi-text);
+}
+.lm-thinking-modes {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--lumi-border);
+  border-radius: var(--lumi-radius-control);
+  background: var(--lumi-tile);
+  padding: 6px;
+  gap: 2px;
+}
+
+/* 固定行高，编辑态切换时行高不变（span ↔ input 等宽） */
+.lm-thinking-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 4px;
+  border-radius: var(--lumi-radius-control);
+}
+
+.lm-thinking-mode:hover {
+  background: var(--lumi-well);
+}
+
+/* 左侧列表项圆点（表示这是一个档位条目） */
+.lm-thinking-mode__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lumi-text-faint);
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+/* 名称：非编辑态为纯文本，行高与 input 一致 */
+.lm-thinking-mode__label {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--lumi-text-base);
+  font-weight: var(--lumi-weight-medium);
+  color: var(--lumi-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 36px;
+}
+
+/* 重命名输入框（白底、紧凑高度，与行高一致） */
+.lm-thinking-mode__name {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 10px;
+  background: #ffffff;
+}
+
+/* 行内图标按钮（编辑 / 配置 / 删除） */
+.lm-thinking-mode__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.lm-thinking-mode__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--lumi-radius-control);
+  color: var(--lumi-text-faint);
+  cursor: pointer;
+  transition: background-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+
+.lm-thinking-mode__btn:hover:not(:disabled) {
+  background: var(--lumi-surface-solid);
+  color: var(--lumi-text);
+}
+
+.lm-thinking-mode__btn--danger:hover:not(:disabled) {
+  background: var(--lumi-danger-bg);
+  color: var(--lumi-danger-text);
+}
+
+.lm-thinking-mode__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* body JSON 编辑区（模态框内，白底） */
+.lm-thinking-mode__body {
+  font-family: var(--lumi-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+  background: #ffffff;
+  width: 100%;
+}
+
+.lm-textarea--error {
+  border-color: var(--lumi-danger-text);
+}
+
+/* 添加档位按钮（纯图标，容器内底部，紧贴上面一行） */
+.lm-thinking-mode__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin: 2px 0 0 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--lumi-radius-control);
+  color: var(--lumi-text-soft);
+  cursor: pointer;
+  transition: background-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+
+.lm-thinking-mode__add:hover {
+  background: var(--lumi-well);
+  color: var(--lumi-text);
+}
+
+/* JSON 编辑模态框（Options 全页固定定位，复用 lm-confirm-overlay 视觉） */
+.lm-options-root .lm-confirm-overlay {
+  position: fixed;
+}
+
+/* 双 class 特异性，压过 .lm-confirm-card 的 width: 220px */
+.lm-confirm-card.lm-thinking-modal {
+  width: 340px;
+  max-width: 92vw;
+  text-align: left;
+}
+
+/* 弹框底部按钮：所有 confirm 弹框统一（取消 / 主色 / 红色危险） */
+.lm-thinking-modal .lm-confirm-actions {
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.lm-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 76px;
+  height: 34px;
+  padding: 0 18px;
+  border-radius: var(--lumi-radius-control);
+  font-size: var(--lumi-text-base);
+  font-weight: var(--lumi-weight-semibold);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry),
+              color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry);
+}
+
+.lm-confirm-btn--cancel {
+  background: var(--lumi-surface-solid);
+  border-color: var(--lumi-border-strong);
+  color: var(--lumi-text);
+}
+
+.lm-confirm-btn--cancel:hover {
+  background: var(--lumi-well);
+}
+
+.lm-confirm-btn--primary {
+  background: var(--lumi-accent-a);
+  color: #ffffff;
+}
+
+.lm-confirm-btn--primary:hover {
+  filter: brightness(1.08);
+}
+
+.lm-confirm-btn--danger {
+  background: #e5484d;
+  color: #ffffff;
+}
+
+.lm-confirm-btn--danger:hover {
+  background: #d42e33;
+}
+
+/* — Agent cards — */
+.lm-custom-agents-list { display: flex; flex-direction: column; gap: 6px; }
+
+.lm-agent-card { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: var(--lumi-radius-control); border: 1px solid var(--lumi-border); background: var(--lumi-tile); }
+.lm-agent-card-body { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.lm-agent-card-body strong { font-size: 14px; display: block; }
+.lm-agent-card-body small { font-size: 11px; color: var(--lumi-text-faint); }
+.lm-agent-card-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--lumi-radius-control); background: var(--lumi-well); color: var(--lumi-text-soft); flex-shrink: 0; }
+.lm-agent-card-icon svg { width: 16px; height: 16px; }
+.lm-agent-card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.lm-agent-card-btn { padding: 5px 12px; border-radius: var(--lumi-radius-control); border: 1px solid var(--lumi-border); background: var(--lumi-well); cursor: pointer; font-size: 12px; color: var(--lumi-text-soft); transition: all 0.15s; }
+.lm-agent-card-btn:hover { border-color: var(--lumi-border-strong); color: var(--lumi-text); }
+.lm-agent-card-btn--danger:hover { border-color: #e5484d; color: #e5484d; }
+.lm-agent-add-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--lumi-radius-control); border: 1px dashed var(--lumi-border-strong); background: none; cursor: pointer; font-size: 13px; color: var(--lumi-text-soft); width: fit-content; transition: all 0.15s; }
+.lm-agent-add-btn:hover { border-color: var(--lumi-accent-a); color: var(--lumi-accent-a); }
+
+/* — Agent form — */
+.lm-agent-form { display: flex; flex-direction: column; gap: 16px; padding: 18px; border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-card); background: var(--lumi-tile); }
+.lm-agent-form-title { font-size: 14px; font-weight: 700; margin: 0; color: var(--lumi-text-primary); }
+.lm-agent-form-actions { display: flex; gap: 8px; }
+/* 表单内创建/取消按钮共用尺寸类（具体视觉在 components.css 的组合选择器里覆盖基类） */
+.lm-agent-form-btn { display: inline-flex; align-items: center; justify-content: center; }
+
+/* — Icon picker — */
+.lm-icon-picker { display: flex; gap: 4px; flex-wrap: wrap; }
+.lm-icon-picker-btn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-control); background: var(--lumi-tile); cursor: pointer; transition: all 0.15s; color: var(--lumi-text-soft); }
+.lm-icon-picker-btn svg { width: 16px; height: 16px; }
+.lm-icon-picker-btn:hover { border-color: var(--lumi-border-strong); background: var(--lumi-tile-hover); }
+.lm-icon-picker-btn--active { border-color: var(--lumi-accent-a); background: rgba(167,139,250,0.1); color: var(--lumi-accent-a); }
+
+/* — Confirm dialog（插件内自定义确认弹窗） — */
+.lm-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(45, 38, 34, 0.18);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry),
+              visibility 0s linear var(--lumi-motion-duration-short);
+}
+.lm-confirm-overlay--active {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry),
+              visibility 0s;
+}
+.lm-confirm-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 220px;
+  padding: 16px;
+  border-radius: var(--lumi-radius-card);
+  text-align: center;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry),
+              transform var(--lumi-motion-duration-short) var(--lumi-motion-ease-entry);
+}
+.lm-confirm-overlay--active .lm-confirm-card {
+  opacity: 1;
+  transform: scale(1);
+}
+.lm-confirm-msg {
+  font-size: var(--lumi-text-base);
+  line-height: var(--lumi-leading-relaxed);
+  margin: 0;
+}
+.lm-confirm-actions {
+  display: flex;
+  gap: var(--lumi-space-4);
+  justify-content: center;
+}
+
+/* — Segmented control（分段选择器，用于语言切换等二选一/多选一） — */
+.lm-segmented { display: inline-flex; gap: var(--lumi-space-3); }
+.lm-segmented-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 72px; height: 34px; padding: 0 16px; border: 1px solid var(--lumi-border-strong); border-radius: var(--lumi-radius-control); cursor: pointer; transition: background var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry), color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry), border-color var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry), box-shadow var(--lumi-motion-duration-micro) var(--lumi-motion-ease-entry); font-size: var(--lumi-text-base); font-weight: var(--lumi-weight-medium); white-space: nowrap; }
+.lm-segmented-btn:disabled { cursor: not-allowed; }
+
+/* — Steps（说明步骤列表） — */
+.lm-steps { margin: var(--lumi-space-4) 0 0; padding-left: var(--lumi-space-7); display: flex; flex-direction: column; gap: var(--lumi-space-3); }
+.lm-steps li { line-height: var(--lumi-leading-relaxed); }
+
+/* — Tool tooltip（工具描述即时浮层，替代原生 title） — */
+.lm-tool-tooltip { position: fixed; transform: translate(12px, 12px); max-width: 240px; padding: var(--lumi-space-4) var(--lumi-space-5); border-radius: var(--lumi-radius-control); font-size: var(--lumi-text-sm); line-height: var(--lumi-leading-snug); pointer-events: none; z-index: 100; }
+
+/* — 滚动到底按钮（用户上滚后有新消息时显示） — */
+.lm-scroll-bottom-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: none; border-radius: 50%; cursor: pointer; position: sticky; z-index: 5; bottom: 8px; margin-left: auto; margin-right: auto; margin-top: -40px; flex-shrink: 0; }
+
+/* — Tool selector — */
+.lm-tool-selector { display: flex; flex-direction: column; gap: 10px; }
+.lm-tool-group { display: flex; flex-direction: column; gap: 4px; }
+.lm-tool-group-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--lumi-text-faint); }
+.lm-tool-group-items { display: flex; flex-wrap: wrap; gap: 4px; }
+.lm-tool-checkbox { display: flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-control); font-size: 11px; cursor: pointer; transition: all 0.15s; color: var(--lumi-text-soft); background: var(--lumi-well); }
+.lm-tool-checkbox:hover { border-color: var(--lumi-border-strong); color: var(--lumi-text); }
+.lm-tool-checkbox input[type="checkbox"] { width: 12px; height: 12px; flex-shrink: 0; margin: 0; }
+.lm-tool-checkbox-name { font-family: "SF Mono", "Fira Code", "Menlo", monospace; font-size: 11px; }
+
+/* — Notes — */
+.lm-note p {
+  margin: 0 0 12px;
+}
+
+.lm-note--compact {
+  padding: 10px 12px;
+}
+
+.lm-note--compact p {
+  margin: 0 0 10px;
+}
+
+/* — Tabs — */
+.lm-tabs {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 4px;
+}
+
+.lm-tab {
+  align-items: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  padding: 8px 12px;
+  transition: all 240ms var(--lumi-ease-spring);
+}
+
+/* — Tool calls — */
+.lumi-tool-call {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+}
+
+.lumi-tool-call__trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: color 180ms var(--lumi-ease-spring);
+}
+
+.lumi-tool-call__trigger--disabled {
+  cursor: default;
+}
+
+.lumi-tool-call__trigger--disabled:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
+.lumi-tool-call__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+}
+
+.lumi-tool-call__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lumi-tool-call__running-label {
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.lumi-tool-call__chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  transition: transform 180ms var(--lumi-ease-spring);
+}
+
+.lumi-tool-call__chevron--open {
+  transform: rotate(90deg);
+}
+
+.lumi-tool-call__detail {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.lumi-tool-call__detail--open {
+  display: flex;
+}
+
+.lumi-tool-call__detail-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.lumi-tool-call__download {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: color 150ms var(--lumi-ease-spring);
+}
+
+.lumi-tool-call__detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lumi-tool-call__detail-label {
+  text-transform: uppercase;
+}
+
+.lumi-tool-call__detail pre {
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  max-height: 160px;
+  padding: 8px 10px;
+}
+
+.lumi-tool-call--skill .lumi-tool-call__trigger {
+  cursor: default;
+}
+
+.lumi-tool-call--skill .lumi-tool-call__trigger:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
+/* — Sequence stack — */
+.lumi-sequence-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.lumi-sequence-stack > * {
+  margin: 0;
+}
+
+.lumi-sequence-stack > .lm-chat-md:empty {
+  display: none;
+}
+
+/* — Streaming dots — */
+.lumi-streaming-dots {
+  display: inline-flex; align-items: center; gap: 3px;
+}
+
+/* — Error badge — */
+.lumi-tool-call__error-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+/* — Running indicator — */
+.lumi-running-indicator {
+  align-items: center;
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 5px;
+  padding: 2px 0 0;
+}
+
+/* — Ghost text overlay — */
+.lumino-ghost-text {
+  font-style: italic;
+}
+
+#lumino-ghost-overlay {
+  all: initial;
+}
+
+/* — Icon sizes — */
+.lumi-icon-sm { width: 14px; height: 14px; }
+.lumi-icon-xs { width: 11px; height: 11px; }
+
+/* — Spinner — */
+.lm-spinner {
+  animation: lumi-spin 0.75s linear infinite;
+  border-radius: 50%;
+  box-sizing: border-box;
+  height: 16px;
+  width: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lm-spinner { animation: none; }
+}
+
+/* — Form fields — */
+.lm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lm-input,
+.lm-textarea {
+  box-sizing: border-box;
+  outline: none;
+  width: 100%;
+  transition: border-color 300ms var(--lumi-ease-spring), box-shadow 300ms var(--lumi-ease-spring);
+}
+
+.lm-textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.lm-textarea--compact {
+  min-height: 72px;
+}
+
+.lm-input:disabled,
+.lm-textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+/* — Toggles — */
+.lm-toggle-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lm-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lm-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.lm-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.lm-toggle-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* — Buttons — */
+.lm-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.lm-primary-button {
+  align-items: center;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 10px;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 10px 14px 10px 22px;
+  transition: box-shadow 400ms var(--lumi-ease-spring), transform 400ms var(--lumi-ease-spring);
+}
+
+.lm-actions .lm-primary-button {
+  flex: 0 1 auto;
+  min-width: 200px;
+  width: auto;
+}
+
+.lm-primary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.lm-primary-button:active:not(:disabled) {
+  transform: scale(0.98) translateY(0);
+}
+
+.lm-primary-label {
+  flex: 1;
+  text-align: left;
+}
+
+.lm-primary-trail {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  height: 32px;
+  justify-content: center;
+  transition: transform 400ms var(--lumi-ease-spring);
+  width: 32px;
+}
+
+.lm-primary-button:hover:not(:disabled) .lm-primary-trail {
+  transform: translate(1px, -1px) scale(1.05);
+}
+
+.lm-primary-icon {
+  height: 13px;
+  width: 13px;
+}
+
+.lm-primary-button:focus-visible {
+  outline: 2px solid rgba(167, 139, 250, 0.55);
+  outline-offset: 3px;
+}
+
+.lm-primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.lm-secondary-button {
+  align-items: center;
+  border: 1px solid var(--lumi-border-strong);
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  width: 100%;
+  transition: box-shadow 400ms var(--lumi-ease-spring), transform 400ms var(--lumi-ease-spring);
+}
+
+.lm-secondary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.lm-secondary-button:focus-visible {
+  outline: 2px solid rgba(167, 139, 250, 0.55);
+  outline-offset: 3px;
+}
+
+.lm-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+
+/* — Form — */
+.lm-helper {
+  margin: 0;
+}
+
+.lm-error {
+  margin: 0;
+}
+
+/* — Logo — */
+.lm-logo {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
+.lm-logo--sm {
+  border-radius: 20px;
+  height: 46px;
+  width: 46px;
+}
+
+.lm-logo-cat {
+  width: 44px;
+  height: 44px;
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* — Badge — */
+.lm-badge {
+  border-radius: 999px;
+  flex-shrink: 0;
+  max-width: 168px;
+  overflow: hidden;
+  padding: 5px 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lm-badge--tight {
+  max-width: 96px;
+  padding: 4px 8px;
+}
+
+/* — Eyebrow — */
+.lm-eyebrow {
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 5px 12px 5px 14px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* — Section title — */
+.lm-section-title {
+  margin: 0;
+  padding-top: 8px;
+}
+
+.lm-section-title:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* — Title/subtitle — */
+.lm-title {
+  margin: 0;
+}
+
+.lm-subtitle {
+  margin: 6px 0 0;
+}
+
+.lm-sp-title {
+  margin: 0;
+}
+
+.lm-sp-tagline {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* — Status — */
+.lm-status {
+  font-size: 13px;
+}
+
+/* — Session strip hint — */
+.lm-session-strip {
+  padding: 4px 0 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--lumi-border);
+}
+
+.lm-session-strip-hint {
+  flex-shrink: 0;
+  padding: 6px 4px;
+}
+
+/* — Chat bubble assistant overrides — */
+.lm-chat-row--assistant .lm-chat-bubble--assistant {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  width: 100%;
+}
+
+/* — Tool call trigger sizing — */
+.lumi-tool-call .lm-chat-bubble:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
+/* ================================================
+   Keyframe Animations
+   ================================================ */
+
+@keyframes lumi-drift-a {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(-18px, 22px) scale(1.06); }
+}
+
+@keyframes lumi-drift-b {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(24px, -16px) scale(1.05); }
+}
+
+@keyframes lumi-drift-c {
+  0%   { transform: translate(0, 0); }
+  100% { transform: translate(-12px, 14px); }
+}
+
+@keyframes lumi-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes lumi-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
+@keyframes lumi-dot-blink {
+  0%, 100% { opacity: 0.3; transform: scale(0.75); }
+  50%      { opacity: 1; transform: scale(1); }
+}

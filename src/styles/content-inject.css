@@ -1,0 +1,105 @@
+/* 内容脚本：悬浮按钮 — token 作用域在按钮元素上 */
+/* 不 @import tokens.css 以避免污染宿主页面 :root */
+/* Token 值随按钮的 data-theme 属性变化 */
+
+/* ===== PAPER 主题 (默认) ===== */
+#lumino-floating-button.lumino-fab,
+#lumino-floating-button.lumino-fab[data-theme="paper"] {
+  --lumi-fab-accent-a: #c97d6d;
+  --lumi-fab-accent-b: #a78bfa;
+  --lumi-fab-ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --lumi-fab-shadow: 0 18px 40px -10px rgba(0, 0, 0, 0.25);
+  --lumi-fab-shadow-hover: 0 22px 48px -10px rgba(0, 0, 0, 0.35);
+}
+
+/* ===== ORYZO 主题 ===== */
+#lumino-floating-button.lumino-fab[data-theme="oryzo"] {
+  --lumi-fab-accent-a: #dc5000;
+  --lumi-fab-accent-b: #6c5f51;
+  --lumi-fab-ease-spring: ease;
+  --lumi-fab-shadow: 0 18px 40px -10px rgba(0, 0, 0, 0.45);
+  --lumi-fab-shadow-hover: 0 22px 48px -10px rgba(0, 0, 0, 0.55);
+}
+
+/* ===== FICTIONAL 主题 ===== */
+#lumino-floating-button.lumino-fab[data-theme="fictional"] {
+  --lumi-fab-accent-a: #fd4b38;
+  --lumi-fab-accent-b: #8a53ff;
+  --lumi-fab-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --lumi-fab-shadow: 0 18px 40px -10px rgba(0, 0, 0, 0.3);
+  --lumi-fab-shadow-hover: 0 22px 48px -10px rgba(0, 0, 0, 0.4);
+}
+
+#lumino-floating-button.lumino-fab {
+  -webkit-font-smoothing: antialiased;
+  align-items: center;
+  background: none;
+  border: none;
+  border-radius: 999px;
+  bottom: 24px;
+  box-shadow: var(--lumi-fab-shadow);
+  box-sizing: border-box;
+  cursor: grab;
+  display: flex;
+  height: 56px;
+  justify-content: center;
+  padding: 0;
+  position: fixed;
+  right: 24px;
+  transition:
+    box-shadow 520ms var(--lumi-fab-ease-spring),
+    transform 520ms var(--lumi-fab-ease-spring),
+    right 400ms var(--lumi-fab-ease-spring);
+  width: 56px;
+  z-index: 2147483647;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#lumino-floating-button.lumino-fab:hover {
+  box-shadow: var(--lumi-fab-shadow-hover);
+  transform: translateY(-2px);
+}
+
+#lumino-floating-button.lumino-fab:active {
+  cursor: grabbing;
+  transform: scale(0.95) translateY(0);
+}
+
+#lumino-floating-button.lumino-fab .lumino-fab__img {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ===== Agent 执行中：呼吸蒙版 ===== */
+#lumino-floating-button.lumino-fab--pulsing {
+  -webkit-mask-image: radial-gradient(
+    circle,
+    black 20%,
+    transparent 70%
+  );
+  mask-image: radial-gradient(
+    circle,
+    black 20%,
+    transparent 70%
+  );
+  mask-size: 200% 200%;
+  -webkit-mask-size: 200% 200%;
+  mask-position: center;
+  -webkit-mask-position: center;
+  animation: lumino-breathe-mask 1.4s ease-in-out infinite;
+}
+
+@keyframes lumino-breathe-mask {
+  0%, 100% {
+    -webkit-mask-size: 110% 110%;
+    mask-size: 110% 110%;
+  }
+  50% {
+    -webkit-mask-size: 200% 200%;
+    mask-size: 200% 200%;
+  }
+}
