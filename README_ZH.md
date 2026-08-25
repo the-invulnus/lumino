@@ -59,7 +59,16 @@ Lumino 内置四种 Agent，每种针对不同任务调优：
 
 或在 [Chrome 应用商店](https://chromewebstore.google.com/) 中搜索 **"Lumino"**。
 
-### 方式二：手动安装
+### 方式二：手动安装（无需构建工具）
+
+1. 从 [Releases](https://github.com/the-invulnus/lumino/releases) 页面下载最新的 `.zip` 包
+2. 解压文件
+3. 打开 `chrome://extensions`，开启**开发者模式**
+4. 点击**加载已解压的扩展程序**，选择解压后的文件夹
+
+无需安装 Node.js 或其他构建工具。
+
+### 方式三：源码构建
 
 ```bash
 git clone https://github.com/the-invulnus/lumino.git
@@ -68,18 +77,15 @@ pnpm install
 pnpm build
 ```
 
-然后打开 `chrome://extensions`，开启**开发者模式**，点击**加载已解压的扩展程序**，选择 `build/chrome-mv3-prod/` 文件夹。
+在 `chrome://extensions` 中加载 `build/chrome-mv3-prod/` 文件夹。
 
-### 方式三：开发模式
+### 开发模式
 
 ```bash
-git clone https://github.com/the-invulnus/lumino.git
-cd lumino
-pnpm install
 pnpm dev
 ```
 
-加载 `build/chrome-mv3-dev` 目录作为未打包的扩展程序。源码改动会自动触发重新构建。
+加载 `build/chrome-mv3-dev` 目录。源码改动会自动触发重新构建。
 
 ## 配置
 

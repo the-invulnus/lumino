@@ -59,7 +59,16 @@ You can also create **custom agents** with your own system prompts and tool subs
 
 Or search for **"Lumino"** in the [Chrome Web Store](https://chromewebstore.google.com/).
 
-### Option 2: Manual Install
+### Option 2: Manual Install (No Build Required)
+
+1. Download the latest `.zip` from the [Releases](https://github.com/the-invulnus/lumino/releases) page
+2. Unzip the file
+3. Open `chrome://extensions`, enable **Developer mode**
+4. Click **Load unpacked** and select the unzipped folder
+
+No Node.js or build tools required.
+
+### Option 3: Build from Source
 
 ```bash
 git clone https://github.com/the-invulnus/lumino.git
@@ -68,18 +77,15 @@ pnpm install
 pnpm build
 ```
 
-Then open `chrome://extensions`, enable **Developer mode**, and click **Load unpacked** to select the `build/chrome-mv3-prod/` folder.
+Load the `build/chrome-mv3-prod/` folder as an unpacked extension in `chrome://extensions`.
 
-### Option 3: Development
+### Development
 
 ```bash
-git clone https://github.com/the-invulnus/lumino.git
-cd lumino
-pnpm install
 pnpm dev
 ```
 
-Load the `build/chrome-mv3-dev` directory as an unpacked extension. Source changes trigger automatic rebuilds.
+Load the `build/chrome-mv3-dev` directory. Source changes trigger automatic rebuilds.
 
 ## Configuration
 
