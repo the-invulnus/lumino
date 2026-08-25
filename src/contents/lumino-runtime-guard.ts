@@ -1,3 +1,11 @@
+// ============================================================
+// Lumino Runtime Guard — 抑制 Plasmo 运行时噪音
+// ============================================================
+// 职责：
+// 1. 抑制 SW 回收时 Plasmo parcel-runtime 抛出的未捕获错误
+// 2. 隐藏 "context invalidated press to reload" 覆盖层（SW 会在下次通信时自动唤醒）
+// ============================================================
+
 import type { PlasmoCSConfig } from "plasmo"
 
 // import { mountFloatingButton } from "../content/floating-button"

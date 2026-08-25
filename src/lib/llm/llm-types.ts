@@ -161,7 +161,7 @@ export interface ChatOptions {
   fetcher?: typeof fetch
   /** 中止信号 */
   signal?: AbortSignal
-  /** 请求超时（毫秒），默认 120_000 */
+  /** 请求超时（毫秒），不传则无超时限制 */
   timeoutMs?: number
 }
 

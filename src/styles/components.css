@@ -871,6 +871,10 @@
 }
 .lm-chat-error__msg {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--lumi-danger-text);
   font-size: var(--lumi-text-sm);
   line-height: var(--lumi-leading-snug);

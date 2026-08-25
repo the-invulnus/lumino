@@ -302,10 +302,11 @@ export class LlmClient {
     const controller = options?.signal ? undefined : new AbortController()
     const signal = options?.signal ?? controller?.signal
 
-    const timeoutMs = options?.timeoutMs ?? 120_000
-    const timeoutId = setTimeout(() => {
-      controller?.abort()
-    }, timeoutMs)
+    // 仅当显式传入 timeoutMs 时才设置超时，否则不限制
+    const timeoutId =
+      options?.timeoutMs != null
+        ? setTimeout(() => controller?.abort(), options.timeoutMs)
+        : undefined
 
     try {
       const response = await fetcher(this.buildUrl(), {
@@ -319,16 +320,27 @@ export class LlmClient {
       })
 
       if (!response.ok) {
+        // clone response 以便在 JSON 解析失败后还能读取原始文本
+        const cloned = response.clone()
         const data = await this.parseJson<OpenAiErrorResponse>(response)
+        const errorMessage = data?.error?.message
+        if (errorMessage) {
+          throw new LlmRequestError(
+            `LLM request failed with status ${response.status}: ${errorMessage}`,
+            response.status
+          )
+        }
+        // parseJson 失败或响应体不是标准 OpenAI 错误格式时，从克隆副本读取原始文本
+        const rawText = await this.readResponseText(cloned)
         throw new LlmRequestError(
-          data?.error?.message || `LLM request failed with status ${response.status}`,
+          rawText || `LLM request failed with status ${response.status}`,
           response.status
         )
       }
 
       return this.parseJson<OpenAiChatCompletionResponse>(response)
     } finally {
-      clearTimeout(timeoutId)
+      if (timeoutId != null) clearTimeout(timeoutId)
     }
   }
 
@@ -337,6 +349,14 @@ export class LlmClient {
       return (await response.json()) as T
     } catch {
       return undefined
+    }
+  }
+
+  private async readResponseText(response: Response): Promise<string> {
+    try {
+      return await response.text()
+    } catch {
+      return ""
     }
   }
 }

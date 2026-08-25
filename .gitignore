@@ -33,6 +33,9 @@ dist/
 # plasmo - https://www.plasmo.com
 .plasmo
 
+# design docs (keep private)
+docs/
+
 # bpp - http://bpp.browser.market/
 keys.json
 

@@ -37,7 +37,7 @@ export interface AgentLoopInput {
   signal?: AbortSignal
   /** 自定义 fetch（透传给 LlmClient，用于日志/拦截） */
   fetcher?: typeof fetch
-  /** 请求超时（毫秒） */
+  /** 请求超时（毫秒），不传则无超时限制 */
   timeoutMs?: number
 }
 

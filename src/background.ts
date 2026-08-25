@@ -148,8 +148,11 @@ async function executeAgentInBackground(
     }
 
     const errorMsg = err instanceof Error ? err.message : t("chat.error.modelRequest")
-    // 即使不是当前 threadId，也确保错误被广播
+    // 打印完整错误详情（包括 stack、status 等）
     console.error("[lumino:bg] agent error:", err)
+    if (err instanceof Error && (err as any).status) {
+      console.error("[lumino:bg] error status:", (err as any).status)
+    }
 
     chrome.runtime.sendMessage({
       type: AGENT_ERROR_MESSAGE,
