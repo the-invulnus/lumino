@@ -906,6 +906,34 @@
 
 .lm-status { color: var(--lumi-text-soft); }
 
+.lm-obsidian-connection {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--lumi-border);
+  border-radius: 12px;
+  color: var(--lumi-text-soft);
+}
+.lm-obsidian-connection__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.lm-obsidian-connection__row [role="status"] { display: flex; align-items: center; gap: 8px; }
+.lm-obsidian-connection__row .lm-secondary-button {
+  width: auto;
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 0 14px;
+  font-size: 12px;
+}
+.lm-obsidian-connection__dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.lm-obsidian-connection[data-state="connected"] { color: var(--lumi-success); }
+.lm-obsidian-connection[data-state="failed"] { color: var(--lumi-danger-text); }
+.lm-obsidian-connection__hint { margin: 12px 0 0; color: var(--lumi-text-soft); font-size: 12px; line-height: 1.6; }
+.lm-obsidian-connection__error { margin: 12px 0 0; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
 /* ================================================
    Tabs
    ================================================ */

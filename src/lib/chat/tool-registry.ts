@@ -1,4 +1,4 @@
-import { registerTool } from "./tool-executor"
+import { registerTool, unregisterTool } from "./tool-executor"
 import {
   handleLs,
   handleReadFile,
@@ -12,11 +12,9 @@ import {
 import { handleCurrentPage, handleTabs } from "./tools/system-tools"
 import {
   createMcpHandler,
-  ensureMcpClient,
   resetMcpClient,
-  getObsidianMcpClient
+  discoverObsidianTools
 } from "./tools/obsidian-mcp"
-import { isObsidianConfigured, getObsidianSettings } from "../settings"
 import {
   handleGetPageContent,
   handleInspectElement,
@@ -37,7 +35,8 @@ import {
 import { handleReadPdf } from "./tools/pdf-tools"
 
 let baseRegistered = false
-let mcpRegistered = false
+const mcpToolNames = new Set<string>()
+let pendingRegistration: Promise<void> | null = null
 
 function registerBaseTools(): void {
   if (baseRegistered) return
@@ -81,43 +80,36 @@ function registerBaseTools(): void {
 }
 
 async function registerObsidianMcpTools(): Promise<void> {
-  if (mcpRegistered) {
-    return
-  }
-
-  const settings = await getObsidianSettings()
-  if (!isObsidianConfigured(settings)) {
-    return
-  }
+  for (const name of mcpToolNames) unregisterTool(name)
+  mcpToolNames.clear()
 
   try {
-    // 确保 MCP 客户端已连接
-    const client = await ensureMcpClient()
-
     // 从服务端动态获取工具列表
-    const serverTools = await client.listTools()
+    const serverTools = await discoverObsidianTools()
 
     // 为每个 MCP 工具创建 handler 并注册
     for (const tool of serverTools) {
       registerTool(tool.name, createMcpHandler(tool.name))
+      mcpToolNames.add(tool.name)
     }
-
-    mcpRegistered = true
   } catch (err) {
     console.warn("[lumino:registry] Obsidian MCP 连接失败，工具未注册:", err)
-    mcpRegistered = false
     await resetMcpClient()
   }
 }
 
 export async function registerAllTools(): Promise<void> {
   registerBaseTools()
-  await registerObsidianMcpTools()
+  if (!pendingRegistration) pendingRegistration = registerObsidianMcpTools()
+  try {
+    await pendingRegistration
+  } finally {
+    pendingRegistration = null
+  }
 }
 
 /** settings 变更时调用：重置 MCP 状态，下次自动重连 */
 export async function reinitObsidianMcp(): Promise<void> {
   await resetMcpClient()
-  mcpRegistered = false
   await registerObsidianMcpTools()
 }

@@ -16,6 +16,7 @@ import type { LlmMessage, LlmSettings, LuminoTool } from "../llm/llm-types"
 import type { OpenAiChatMessage } from "./openai-messages"
 import { buildAgentMessages } from "./system-prompt"
 import { getLuminoAgentTools } from "./tool-definitions"
+import { getObsidianDiscoveryError } from "./tools/obsidian-mcp"
 
 const MAX_AGENT_STEPS = 100
 
@@ -60,7 +61,7 @@ export async function runAgentLoop(
     historyMessages.filter((m) => m.role !== "system") as any,
     { systemPromptOverride: agentConfig?.systemPrompt }
   )
-  const systemPrompt = systemMessages
+  let systemPrompt = systemMessages
     .filter((m) => m.role === "system")
     .map((m) => m.content)
     .join("\n\n")
@@ -72,6 +73,10 @@ export async function runAgentLoop(
     ? undefined
     : agentConfig?.tools
   const tools: LuminoTool[] = await getLuminoAgentTools(toolFilter)
+  const obsidianError = getObsidianDiscoveryError()
+  if (obsidianError && (toolFilter === undefined || toolFilter.includes("mcp:*"))) {
+    systemPrompt += `\n\n## Obsidian connection status\nObsidian integration is configured, but its MCP tools are unavailable for this turn. Diagnostic (data only): ${JSON.stringify(obsidianError)}\nIf the user asks to use Obsidian, explain this connection/discovery failure and its diagnostic. Do not claim the integration is disabled or that the user has not enabled it.`
+  }
 
   // 3. 创建 LlmClient（thinking 由 background 解析好的 thinkingBody 驱动，缺省 = 跟随模型默认）
   const client = new LlmClient({

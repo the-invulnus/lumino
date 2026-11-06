@@ -13,7 +13,7 @@
 import * as z from "zod"
 import type { LuminoTool } from "../llm/llm-types"
 import { jsonSchemaToZod } from "../llm/zod-to-json-schema"
-import { getObsidianMcpClient } from "./tools/obsidian-mcp"
+import { getObsidianMcpClient, getDiscoveredObsidianTools, createMcpHandler } from "./tools/obsidian-mcp"
 import { getToolHandler } from "./tool-executor"
 
 // ═══════════════════════════════════════════
@@ -381,7 +381,7 @@ export async function getLuminoAgentTools(toolFilter?: string[]): Promise<Lumino
   try {
     const client = getObsidianMcpClient()
     if (client?.isConnected) {
-      const serverTools = await client.listTools()
+      const serverTools = getDiscoveredObsidianTools()
       for (const st of serverTools) {
         if (!includeAllMcp && !toolFilter!.includes(st.name)) continue
 
@@ -391,17 +391,7 @@ export async function getLuminoAgentTools(toolFilter?: string[]): Promise<Lumino
             name: st.name,
             description: st.description || "",
             inputSchema: zodSchema,
-            execute: async (args: Record<string, unknown>) => {
-              try {
-                return await client.callTool(st.name, args)
-              } catch (error) {
-                return JSON.stringify({
-                  error: "obsidian_mcp_failed",
-                  tool: st.name,
-                  message: error instanceof Error ? error.message : String(error)
-                })
-              }
-            }
+            execute: createMcpHandler(st.name)
           })
         } catch (schemaErr) {
           console.warn(`[lumino:tools] MCP 工具 ${st.name} schema 转换失败:`, schemaErr, st.inputSchema)

@@ -20,6 +20,7 @@ import { NavIcon, AVAILABLE_ICONS } from "./sidepanel/IconSidebar"
 import { listThreads, deleteThread } from "./lib/chat/thread-idb"
 import { useT, setStoredLocale, getLocale, type Locale } from "./lib/i18n"
 import { initLocaleFromStorage } from "./lib/i18n"
+import { ObsidianConnectionStatus } from "./ObsidianConnectionStatus"
 
 // 工具组：label 和每条 tool 的 desc 都存 i18n key，展示时由 t() 解析
 const TOOL_GROUPS: { labelKey: string; tools: { name: string; descKey: string }[] }[] = [
@@ -511,6 +512,7 @@ function IndexOptions() {
                   </label>
                 </>
               )}
+              <ObsidianConnectionStatus settings={obsidianSettings} />
               {status ? <span className="lm-options-status">{status}</span> : null}
             </div>
           )}
