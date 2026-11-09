@@ -18,8 +18,9 @@
 | 多页对比截图 | `assets/store/02-compare-1280x800.png` | 1280 × 800 |
 | 文件工作区截图 | `assets/store/03-workspace-1280x800.png` | 1280 × 800 |
 | 快捷任务截图 | `assets/store/04-tasks-1280x800.png` | 1280 × 800 |
+| English store screenshots | `assets/store/en/01-assistant-1280x800.png` – `04-tasks-1280x800.png` | 1280 × 800 |
 
-宣传图使用英文。中文界面截图使用真实应用组件，所有会话、页面和文件均为隔离的虚构示例，已标注“界面演示 · 示例内容”。不包含用户资料、真实 API Key 或外部服务的生成结果。素材预览代码不包含在扩展入口中。
+宣传图使用英文。中文与英文界面截图均使用真实应用组件，所有会话、页面和文件均为隔离的虚构示例；界面中标注演示内容。不包含用户资料、真实 API Key 或外部服务的生成结果。素材预览代码不包含在扩展入口中。
 
 ## 重新导出截图
 
@@ -30,7 +31,7 @@ python3 -m http.server 8766 --bind 127.0.0.1 --directory marketing/.render
 node marketing/render-preview.mjs
 ```
 
-渲染器创建独立的临时 Chrome 配置，导出后自动清理，不读取个人浏览器配置。`.render/` 为忽略的构建产物。
+渲染器创建独立的临时 Chrome 配置，分别导出中文和英文截图，导出后自动清理，不读取个人浏览器配置。`.render/` 为忽略的构建产物。
 
 ## 封面来源与提示词
 

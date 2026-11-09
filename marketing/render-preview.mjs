@@ -37,32 +37,36 @@ try {
   await send("Runtime.enable")
   await send("Page.enable")
   await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false })
-  await mkdir(resolve(root, "assets/store"), { recursive: true })
-  for (const [index, view] of ["assistant", "compare", "workspace", "tasks"].entries()) {
-    errors.length = 0
-    await send("Page.navigate", { url: `http://127.0.0.1:8766/?view=${view}` })
-    let ready = false
-    for (let i = 0; i < 100; i++) {
-      await pause(150)
-      const state = await send("Runtime.evaluate", { expression: 'document.documentElement.dataset.ready === "true" && !!document.querySelector(".wb-main")', returnByValue: true })
-      if (state.result.value) { ready = true; break }
-      if (errors.length) throw new Error(JSON.stringify(errors))
+  for (const lang of ["zh", "en"]) {
+    const output = lang === "zh" ? resolve(root, "assets/store") : resolve(root, "assets/store/en")
+    await mkdir(output, { recursive: true })
+    for (const [index, view] of ["assistant", "compare", "workspace", "tasks"].entries()) {
+      errors.length = 0
+      await send("Page.navigate", { url: `http://127.0.0.1:8766/?view=${view}&lang=${lang}` })
+      let ready = false
+      for (let i = 0; i < 100; i++) {
+        await pause(150)
+        const state = await send("Runtime.evaluate", { expression: 'document.documentElement.dataset.ready === "true" && !!document.querySelector(".wb-main")', returnByValue: true })
+        if (state.result.value) { ready = true; break }
+        if (errors.length) throw new Error(JSON.stringify(errors))
+      }
+      if (!ready) {
+        const state = await send("Runtime.evaluate", { expression: 'JSON.stringify({url:location.href, state:document.readyState, body:document.body?.innerText, resources:performance.getEntriesByType("resource").map(r=>({name:r.name,size:r.transferSize}))})', returnByValue: true })
+        throw new Error("App did not render: " + JSON.stringify({ errors, state }))
+      }
+      await pause(1000)
+      if (view === "workspace" || view === "tasks") {
+        const title = view === "workspace" ? (lang === "zh" ? "工作区" : "Workspace") : (lang === "zh" ? "快捷任务" : "Tasks")
+        await send("Runtime.evaluate", { expression: `document.querySelector('.lm-icon-sidebar button[title="${title}"]')?.click()` })
+        await pause(500)
+      }
+      await send("Runtime.evaluate", { expression: 'document.querySelectorAll(".lm-chat-scroll").forEach(el => { el.scrollTop = 0 })' })
+      await pause(100)
+      const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false })
+      const path = resolve(output, `0${index + 1}-${view}-1280x800.png`)
+      await writeFile(path, Buffer.from(shot.data, "base64"))
+      console.log(path)
     }
-    if (!ready) {
-      const state = await send("Runtime.evaluate", { expression: 'JSON.stringify({url:location.href, state:document.readyState, body:document.body?.innerText, resources:performance.getEntriesByType("resource").map(r=>({name:r.name,size:r.transferSize}))})', returnByValue: true })
-      throw new Error("App did not render: " + JSON.stringify({ errors, state }))
-    }
-    await pause(1000)
-    if (view === "workspace" || view === "tasks") {
-      await send("Runtime.evaluate", { expression: `document.querySelector('.lm-icon-sidebar button[title="${view === "workspace" ? "工作区" : "快捷任务"}"]')?.click()` })
-      await pause(500)
-    }
-    await send("Runtime.evaluate", { expression: 'document.querySelectorAll(".lm-chat-scroll").forEach(el => { el.scrollTop = 0 })' })
-    await pause(100)
-    const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false })
-    const path = resolve(root, `assets/store/0${index + 1}-${view}-1280x800.png`)
-    await writeFile(path, Buffer.from(shot.data, "base64"))
-    console.log(path)
   }
 } finally {
   socket?.close()

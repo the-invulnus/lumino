@@ -8,7 +8,7 @@ Lumino 是浏览器侧边栏 AI 助手，用于根据用户指令处理网页与
 
 ### 本地保存的数据
 
-- 模型接口地址、模型名称、API Key、Obsidian MCP 地址与凭证、语言偏好、快捷任务保存在 Chrome 本地存储中。
+- 模型接口地址、模型名称、API Key、Obsidian MCP 地址与凭证、语言偏好、快捷任务保存在 Chrome 本地存储中。发起请求时，Lumino 使用相应凭证向用户配置的模型或 MCP 服务进行身份验证；凭证不会发送给 Lumino 开发者运营的服务器。
 - 对话与消息保存在浏览器 IndexedDB 中。
 - 上传文件、下载资源、网页收藏、助手回复、截图、笔记与项目文件保存在浏览器 OPFS 工作区中；临时工具输出也可能存入工作区。
 - 主题以及保留下来的旧自定义 Agent 配置可能使用 Chrome 同步存储，由用户的 Chrome 同步设置决定是否跨设备同步。模型与 Obsidian 的凭证不使用同步存储。
@@ -20,6 +20,8 @@ Lumino 会将对话及完成任务所需的上下文发送到用户自行配置�
 启用 Obsidian 集成后，Lumino 通过用户配置的 MCP 服务地址执行笔记相关操作。该地址可能是本机服务，也可能是用户选择的其他地址。相关数据的处理还受该服务及模型提供方的政策约束。
 
 浏览器工具也可能按用户任务访问网站、下载资源、填写表单或操作页面。相应网站会接收到这些操作涉及的数据。请只引用适合交给所选服务处理的内容，并在执行重要操作时留意助手的工具调用。
+
+Lumino 仅为提供用户主动请求的网页、对话、文件和 Obsidian 功能处理上述数据；不会出售这些数据，也不会将其用于广告或与产品功能无关的用途。数据由用户所选的模型、MCP 或目标网站按各自政策处理。
 
 ### 权限用途
 
@@ -48,11 +50,11 @@ Lumino 会将对话及完成任务所需的上下文发送到用户自行配置�
 
 Lumino is a browser-side AI assistant for working with pages and files at your direction. The developer does not operate a server that receives your conversations, page content or workspace files. Lumino has no advertising, behavioral analytics or telemetry, and does not sell user data.
 
-Model and Obsidian MCP settings, credentials, language preferences and shortcuts are stored in Chrome local storage. Conversations use IndexedDB. Uploaded files, downloads, saved pages, saved replies, screenshots, notes, projects and temporary tool outputs use the browser's OPFS workspace. Theme settings and legacy custom-agent configurations may use Chrome sync storage; model and Obsidian credentials do not.
+Model and Obsidian MCP settings, credentials, language preferences and shortcuts are stored in Chrome local storage. Lumino uses the relevant credential to authenticate requests to the model or MCP endpoint you configure; credentials are not sent to servers operated by the Lumino developer. Conversations use IndexedDB. Uploaded files, downloads, saved pages, saved replies, screenshots, notes, projects and temporary tool outputs use the browser's OPFS workspace. Theme settings and legacy custom-agent configurations may use Chrome sync storage; model and Obsidian credentials do not.
 
 To perform your requests, Lumino sends relevant conversation and context to your configured OpenAI-compatible model endpoint. This can include page titles, URLs, text, structure, screenshots and file contents that you reference or that tools read for a task. Lumino does not capture microphone or camera data.
 
-If enabled, Obsidian operations use your configured MCP endpoint, which may be local or remote. Browser actions may also send relevant data to the websites you ask the assistant to use. These services' own data policies apply. Only provide content appropriate for your selected services.
+If enabled, Obsidian operations use your configured MCP endpoint, which may be local or remote. Browser actions may also send relevant data to the websites you ask the assistant to use. These services' own data policies apply. Only provide content appropriate for your selected services. Lumino processes this information only to provide the page, conversation, file and Obsidian features you request. It does not sell this information or use it for advertising or purposes unrelated to the product. The model, MCP and destination websites you choose process data under their own policies.
 
 Permissions support the side panel, settings and task storage, tab references, page reading and interaction, file export, offscreen PDF processing and temporary-cache cleanup. Broad website access enables these user-directed features across sites; it does not itself send browsing history to the developer.
 
