@@ -154,7 +154,7 @@ export const exportTool = luminoTool({
 
 export const currentPageTool = luminoTool({
   name: "current_page",
-  description: "获取当前活跃标签页的 ID、URL 和标题。涉及浏览器操作时调用以锁定目标页面。",
+  description: "获取当前活跃标签页的 ID、URL 和标题。仅在需要确认当前活跃页面时按需调用；消息已引用目标页面并提供 tab_id 时，直接使用该 ID，无需先调用此工具。",
   inputSchema: z.z.object({})
 })
 

@@ -102,7 +102,7 @@ function IndexOptions() {
   const [locale, setLocale] = useState<Locale>(getLocale())
 
   useEffect(() => {
-    // 恢复 locale（默认 en），再加载其余设置
+    // 恢复 locale（默认跟随 Chrome 界面语言），再加载其余设置
     initLocaleFromStorage().then((lc) => setLocale(lc))
     Promise.all([
       getLlmSettings().catch(() => ({ baseUrl: "", apiKey: "", model: "" })),

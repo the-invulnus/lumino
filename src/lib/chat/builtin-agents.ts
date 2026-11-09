@@ -28,34 +28,8 @@ const BUILTIN_AGENT_DEFS: Omit<AgentConfig, "systemPrompt">[] = [
     isBuiltin: true,
     tools: [],  // 内置 agent 用全部工具（isBuiltin 时忽略 tools）
     order: 0
-  },
-  {
-    id: "research",
-    name: "agent.research.name",
-    description: "agent.research.desc",
-    icon: "research",
-    isBuiltin: true,
-    tools: [],
-    order: 1
-  },
-  {
-    id: "replicate",
-    name: "agent.replicate.name",
-    description: "agent.replicate.desc",
-    icon: "replicate",
-    isBuiltin: true,
-    tools: [],
-    order: 2
-  },
-  {
-    id: "automate",
-    name: "agent.automate.name",
-    description: "agent.automate.desc",
-    icon: "automate",
-    isBuiltin: true,
-    tools: [],
-    order: 3
   }
+
 ]
 
 /**
@@ -91,7 +65,7 @@ export async function getAllAgents(): Promise<AgentConfig[]> {
  */
 export async function getAgentById(id: string): Promise<AgentConfig | undefined> {
   const builtinAgents = await getBuiltinAgents()
-  const builtin = builtinAgents.find(a => a.id === id)
+  const builtin = builtinAgents.find(a => a.id === (["research", "replicate", "automate"].includes(id) ? "chat" : id))
   if (builtin) return builtin
 
   const customAgents = await loadCustomAgents()

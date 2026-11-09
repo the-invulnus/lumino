@@ -1,0 +1,8 @@
+{
+  "extensionName": {
+    "message": "Lumino - AI 网页助手、总结与笔记"
+  },
+  "extensionDescription": {
+    "message": "浏览器侧边栏 AI 助手：总结网页、对比多个标签页、整理笔记与文件、执行网页任务。支持自选模型和 Obsidian，自动适配中英文界面，可手动切换。"
+  }
+}

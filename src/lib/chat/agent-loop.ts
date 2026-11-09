@@ -17,14 +17,9 @@ import type { OpenAiChatMessage } from "./openai-messages"
 import { buildAgentMessages } from "./system-prompt"
 import { getLuminoAgentTools } from "./tool-definitions"
 import { getObsidianDiscoveryError } from "./tools/obsidian-mcp"
+import { buildUserInputWithTime } from "./message-metadata"
 
 const MAX_AGENT_STEPS = 100
-
-function buildUserInputWithTime(userInput: string): string {
-  const now = new Date()
-  const timeStr = now.toISOString()
-  return `[Current Time: ${timeStr}]\n\n${userInput}`
-}
 
 export type AgentLoopInput = {
   settings: LlmSettings

@@ -2,7 +2,7 @@
  * Lumino i18n — 轻量翻译核心（零依赖）
  *
  * 设计：
- * - 当前 locale 是模块级变量，启动时从 chrome.storage.local 异步恢复（默认 "en"）
+ * - 首次使用跟随 Chrome 界面语言；已保存的手动选择优先
  * - t() 同步查字典，未命中时回退到 en，再回退到 key 本身
  * - React 组件用 useT()：监听 "lumino-locale-change" 事件，locale 变化时重渲染
  * - content script / background.ts 无 React，直接用模块级 t() / getLocale()
@@ -20,7 +20,17 @@ import { zh } from "./i18n/zh"
 
 export type Locale = "en" | "zh"
 
-export const DEFAULT_LOCALE: Locale = "en"
+/** Chinese browser variants use Simplified Chinese; other languages use English. */
+function browserLocale(): Locale {
+  let language: string | undefined
+  try {
+    language = typeof chrome !== "undefined" ? chrome.i18n?.getUILanguage?.() : undefined
+  } catch { /* Browser API may be unavailable outside an extension page. */ }
+  language ||= typeof navigator !== "undefined" ? navigator.language : "en"
+  return /^zh(?:[-_]|$)/i.test(language) ? "zh" : "en"
+}
+
+export const DEFAULT_LOCALE: Locale = browserLocale()
 
 export const LOCALE_STORAGE_KEY = "lumino_locale"
 
@@ -57,11 +67,11 @@ export function t(key: string, params?: Record<string, string | number>): string
 
 /** 设置 document.documentElement.lang 并广播 locale 变化事件（当前 window） */
 export function applyLocale(locale: Locale): void {
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = locale === "zh" ? "zh-CN" : "en"
+  }
   if (locale === currentLocale) return
   currentLocale = locale
-  if (typeof document !== "undefined") {
-    document.documentElement.lang = locale
-  }
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(LOCALE_EVENT, { detail: locale }))
   }
@@ -79,8 +89,9 @@ export async function initLocaleFromStorage(): Promise<Locale> {
   } catch {
     // storage 不可用（极端情况），保持默认
   }
-  applyLocale(DEFAULT_LOCALE)
-  return DEFAULT_LOCALE
+  const locale = browserLocale()
+  applyLocale(locale)
+  return locale
 }
 
 /**

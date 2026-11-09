@@ -46,6 +46,18 @@ export async function readWorkspaceFile(path: string): Promise<string | null> {
   }
 }
 
+/** Read file metadata without loading its contents into memory. */
+export async function statWorkspaceFile(path: string): Promise<{ size: number; modifiedAt: number } | null> {
+  try {
+    let directory = await getWorkspaceHandle()
+    const parts = path.replace(/^\/+/, "").split("/")
+    const name = parts.pop()!
+    for (const part of parts) directory = await directory.getDirectoryHandle(part)
+    const file = await (await directory.getFileHandle(name)).getFile()
+    return { size: file.size, modifiedAt: file.lastModified }
+  } catch { return null }
+}
+
 /** 以二进制读取文件（用于图片等非文本资源） */
 export async function readWorkspaceFileBytes(
   path: string
@@ -133,28 +145,32 @@ export function isBinaryPath(path: string): boolean {
     "zip",
     "gz",
     "tar",
-    "wasm"
+    "wasm",
+    "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "odp",
+    "7z", "rar", "bin", "avif", "heic", "tif", "tiff", "m4a", "flac", "mov"
   ].includes(ext || "")
 }
 
-export async function deleteWorkspaceFile(path: string): Promise<void> {
+export async function deleteWorkspaceFile(path: string, { recursive = false }: { recursive?: boolean } = {}): Promise<void> {
+  const parts = path.split("/").filter(Boolean)
+  if (!parts.length || parts.some(part => part === "." || part === "..")) throw new Error("invalid_workspace_path")
   const dir = await getWorkspaceHandle()
-  const parts = path.replace(/^\/+/, "").split("/")
   const fileName = parts.pop()!
   let current = dir
 
   for (const part of parts) {
     try {
       current = await current.getDirectoryHandle(part)
-    } catch {
-      return
+    } catch (error) {
+      if ((error as { name?: string })?.name === "NotFoundError") return
+      throw error
     }
   }
 
   try {
-    await current.removeEntry(fileName)
-  } catch {
-    // file doesn't exist
+    await current.removeEntry(fileName, { recursive })
+  } catch (error) {
+    if ((error as { name?: string })?.name !== "NotFoundError") throw error
   }
 }
 
@@ -226,6 +242,12 @@ function mimeTypeForFilename(filename: string): string {
     gz: "application/gzip",
     tar: "application/x-tar",
     mp3: "audio/mpeg",
+    m4a: "audio/mp4",
+    flac: "audio/flac",
+    ogg: "audio/ogg",
+    mov: "video/quicktime",
+    avif: "image/avif",
+    bmp: "image/bmp",
     wav: "audio/wav",
     mp4: "video/mp4",
     webm: "video/webm",

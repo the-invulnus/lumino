@@ -1,3 +1,5 @@
+import { readMessageContext, stripPageContext } from "../../lib/workbench/store"
+import { stripCurrentTime } from "../../lib/chat/message-metadata"
 import { Fragment, useState } from "react"
 import { marked } from "marked"
 import DOMPurify from "dompurify"
@@ -8,6 +10,7 @@ import { exportWorkspaceFile } from "../../lib/fs/workspace"
 import { useT } from "../../lib/i18n"
 import { LumiToolCall } from "./LumiToolCall"
 import { ReasoningBlock } from "./ReasoningBlock"
+import { ReferenceChips } from "./ReferenceChips"
 
 function renderMarkdown(text: string): JSX.Element {
   let html: string
@@ -48,11 +51,8 @@ function renderMarkdown(text: string): JSX.Element {
   )
 }
 
-/** 隐藏内部标记前缀（如 Current Time），不暴露给 UI */
-const HIDDEN_PREFIX = /^\[Current Time: \d{4}-\d{2}-\d{2}.+\]\n\n/
-
 export function displayContent(content: string): string {
-  return content.replace(HIDDEN_PREFIX, "")
+  return stripPageContext(stripCurrentTime(content))
 }
 
 export function formatMessagePreview(message: OpenAiChatMessage): string {
@@ -72,21 +72,25 @@ export function ChatMessageBlock({
   message,
   allMessages,
   index,
+  onOpenFile,
   inGroup = false
 }: {
   message: OpenAiChatMessage
   allMessages: OpenAiChatMessage[]
   index: number
+  onOpenFile?: (path: string) => void
   inGroup?: boolean
 }) {
   const t = useT()
   if (message.role === "user") {
-    if (inGroup) return <>{displayContent(formatMessagePreview(message))}</>
+    const context = readMessageContext(stripCurrentTime(formatMessagePreview(message)))
+    const references = <ReferenceChips pages={context.pages} files={context.files} onOpenFile={onOpenFile} className="wb-message-references" />
+    const text = context.text && <div className="wb-user-message-text">{context.text}</div>
+    if (inGroup) return <>{references}{text}</>
     return (
       <div className="lm-chat-row lm-chat-row--user">
-        <div className="lm-chat-bubble lm-chat-bubble--user">
-          {displayContent(formatMessagePreview(message))}
-        </div>
+        {references}
+        {text && <div className="lm-chat-bubble lm-chat-bubble--user">{text}</div>}
       </div>
     )
   }

@@ -1,74 +1,32 @@
-# Lumino
+# Lumino - AI 网页助手、总结与笔记
 
-[中文](./README_ZH.md) | English
+简体中文 · [English](README_EN.md)
 
-> Turn what you browse into what you build.
+> 把网页，变成成果。
 
-**Lumino** is a multi-modal AI assistant that lives in your browser's side panel. Powered by your own LLM (any OpenAI-compatible API), it reads web pages, scrapes designs, automates forms, manages files, and integrates with your Obsidian vault — all through a self-hosted agent loop that keeps your data private.
+Lumino 是浏览器侧边栏中的 AI 助手。引用正在阅读的网页、多个标签页或工作区文件，在同一个对话中完成总结、对比、笔记整理和网页操作。
 
-<p align="center">
-  <img src="assets/screenshot-1280x800.png" alt="Lumino Screenshot" width="640" />
-</p>
+![Lumino](assets/promo-tiles/marquee-promo-1400x560.jpg)
 
-## Features
+## 功能
 
-### 🤖 Multi-Agent Modes
+- **统一助手**：网页问答、文章总结、多页对比、页面设计采集和浏览器操作。
+- **明确的引用**：网页和文件以 chip 展示；网页引用可切回原标签页，文件引用可打开预览。
+- **文件工作区**：上传、收藏、搜索、排序、预览、文本编辑和导出；支持图标与列表视图。
+- **固定目录**：`uploads/` 保存上传文件，`downloads/` 保存下载资源，`favorite/` 保存收藏，`screenshots/` 保存截图，`notes/` 整理笔记，`projects/` 保存助手的新建成果。
+- **快捷任务**：保存常用指令，一键带入对话；由用户主动运行，不是定时任务。
+- **历史会话**：搜索、按时间分组、折叠分组，以及消息编辑和重新生成。
+- **可查看的执行过程**：工具调用与思考过程可以整体收起，运行时可以停止任务。
+- **可选 Obsidian MCP**：配置兼容服务后，读取和整理自己的笔记。
+- **自动选择语言**：首次使用跟随 Chrome 界面语言，中文环境使用中文，其余使用 English；支持手动切换并保留已有偏好。
 
-Lumino ships with four built-in agents, each tuned for a different task:
+## 安装
 
-| Agent | What it does |
-|---|---|
-| **Chat** | All-in-one assistant — read/write files, browse pages, scrape resources |
-| **Research** | Deep search across web sources, extract and save findings to notes |
-| **Replicate** | Extract DOM structure, CSS styles, and resources from any page |
-| **Automate** | Fill forms, click elements, press keys — automate repetitive web tasks |
+[从 Chrome 应用商店安装](https://chromewebstore.google.com/detail/pgmojincedjeggjgfafpkbmloiiinplj)
 
-You can also create **custom agents** with your own system prompts and tool subsets.
+手动安装：下载可用的扩展 ZIP，解压后打开 `chrome://extensions`，启用“开发者模式”，点击“加载已解压的扩展程序”，选择解压目录。
 
-### 🛠 Rich Built-in Tools (23+)
-
-| Category | Tools |
-|---|---|
-| **Page Reading** | `get_page_content` — extracts readable text via Mozilla Readability |
-| **Browser Interaction** | `navigate`, `click_element`, `fill_form`, `press_key`, `scroll`, `screenshot`, `inspect_element`, `close_tab` |
-| **Page Scraping** | `scrape_structure`, `scrape_styles`, `scrape_resources`, `fetch_resource` |
-| **File System** | `ls`, `read_file`, `write_file`, `edit_file`, `glob`, `grep`, `rm`, `export` |
-| **System** | `current_page`, `tabs` |
-| **PDF** | `read_pdf` — extract text from PDFs (URL or local path) |
-| **Obsidian** | Dynamic MCP tools — `vault_list`, `vault_read`, `vault_write`, and more |
-
-### 🔒 Privacy First
-
-- Your **API key is stored locally** in `chrome.storage.local` — never synced to the cloud
-- All LLM requests go directly from your browser to your configured API endpoint
-- No telemetry, no analytics, no third-party servers
-
-### 🎨 Other Highlights
-
-- **Three themes** — Paper, ORYZO, Fictional
-- **i18n** — English / 中文 runtime switching
-- **OPFS workspace** — built-in file system for storing and editing files during sessions
-- **Thinking mode** — configure per-model reasoning/thinking parameters
-- **Markdown rendering** — with KaTeX math support and DOMPurify sanitization
-
-## Installation
-
-### Option 1: Chrome Web Store
-
-<a href="https://chromewebstore.google.com/detail/lumino-browse-and-build-w/pgmojincedjeggjgfafpkbmloiiinplj"><img src="https://user-images.githubusercontent.com/585534/107280622-91a8ea80-6a26-11eb-8d07-77c548b28665.png" alt="Available in the Chrome Web Store" height="48" /></a>
-
-Or search for **"Lumino"** in the [Chrome Web Store](https://chromewebstore.google.com/).
-
-### Option 2: Manual Install (No Build Required)
-
-1. Download the latest `.zip` from the [Releases](https://github.com/the-invulnus/lumino/releases) page
-2. Unzip the file
-3. Open `chrome://extensions`, enable **Developer mode**
-4. Click **Load unpacked** and select the unzipped folder
-
-No Node.js or build tools required.
-
-### Option 3: Build from Source
+从源码构建：
 
 ```bash
 git clone https://github.com/the-invulnus/lumino.git
@@ -77,63 +35,33 @@ pnpm install
 pnpm build
 ```
 
-Load the `build/chrome-mv3-prod/` folder as an unpacked extension in `chrome://extensions`.
+加载 `build/chrome-mv3-prod/`。开发时运行 `pnpm dev` 并加载 `build/chrome-mv3-dev/`；运行 `pnpm package` 生成 `build/chrome-mv3-prod.zip`。
 
-### Development
+## 首次使用
+
+1. 打开扩展设置，填写 OpenAI 兼容接口地址、API Key 和支持工具调用的模型名称。
+2. 点击 Lumino 图标打开侧边栏。
+3. 选择参考网页，或上传并引用文件，输入任务。
+4. 在工作区中查看和继续处理生成的文件；把常用指令保存为快捷任务。
+
+Lumino 不内置模型访问额度。模型服务的效果、可用性与费用由你选择的提供方决定。Obsidian 集成需要单独运行兼容的 MCP 服务，并在设置中启用。
+
+## 数据与隐私
+
+凭证保存在 `chrome.storage.local`；会话使用 IndexedDB，文件使用浏览器 OPFS。执行任务时，相关对话、网页内容、截图或文件片段会按功能需要发送给你配置的模型服务或 Obsidian 服务。Lumino 不将这些数据上传到开发者服务器，不内置广告或行为分析。主题与旧自定义 Agent 配置可能使用 Chrome 同步存储。
+
+详见[隐私政策](PRIVACY.md)。卸载扩展会移除其本地数据，请先导出需要保留的文件。
+
+## 开发
+
+Plasmo · React 18 · TypeScript · Vitest · IndexedDB / OPFS
 
 ```bash
-pnpm dev
+pnpm test
+pnpm exec tsc --noEmit
+pnpm package
 ```
 
-Load the `build/chrome-mv3-dev` directory. Source changes trigger automatic rebuilds.
-
-## Configuration
-
-After installing, open the **Options page** (right-click the extension icon → Options) to configure:
-
-1. **LLM Connection** — Set your OpenAI-compatible API endpoint (base URL, API key, model name). Lumino works with any provider that supports the OpenAI chat completions API, including Ollama, vLLM, Groq, DeepSeek, and local models.
-
-2. **Obsidian Integration** *(optional)* — Enable the [Obsidian Local REST API](https://github.com/coddingtonbear/obsidian-local-rest-api) plugin, then enter your vault host and API key. The agent can then read and write notes directly.
-
-3. **Custom Agents** *(optional)* — Create agents with custom system prompts and hand-picked tool subsets.
-
-4. **Theme & Language** — Pick a color scheme and switch between English and Chinese.
-
-## Usage
-
-1. Click the Lumino icon in your Chrome toolbar to open the side panel
-2. Select an agent mode from the sidebar (Chat, Research, Replicate, or Automate)
-3. Type your prompt — the agent will autonomously execute tools to complete your task
-4. Each tool call is shown as an expandable card so you can inspect inputs and outputs
-5. Switch between conversations in the history panel
-
-## Architecture
-
-Lumino is built with [Plasmo](https://docs.plasmo.com/) (Chrome Extension framework), React 18, and TypeScript. It uses a custom-built agent loop (`while(true)` + tool calling) rather than relying on third-party AI SDKs.
-
-For detailed architecture documentation, see [CLAUDE.md](./CLAUDE.md).
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Framework | [Plasmo](https://docs.plasmo.com/) 0.90.5 |
-| UI | React 18 + TypeScript 5.3 |
-| Agent Loop | Custom `LlmClient` + `runAgentLoop()` |
-| LLM Protocol | OpenAI-compatible API |
-| Schema Validation | Zod 3.25 |
-| Styling | Pure CSS (three-layer: tokens / layout / components) |
-| Package Manager | pnpm |
-| Testing | Vitest + jsdom |
-| Storage | Chrome Storage API + IndexedDB + OPFS |
-
-## License
+商店素材与中英文文案见 [marketing](marketing/README.md)。
 
 MIT © 2026 [the invulnus](https://github.com/the-invulnus)
-
-## Acknowledgments
-
-- [Mozilla Readability](https://github.com/mozilla/readability) for article extraction
-- [pdf.js](https://mozilla.github.io/pdf.js/) for PDF parsing
-- [KaTeX](https://katex.org/) for math rendering
-- [Plasmo](https://docs.plasmo.com/) for the excellent extension framework

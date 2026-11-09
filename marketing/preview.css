@@ -1,0 +1,21 @@
+html, body { width: 1280px; height: 800px; margin: 0; overflow: hidden; background: #f8f5f0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+.store-canvas { position: relative; width: 1280px; height: 800px; overflow: hidden; background: radial-gradient(ellipse at 95% 12%, #eae4f4 0%, transparent 52%), radial-gradient(ellipse at 72% 94%, #f4ddd5 0%, transparent 50%), #f8f5f0; }
+.store-brand { position: absolute; top: 49px; left: 60px; display: flex; align-items: center; gap: 13px; color: #24221f; font: 600 32px/1 Georgia, serif; }
+.store-brand img { width: 41px; height: 41px; }
+#feature-copy { position: absolute; left: 60px; top: 190px; width: 535px; }
+.eyebrow { font-size: 13px; letter-spacing: 2px; font-weight: 600; color: #8a766e; }
+#feature-copy h1 { margin: 21px 0 25px; font-size: 49px; letter-spacing: -1.9px; line-height: 1.33; font-weight: 600; color: #28241f; }
+#feature-copy p { color: #746e68; font-size: 18px; line-height: 1.9; margin: 0; }
+#feature-copy ul { list-style: none; margin: 35px 0 0; padding: 0; display: flex; flex-direction: column; gap: 15px; color: #4d4741; font-size: 15px; }
+#feature-copy li { display: flex; gap: 10px; align-items: center; }
+#feature-copy li span { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: #e9e2ed; color: #8a789f; font-size: 12px; }
+.store-foot { position: absolute; left: 60px; bottom: 43px; font-size: 12px; color: #958b83; letter-spacing: .3px; }
+.store-app-frame { position: absolute; right: 48px; top: 43px; width: 566px; height: 712px; border-radius: 22px; overflow: hidden; border: 1px solid #fff; box-shadow: 0 24px 65px #675b7430, 0 4px 10px #675b7410; background: #faf7f3; }
+.store-app-title { box-sizing: border-box; display: flex; align-items: center; gap: 9px; height: 36px; padding: 0 14px; color: #847a72; background: #f0ebe5; font-size: 11px; border-bottom: 1px solid #e8e0d9; }
+.store-app-title img { width: 16px; height: 16px; }
+.store-app-title span:last-child { margin-left: auto; color: #a19a94; }
+#app { height: calc(100% - 36px); }
+#app .lm-sidepanel { height: 100%; }
+#app *, #app *::before, #app *::after { animation-duration: 0s !important; animation-delay: 0s !important; transition-duration: 0s !important; }
+#app .lm-chat-row-wrapper { opacity: 1; transform: none; }

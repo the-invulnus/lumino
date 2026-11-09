@@ -1509,3 +1509,33 @@
   font-size: var(--lumi-text-xs);
   color: var(--lumi-text-faint);
 }
+
+/* Per-turn execution disclosure: compact by default, final answer always visible. */
+.lumi-assistant-turn { min-width: 0; white-space: normal; }
+.lumi-turn-process { margin: 0 0 8px; }
+.lumi-turn-process:last-child { margin-bottom: 0; }
+.lumi-turn-process__summary {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  width: max-content;
+  max-width: 100%;
+  white-space: nowrap;
+  border: 0;
+  border-radius: var(--lumi-radius-control);
+  padding: 5px 0;
+  background: transparent;
+  color: var(--lumi-text-soft);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+.lumi-turn-process__summary:hover { color: var(--lumi-text); }
+.lumi-turn-process__summary > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lumi-turn-process__chevron { flex: 0 0 12px; transition: transform .15s; }
+.lumi-turn-process__chevron.is-open { transform: rotate(90deg); }
+.lumi-turn-process__running { flex-shrink: 0; color: var(--lumi-text-soft); font-size: 10px; }
+.lumi-turn-process__details { margin: 4px 0 10px; padding-left: 10px; border-left: 1px solid var(--lumi-border-strong); }

@@ -5,6 +5,19 @@
  */
 
 export const en: Record<string, string> = {
+  "execution.toolCalls": "{count} tool calls",
+  "execution.process": "Execution details",
+  "execution.running": "Running",
+  "chat.references": "Referenced pages and files",
+  "chat.removeFileReference": "Remove file reference: {path}",
+  "chat.previewFileReference": "Preview file: {path}",
+  "chat.switchPageReference": "Switch to tab: {title}",
+  "chat.removePageReference": "Remove page reference: {title}",
+  "chat.pageReferenceUnavailable": "This tab is closed or temporarily unavailable.",
+  "chat.uploadFiles": "Upload files",
+  "chat.uploadingFiles": "Uploading files…",
+  "chat.filesUploadFailed": "Could not upload these files. Please try again: {names}",
+
   // ── 内置 Agent 名称/描述 ──
   "agent.chat.name": "Chat",
   "agent.chat.desc": "All-in-one: read & write files, control pages, scrape resources",
@@ -67,6 +80,11 @@ export const en: Record<string, string> = {
   "history.empty": "No history yet",
   "history.notFound": "No matching chats found",
   "history.delete": "Delete",
+  "history.group.today": "Today",
+  "history.group.yesterday": "Yesterday",
+  "history.group.last7Days": "Last 7 days",
+  "history.group.thisMonth": "This month",
+  "history.group.count": "{count} chats",
 
   // ── 设置页导航 ──
   "option.nav.llm": "Model",

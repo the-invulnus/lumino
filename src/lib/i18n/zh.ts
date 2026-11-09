@@ -5,6 +5,19 @@
  */
 
 export const zh: Record<string, string> = {
+  "execution.toolCalls": "{count} 次工具调用",
+  "execution.process": "执行过程",
+  "execution.running": "执行中",
+  "chat.references": "引用的网页和文件",
+  "chat.removeFileReference": "移除文件引用：{path}",
+  "chat.previewFileReference": "预览文件：{path}",
+  "chat.switchPageReference": "切换到标签页：{title}",
+  "chat.removePageReference": "移除网页引用：{title}",
+  "chat.pageReferenceUnavailable": "该标签页已关闭或暂时无法切换。",
+  "chat.uploadFiles": "上传文件",
+  "chat.uploadingFiles": "正在上传文件…",
+  "chat.filesUploadFailed": "以下文件上传失败，请重试：{names}",
+
   // ── 内置 Agent 名称/描述 ──
   "agent.chat.name": "通用",
   "agent.chat.desc": "全能助手：读写文件、操控页面、爬取资源",
@@ -67,6 +80,11 @@ export const zh: Record<string, string> = {
   "history.empty": "暂无历史会话",
   "history.notFound": "未找到匹配的会话",
   "history.delete": "删除",
+  "history.group.today": "今天",
+  "history.group.yesterday": "昨天",
+  "history.group.last7Days": "最近 7 天",
+  "history.group.thisMonth": "本月",
+  "history.group.count": "{count} 个会话",
 
   // ── 设置页导航 ──
   "option.nav.llm": "模型",
