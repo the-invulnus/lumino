@@ -40,6 +40,8 @@ Lumino 是一款基于 Plasmo 框架构建的 Chrome 浏览器扩展，定位为
 
 LLM API Key 与 Obsidian token 存 `chrome.storage.local`（`settings.ts` 的 `getStorageArea` 默认 local），**不随 Google 账号同步到云端**，降低账号被入侵时的凭证泄露面。自定义 Agent 配置（`mode-config.ts`）不含密钥，仍存 `chrome.storage.sync` 以支持跨设备同步。
 
+**IndexedDB 升级策略**（`lib/db.ts`）：`onupgradeneeded` 只做增量建表/迁移，**禁止 `deleteObjectStore` 删表重建**——否则任何 `DB_VERSION` 提升都会静默清空用户全部历史会话。数据库版本高于代码时（回退旧版本）按现有版本打开，不删库；连接收到 `versionchange` 时主动关闭以免阻塞升级。
+
 ## 运行模式
 
 Chrome Extension Manifest V3，**Service Worker + Side Panel + Content Script + Offscreen**：

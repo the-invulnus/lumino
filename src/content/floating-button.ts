@@ -8,7 +8,7 @@ import { t, initLocaleFromStorage } from "../lib/i18n"
 
 export const FLOATING_BUTTON_ID = "lumino-floating-button"
 
-// content script 启动时恢复 locale（异步，不阻塞按钮创建；默认 en 兜底）
+// content script 启动时恢复 locale（异步，不阻塞按钮创建；默认跟随 Chrome 界面语言）
 void initLocaleFromStorage()
 
 function requestOpenSidePanel() {

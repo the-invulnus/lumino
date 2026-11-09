@@ -5,6 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { OPEN_SIDE_PANEL_MESSAGE } from "../lib/side-panel-bridge"
+import { applyLocale } from "../lib/i18n"
 import {
   createFloatingButton,
   FLOATING_BUTTON_ID,
@@ -15,6 +16,7 @@ describe("floating button", () => {
   const sendMessage = vi.fn().mockResolvedValue(undefined)
 
   beforeEach(() => {
+    applyLocale("zh")
     document.body.innerHTML = ""
     document.body.removeAttribute("style")
     sendMessage.mockClear()
@@ -46,7 +48,7 @@ describe("floating button", () => {
 
     expect(button.id).toBe(FLOATING_BUTTON_ID)
     expect(button.className).toContain("lumino-fab")
-    expect(button.getAttribute("aria-label")).toBe("Open Lumino side panel")
+    expect(button.getAttribute("aria-label")).toBe("打开 Lumino 侧边栏")
     expect(button.querySelector(".lumino-fab__img")).not.toBeNull()
   })
 

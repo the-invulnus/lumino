@@ -1,0 +1,31 @@
+Lumino is an AI web assistant in your browser side panel. Work with web pages, multiple tabs and workspace files through one assistant to summarize, compare, take notes and complete browser tasks.
+
+READ AND COMPARE PAGES
+Summarize articles, explain concepts and extract key facts. Reference multiple tabs to compare products, approaches or research. Keep source links and save findings as Markdown notes or CSV files.
+
+A WORKSPACE FOR FILES AND FAVORITES
+Upload files, save web pages and bookmark assistant replies. Browse folders in icon or list view, search and sort files, preview supported formats and edit text files. Attach workspace files to a new conversation to continue your work.
+
+REUSABLE TASK SHORTCUTS
+Start with page summaries, multi-page comparisons, design collection and note-taking. Save your own instructions for later reuse. Shortcuts are started manually; they do not run on a schedule.
+
+BROWSER ACTIONS AND DESIGN COLLECTION
+Ask the assistant to read pages, navigate tabs, fill forms, click elements, take screenshots or collect page structure, styles and resources. Inspect the tool calls, collapse the execution details or stop the task.
+
+OPTIONAL OBSIDIAN CONNECTION
+Connect a compatible Obsidian MCP service to read and organize notes. This requires a separately installed and configured service.
+
+BRING YOUR OWN MODEL
+Configure an OpenAI-compatible endpoint, API key and a model that supports tool calling. Lumino does not include model access. Model availability, quality and API charges depend on your provider. Lumino itself has no subscription fee.
+
+AUTOMATIC LANGUAGE SELECTION
+On first use, Chinese Chrome interfaces use Simplified Chinese; other browser languages use English. Switch manually in settings; your saved preference is preserved. Includes themes, conversation search and collapsible date groups.
+
+DATA HANDLING
+API keys are stored locally and sent only to your configured model or Obsidian service to authenticate requests. Conversations, workspace files and favorites are primarily stored in your browser. To carry out your requests, relevant messages, page content, screenshots or file excerpts may be sent to these services. Before the first send, Lumino displays a data-use notice and waits for your agreement; you can reset this choice in Model settings. Lumino does not upload this content to developer-operated servers and includes no advertising or behavioral analytics. Review your chosen provider's data policy.
+
+Get started: install Lumino, configure a model in settings, reference a page or file, and describe your task.
+
+Project: https://github.com/the-invulnus/lumino
+Support: https://github.com/the-invulnus/lumino/issues
+Privacy: https://github.com/the-invulnus/lumino/blob/main/PRIVACY.md

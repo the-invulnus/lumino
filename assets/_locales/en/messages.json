@@ -1,0 +1,8 @@
+{
+  "extensionName": {
+    "message": "Lumino - AI Web Assistant, Summaries & Notes"
+  },
+  "extensionDescription": {
+    "message": "Summarize pages, compare tabs, organize notes and files, and automate browser tasks. Bring your own AI model; connect Obsidian."
+  }
+}

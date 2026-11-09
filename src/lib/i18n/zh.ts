@@ -5,6 +5,19 @@
  */
 
 export const zh: Record<string, string> = {
+  "execution.toolCalls": "{count} 次工具调用",
+  "execution.process": "执行过程",
+  "execution.running": "执行中",
+  "chat.references": "引用的网页和文件",
+  "chat.removeFileReference": "移除文件引用：{path}",
+  "chat.previewFileReference": "预览文件：{path}",
+  "chat.switchPageReference": "切换到标签页：{title}",
+  "chat.removePageReference": "移除网页引用：{title}",
+  "chat.pageReferenceUnavailable": "该标签页已关闭或暂时无法切换。",
+  "chat.uploadFiles": "上传文件",
+  "chat.uploadingFiles": "正在上传文件…",
+  "chat.filesUploadFailed": "以下文件上传失败，请重试：{names}",
+
   // ── 内置 Agent 名称/描述 ──
   "agent.chat.name": "通用",
   "agent.chat.desc": "全能助手：读写文件、操控页面、爬取资源",
@@ -67,6 +80,11 @@ export const zh: Record<string, string> = {
   "history.empty": "暂无历史会话",
   "history.notFound": "未找到匹配的会话",
   "history.delete": "删除",
+  "history.group.today": "今天",
+  "history.group.yesterday": "昨天",
+  "history.group.last7Days": "最近 7 天",
+  "history.group.thisMonth": "本月",
+  "history.group.count": "{count} 个会话",
 
   // ── 设置页导航 ──
   "option.nav.llm": "模型",
@@ -76,7 +94,10 @@ export const zh: Record<string, string> = {
 
   // LLM 面板
   "option.llm.title": "模型连接",
-  "option.llm.desc": "配置 OpenAI 兼容 API，连接完成后 Agent 将通过此 API 与模型通信。",
+  "option.llm.desc": "配置 OpenAI 兼容模型服务。发送后，对话内容及完成任务所需的网页、文件或截图会发送到此服务；API Key 保存在本机，并会随请求发送给此服务用于身份验证。首次发送前会显示数据处理说明，请确认服务商的数据政策。",
+  "option.llm.resetDataConsent": "重新显示发送前说明",
+  "option.llm.consentResetDone": "下次发送时会再次显示数据处理说明。",
+  "option.llm.consentResetFailed": "无法重置数据处理确认，请重试。",
 
   // 思考配置（thinking mode）
   "option.thinking.title": "思考模式配置",
@@ -98,6 +119,14 @@ export const zh: Record<string, string> = {
   "option.obsidian.desc": "连接 Obsidian Local REST API 后，Agent 可以直接读写你的 vault。",
   "option.obsidian.enable": "启用 Obsidian 集成",
   "option.obsidian.apiKeyPlaceholder": "在 Obsidian 设置中获取",
+  "option.obsidian.connection.disabled": "集成未启用",
+  "option.obsidian.connection.incomplete": "请填写 API 地址和 API Key",
+  "option.obsidian.connection.checking": "正在检查连接…",
+  "option.obsidian.connection.connected": "连接成功 · {count} 个工具可用",
+  "option.obsidian.connection.empty": "已连接，但未发现可用工具",
+  "option.obsidian.connection.failed": "连接失败",
+  "option.obsidian.connection.test": "测试连接",
+  "option.obsidian.connection.hint": "检测当前填写的配置，无需先保存。状态反映最近一次检测结果；修改后请保存以供 Agent 使用。",
   "option.obsidian.whatTitle": "这是什么功能？",
   "option.obsidian.whatDesc": "Obsidian 是一款本地笔记应用。连接后，Agent 可以读取你的笔记、新建笔记、向已有笔记追加内容——把调研结果、会议纪要或任何输出直接存进你的 vault。",
   "option.obsidian.setupTitle": "如何配置",

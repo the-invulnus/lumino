@@ -2,11 +2,9 @@
  * 右侧图标导航栏（HeyGen 风格）
  *
  * 图标 40×40 在上 + 标签文字 11px 在下。
- * 内置 Agent 在前，用户自定义 Agent 在后，设置按钮在底部。
+ * 功能入口在上，历史与设置在底部；复用原有导航样式。
  */
 
-import { type AgentConfig } from "../lib/chat/mode-config"
-import type { CSSProperties } from "react"
 import { useT } from "../lib/i18n"
 
 /** 导航栏图标组件 — 使用纯 SVG 图标（无需外部依赖） */
@@ -14,6 +12,14 @@ function NavIcon({ icon }: { icon: string }) {
   const props = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const }
 
   switch (icon) {
+    case "file":
+      return <svg {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+    case "table":
+      return <svg {...props}><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 9v12M3 15h18"/></svg>
+    case "folder":
+      return <svg {...props}><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    case "history":
+      return <svg {...props}><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg>
     case "home":
       return (
         <svg {...props}>
@@ -79,82 +85,45 @@ export const AVAILABLE_ICONS = [
   "home", "settings", "custom"
 ]
 
-/** 导航栏自身的图标 key 名（与 AgentConfig.icon 不同，这是导航栏内置图标） */
-function getIconKey(agent: AgentConfig, isHome: boolean): string {
-  if (isHome) return "home"
-  if (agent.isBuiltin) return agent.icon
-  return "custom"
-}
+export type SidebarItem = { id: string; label: string; title?: string; icon: string; running?: boolean }
 
 export function IconSidebar({
-  agents,
-  currentAgentId,
-  runningAgentIds,
-  onSelectAgent,
-  onGoHome,
+  items,
+  currentView,
+  onSelect,
+  onOpenHistory,
   onOpenSettings
 }: {
-  agents: AgentConfig[]
-  currentAgentId: string | null   // null = 在首页
-  runningAgentIds: Set<string>
-  onSelectAgent: (agent: AgentConfig) => void
-  onGoHome: () => void
+  items: SidebarItem[]
+  currentView: string
+  onSelect: (id: string) => void
+  onOpenHistory: () => void
   onOpenSettings: () => void
 }) {
   const t = useT()
   return (
     <nav className="lm-icon-sidebar" aria-label={t("nav.ariaLabel")}>
-      {/* 首页 */}
-      <button
-        className={`lm-nav-item${currentAgentId === null ? " lm-nav-item--active" : ""}`}
-        title={t("nav.home")}
-        onClick={onGoHome}
-        type="button"
-      >
-        <div className="lm-nav-icon-box">
-          <NavIcon icon="home" />
-        </div>
-        <span className="lm-nav-label">{t("nav.home")}</span>
-      </button>
-
-      {/* 所有 Agent（内置 + 自定义） */}
-      {agents.map((agent) => {
-        const isRunning = runningAgentIds.has(agent.id)
-        const isActive = currentAgentId === agent.id
-        return (
-          <button
-            key={agent.id}
-            className={`lm-nav-item${isActive ? " lm-nav-item--active" : ""}`}
-            title={t(agent.name)}
-            onClick={() => onSelectAgent(agent)}
-            type="button"
-            style={{ position: "relative" } as CSSProperties}
-          >
-            <div className="lm-nav-icon-box">
-              <NavIcon icon={getIconKey(agent, false)} />
-            </div>
-            <span className="lm-nav-label">{t(agent.name)}</span>
-            {/* 运行中指示器 */}
-            {isRunning && (
-              <span className="lm-nav-running-dot" />
-            )}
-          </button>
-        )
-      })}
-
-      {/* spacer 推动设置到底部 */}
+      {items.map((item) => (
+        <button
+          key={item.id}
+          className={`lm-nav-item${currentView === item.id ? " lm-nav-item--active" : ""}`}
+          aria-current={currentView === item.id ? "page" : undefined}
+          aria-label={item.title || item.label}
+          title={item.title || item.label}
+          onClick={() => onSelect(item.id)}
+          type="button"
+        >
+          <div className="lm-nav-icon-box"><NavIcon icon={item.icon} /></div>
+          <span className="lm-nav-label">{item.label}</span>
+          {item.running && <span className="lm-nav-running-dot" />}
+        </button>
+      ))}
       <div className="lm-nav-spacer" />
-
-      {/* 设置 */}
-      <button
-        className="lm-nav-item"
-        title={t("nav.settings")}
-        onClick={onOpenSettings}
-        type="button"
-      >
-        <div className="lm-nav-icon-box">
-          <NavIcon icon="settings" />
-        </div>
+      <button className="lm-nav-item" title={t("chat.tooltip.history")} aria-label={t("chat.tooltip.history")} onClick={onOpenHistory} type="button">
+        <div className="lm-nav-icon-box"><NavIcon icon="history" /></div>
+      </button>
+      <button className="lm-nav-item" title={t("nav.settings")} onClick={onOpenSettings} type="button">
+        <div className="lm-nav-icon-box"><NavIcon icon="settings" /></div>
         <span className="lm-nav-label">{t("nav.settings")}</span>
       </button>
     </nav>

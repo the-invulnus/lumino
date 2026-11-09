@@ -5,7 +5,7 @@ import { getAgentWindowId } from "./agent-window"
 // ═══════════════════════════════════════════
 
 /** 驱逐文件存储目录 */
-export const EVICT_DIR = "/large_tool_results"
+export { TOOL_RESULTS_DIR as EVICT_DIR } from "../../fs/workspace-paths"
 
 /** fetch_resource 下载文件存储目录 */
 export const DOWNLOADS_DIR = "/downloads"

@@ -1,0 +1,307 @@
+/* Workbench uses the existing theme tokens and keeps the narrow sidebar first. */
+.wb-shell { font-family: var(--lumi-font); }
+.wb-shell *, .wb-shell *::before, .wb-shell *::after { box-sizing: border-box; }
+.wb-shell button { cursor: pointer; }
+.wb-shell button:disabled { cursor: default; opacity: .5; }
+/* The composer shell owns its focus border; do not outline its inner textarea. */
+.wb-shell :is(button, input, textarea, a):not(.lm-input--composer):focus-visible { outline: 2px solid var(--lumi-accent-b); outline-offset: 2px; }
+.wb-shell .lm-input.lm-input--composer:focus-visible { outline: none; box-shadow: none; }
+.wb-icon-button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--lumi-text-soft); }
+.wb-icon-button:hover { background: var(--lumi-well); color: var(--lumi-text); }
+.wb-local-dot { width: 5px; height: 5px; background: var(--lumi-success); border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.wb-main, .wb-view { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
+.wb-view[hidden] { display: none; }
+.wb-chat-empty { margin: auto; padding: 24px 12px; max-width: 280px; text-align: center; }
+.wb-chat-empty-title { margin: 0 0 8px; color: var(--lumi-text-soft); font-size: var(--lumi-text-md); font-weight: var(--lumi-weight-medium); }
+.wb-chat-empty-hint { margin: 0; color: var(--lumi-text-soft); font-size: 12px; line-height: 1.8; }
+.wb-chat-empty-context { margin: 14px 0 0; color: var(--lumi-text-faint); font-size: 11px; line-height: 1.7; }
+
+.wb-home { width: 100%; padding: 4px 0 16px; }
+.wb-home .lm-home-card { min-width: 0; padding: 12px 10px; gap: 8px; }
+.wb-home .lm-home-card-icon { width: 28px; height: 28px; }
+.wb-home .lm-home-card-name { font-size: var(--lumi-text-base); line-height: var(--lumi-leading-snug); }
+.wb-home .lm-home-card-desc { overflow-wrap: anywhere; }
+.wb-section-label { font-size: var(--lumi-text-xs); color: var(--lumi-text-soft); font-weight: var(--lumi-weight-semibold); }
+.wb-shell .lm-composer { padding-top: 7px; position: relative; }
+.wb-context-bar { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; padding: 0 3px 8px; max-height: 82px; overflow: auto; }
+.wb-context-add { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 26px; height: 26px; padding: 0; border: 1px solid var(--lumi-border-strong); border-radius: var(--lumi-radius-control); font-size: 16px; line-height: 1; background: var(--lumi-tile); color: var(--lumi-text-soft); }
+.wb-context-add:hover { background: var(--lumi-tile-hover); }
+.wb-context-bar > .wb-reference-chip { max-width: min(210px, calc(100% - 31px)); height: 26px; }
+.wb-reference-chips { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; white-space: normal; }
+.wb-reference-chip { display: inline-flex; align-items: center; gap: 5px; max-width: min(210px, 100%); min-width: 0; padding: 4px 7px; border: 1px solid var(--lumi-border-strong); border-radius: 7px; background: var(--lumi-tile); color: var(--lumi-text-soft); font: 11px/1.4 var(--lumi-font); text-decoration: none; }
+.wb-reference-chip:is(a, button):hover { background: var(--lumi-tile-hover); }
+.wb-reference-chip > svg, .wb-reference-icon { flex-shrink: 0; display: flex; }
+.wb-reference-icon svg { width: 13px; height: 13px; }
+.wb-reference-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-reference-file, .wb-reference-page { padding: 0; gap: 0; }
+.wb-reference-open { display: inline-flex; align-items: center; flex: 1; gap: 5px; min-width: 0; padding: 4px 7px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; text-align: left; }
+.wb-reference-remove { display: inline-flex; align-items: center; justify-content: center; align-self: stretch; flex-shrink: 0; width: 23px; padding: 0; border: 0; border-radius: 0 6px 6px 0; background: transparent; color: var(--lumi-text-soft); font-size: 14px; line-height: 1; }
+.wb-reference-open:is(button):hover, .wb-reference-remove:hover { background: var(--lumi-tile-hover); color: var(--lumi-text); }
+.wb-composer-files { padding: 10px 12px 0; max-height: 90px; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--lumi-border-strong) transparent; }
+.wb-message-references { justify-content: flex-end; align-self: flex-end; max-width: 94%; margin-bottom: 7px; }
+.wb-composer-icon-button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 28px; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; color: var(--lumi-text-soft); background: transparent; }
+.wb-composer-icon-button:hover:not(:disabled) { color: var(--lumi-text); background: var(--lumi-well); }
+.wb-upload-spinner { animation: wb-upload-spin .8s linear infinite; }
+@keyframes wb-upload-spin { to { transform: rotate(360deg); } }
+.wb-shell .lm-composer__toolbar { gap: 6px; }
+.wb-shell .lm-composer__spacer { min-width: 4px; }
+.wb-shell .lm-composer-thinking { flex: 0 1 auto; min-width: 0; max-width: min(50%, 170px); }
+.wb-shell .lm-composer-thinking__trigger { max-width: 100%; height: 28px; gap: 5px; padding: 0 9px; font-size: 11px; color: var(--lumi-text-soft); }
+.wb-shell .lm-composer-thinking__trigger > svg { flex-shrink: 0; }
+.wb-shell .lm-composer-thinking__menu { left: auto; right: 0; width: max-content; min-width: 140px; max-width: 220px; }
+.wb-shell .lm-composer-thinking__item { white-space: normal; overflow-wrap: anywhere; }
+.wb-tab-picker { position: absolute; bottom: calc(100% - 2px); left: 0; right: 0; max-height: min(360px, 48vh); overflow: auto; background: var(--lumi-surface-solid); border: 1px solid var(--lumi-border-strong); box-shadow: 0 8px 35px var(--lumi-border-strong); border-radius: 13px; padding: 12px; z-index: 20; }
+/* Shared scroll treatment for page lists, pickers and editors. */
+.wb-shell :is(.wb-context-bar, .wb-tab-picker, .wb-page-scroll, .lm-history-panel-list, .wb-file-editor, .wb-document, .wb-task-form textarea) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--lumi-border-strong) transparent;
+}
+/* Only outer panels contain scrolling. Documents often have horizontal overflow
+   but no vertical scroll range; containing them traps the wheel over the text. */
+.wb-shell :is(.wb-context-bar, .wb-tab-picker, .wb-page-scroll) { overscroll-behavior: contain; }
+.wb-shell :is(.wb-document, .wb-file-editor, .wb-task-form textarea) { overscroll-behavior: auto; }
+.wb-shell :is(.wb-context-bar, .wb-tab-picker, .wb-page-scroll, .lm-history-panel-list, .wb-file-editor, .wb-document, .wb-task-form textarea):hover { scrollbar-color: var(--lumi-text-faint) transparent; }
+.wb-shell :is(.wb-context-bar, .wb-tab-picker, .wb-page-scroll, .lm-history-panel-list, .wb-file-editor, .wb-document, .wb-task-form textarea)::-webkit-scrollbar { width: 4px; height: 4px; }
+.wb-shell :is(.wb-context-bar, .wb-tab-picker, .wb-page-scroll, .lm-history-panel-list, .wb-file-editor, .wb-document, .wb-task-form textarea)::-webkit-scrollbar-track { background: transparent; }
+.wb-shell :is(.wb-context-bar, .wb-tab-picker, .wb-page-scroll, .lm-history-panel-list, .wb-file-editor, .wb-document, .wb-task-form textarea)::-webkit-scrollbar-thumb { background: var(--lumi-border-strong); border-radius: 999px; }
+.wb-shell :is(.wb-context-bar, .wb-tab-picker, .wb-page-scroll, .lm-history-panel-list, .wb-file-editor, .wb-document, .wb-task-form textarea):hover::-webkit-scrollbar-thumb { background: var(--lumi-text-faint); }
+.wb-shell :is(.wb-context-bar, .wb-tab-picker, .wb-page-scroll, .lm-history-panel-list, .wb-file-editor, .wb-document, .wb-task-form textarea)::-webkit-scrollbar-button { display: none; }
+.wb-shell :is(.wb-context-bar, .wb-tab-picker, .wb-page-scroll, .lm-history-panel-list, .wb-file-editor, .wb-document, .wb-task-form textarea)::-webkit-scrollbar-corner { background: transparent; }
+.wb-tab-picker .wb-section-heading { margin: 0 0 7px; font-size: 11px; }
+.wb-tab-choice { display: flex; align-items: center; gap: 9px; padding: 10px 4px; border-top: 1px solid var(--lumi-border); cursor: pointer; }
+.wb-tab-choice > span { min-width: 0; }
+.wb-tab-choice strong, .wb-tab-choice small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 500; }
+.wb-tab-choice small { color: var(--lumi-text-soft); font-size: 10px; margin-top: 3px; }
+.wb-tab-choice input { accent-color: var(--lumi-accent-a); }
+.wb-page {
+  --wb-paper: #fffdfb;
+  --wb-toolbar: #edf2f5;
+  --wb-library: #f0ebf6;
+  --wb-warm: #f6eee5;
+  --wb-selected: #ece5f8;
+  --wb-icon-blue: #54798d;
+  --wb-icon-purple: #806494;
+  --wb-icon-coral: #ab7162;
+  --wb-icon-gold: #a58143;
+  display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; overflow: hidden;
+  color: var(--lumi-text); font-size: var(--lumi-text-base); line-height: var(--lumi-leading-relaxed);
+}
+/* Keep the same warm paper, mist blue and lavender hierarchy in dark mode. */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="paper"] .wb-page {
+    --wb-paper: #292421; --wb-toolbar: #262e33; --wb-library: #302938;
+    --wb-warm: #342c24; --wb-selected: #42344f;
+    --wb-icon-blue: #a5c9dc; --wb-icon-purple: #c4a9db;
+    --wb-icon-coral: #e5a899; --wb-icon-gold: #dbbb85;
+  }
+}
+.wb-page-header { flex-shrink: 0; padding: 4px 6px 0; }
+.wb-page-header .wb-segment-row { margin-bottom: 0; }
+.wb-page-scroll { flex: 1; min-height: 0; min-width: 0; overflow: auto; padding: 10px 6px 12px; scrollbar-gutter: stable; }
+.wb-page-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.wb-page-heading h1 { font-size: 18px; font-weight: var(--lumi-weight-semibold); margin: 0; }
+.wb-page-heading p { color: var(--lumi-text-soft); font-size: var(--lumi-text-base); line-height: var(--lumi-leading-relaxed); margin: 6px 0 2px; }
+.wb-page .wb-button { font-size: var(--lumi-text-base); background: var(--wb-paper); box-shadow: var(--lumi-shadow-card); }
+.wb-page .wb-button:hover:not(:disabled) { background: var(--lumi-tile-hover); }
+.wb-page .wb-button--primary { background: var(--wb-library); }
+.wb-page .wb-button--primary:hover:not(:disabled) { background: var(--wb-selected); }
+.wb-page .wb-text-button { font-size: 12px; }
+.wb-page .wb-confirm-actions .wb-button--danger { background: var(--lumi-danger-bg); }
+.wb-count { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; min-width: 24px; padding: 2px 7px; border-radius: 6px; background: var(--lumi-well); color: var(--lumi-text-soft); font-size: 11px; font-weight: 500; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.wb-stats { display: flex; gap: 22px; padding: 14px 0; color: var(--lumi-text-soft); font-size: 10px; border-bottom: 1px solid var(--lumi-border); }
+.wb-stats strong { font-size: var(--lumi-text-lg); color: var(--lumi-text); font-weight: 500; margin-right: 3px; }
+.wb-segment-row, .wb-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 22px 0 14px; }
+.wb-segments { display: flex; gap: 17px; }
+.wb-segments button { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--lumi-text-soft); font-size: 12px; padding: 5px 0 8px; }
+.wb-segments button.is-active { border-bottom-color: var(--lumi-accent-a); color: var(--lumi-text); font-weight: 600; }
+.wb-list-tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; }
+.wb-search, .wb-task-form input, .wb-task-form textarea { border: 1px solid var(--lumi-border-strong); border-radius: 8px; background: var(--lumi-tile); color: var(--lumi-text); font-size: 12px; padding: 11px; width: 100%; outline: none; }
+.wb-button { border: 1px solid var(--lumi-border-strong); background: var(--lumi-tile); color: var(--lumi-text); min-height: 32px; padding: 6px 12px; border-radius: var(--lumi-radius-control); font-size: 12px; line-height: var(--lumi-leading-snug); font-weight: var(--lumi-weight-medium); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.wb-button:hover:not(:disabled) { background: var(--lumi-well); }
+/* Match the existing neutral form actions instead of adding another gradient CTA. */
+.wb-button--primary { background: var(--lumi-tile-hover); color: var(--lumi-text); box-shadow: none; }
+.wb-button--primary:hover:not(:disabled) { background: var(--lumi-well); box-shadow: none; }
+.wb-text-button { border: 0; background: transparent; color: var(--lumi-text-soft); font-size: 11px; padding: 5px 2px; }
+.wb-text-button:hover { color: var(--lumi-accent-a); }
+.wb-save-shortcut { margin-right: 10px; font-size: 10px; }
+.wb-source-list { display: flex; flex-direction: column; gap: 12px; }
+.wb-source-card { width: 100%; padding: 16px; border: 1px solid var(--lumi-border-strong); background: var(--lumi-tile); color: var(--lumi-text); border-radius: 12px; text-align: left; }
+.wb-source-card:hover { border-color: var(--lumi-accent-a); }
+.wb-source-top { display: flex; justify-content: space-between; gap: 8px; color: var(--lumi-text-soft); font-size: 11px; margin-bottom: 12px; }
+.wb-source-domain { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 10px var(--lumi-mono); }
+.wb-source-card > strong { font-size: 14px; line-height: 1.6; display: block; overflow-wrap: anywhere; }
+.wb-source-card p { font-size: 11px; color: var(--lumi-text-soft); line-height: 1.8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 8px 0 14px; }
+.wb-card-meta { font-size: 9px; color: var(--lumi-text-soft); }
+.wb-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 42px 12px; }
+.wb-empty-icon { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--lumi-border-strong); background: var(--lumi-well); color: var(--lumi-accent-a); border-radius: 12px; margin-bottom: 15px; }
+.wb-empty-icon svg { width: 27px; height: 27px; }
+.wb-empty h2 { font-size: 15px; font-weight: 500; }
+.wb-empty p { font-size: 12px; color: var(--lumi-text-soft); line-height: 1.8; margin-top: 0; max-width: 270px; }
+/* File manager: persistent navigation, one directory at a time. */
+.wb-explorer-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 10px; }
+.wb-explorer-title h1 { margin: 0; font-size: 18px; font-weight: var(--lumi-weight-semibold); }
+.wb-explorer-title-actions { display: flex; align-items: center; gap: 5px; }
+.wb-explorer-toolbar { padding: 8px; border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-panel); background: var(--wb-toolbar); box-shadow: var(--lumi-shadow-panel); }
+/* The frame stays aligned with the toolbar; only its contents scroll. */
+.wb-explorer-body { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; margin: 10px 6px 6px; border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-panel); background: var(--wb-paper); box-shadow: var(--lumi-shadow-panel); overflow: hidden; }
+.wb-explorer-body > .wb-page-scroll { padding: 12px 8px; }
+.wb-hidden-toggle[aria-pressed="true"] { color: var(--lumi-accent-b); background: var(--lumi-well); }
+.wb-confirm-dialog { width: min(340px, calc(100vw - 32px)); max-height: calc(100vh - 40px); padding: 0; margin: auto; overflow: auto; border: 1px solid var(--lumi-border-strong); border-radius: 15px; background: var(--lumi-surface-solid); color: var(--lumi-text); box-shadow: 0 16px 50px rgba(30, 24, 21, .18); font-family: var(--lumi-font); scrollbar-width: thin; scrollbar-color: var(--lumi-border-strong) transparent; }
+.wb-confirm-dialog::backdrop { background: rgba(35, 29, 25, .22); backdrop-filter: blur(3px); }
+.wb-confirm-body { padding: 22px; }
+.wb-confirm-body h2 { margin: 0 0 10px; font-size: 16px; line-height: 1.5; font-weight: var(--lumi-weight-semibold); overflow-wrap: anywhere; }
+.wb-confirm-body p { margin: 0; color: var(--lumi-text-soft); font-size: 12px; line-height: 1.8; white-space: pre-wrap; }
+.wb-confirm-detail { margin-top: 14px; padding: 10px 12px; max-height: 130px; overflow: auto; overflow-wrap: anywhere; border: 1px solid var(--lumi-border); border-radius: 8px; background: var(--lumi-well); color: var(--lumi-text); font: 11px/1.7 var(--lumi-mono); white-space: pre-wrap; }
+.wb-confirm-body .wb-confirm-warning { margin-top: 12px; color: var(--lumi-danger-text); }
+.wb-confirm-actions { display: flex; gap: 10px; margin-top: 22px; }
+.wb-confirm-actions .wb-button { flex: 1; min-height: 35px; }
+.wb-confirm-actions .wb-button--danger { border-color: var(--lumi-danger-border); background: var(--lumi-danger-bg); }
+.wb-data-use-dialog { width: min(420px, calc(100vw - 32px)); }
+.wb-data-use-body h2 { font-size: 17px; }
+.wb-data-use-body > p { font-size: 12px; line-height: 1.75; }
+.wb-data-use-list { margin: 10px 0 0; padding-left: 20px; color: var(--lumi-text-soft); font-size: 12px; line-height: 1.75; }
+.wb-data-use-list li + li { margin-top: 5px; }
+.wb-data-use-body .wb-data-use-note { margin-top: 14px; padding: 10px 12px; border: 1px solid var(--lumi-border); border-radius: 9px; background: var(--lumi-well); color: var(--lumi-text-soft); font-size: 11px; line-height: 1.7; }
+.wb-data-use-dialog .wb-confirm-actions { margin-top: 18px; }
+.wb-collect-button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 5px 8px; }
+.wb-collect-button > svg { color: var(--wb-icon-gold); }
+.wb-explorer-navigation { display: flex; align-items: center; gap: 1px; min-width: 0; margin-bottom: 8px; }
+.wb-explorer-navigation > .wb-icon-button { flex: 0 0 28px; width: 28px; height: 28px; }
+.wb-breadcrumbs { display: flex; align-items: center; flex: 1; min-width: 0; gap: 2px; overflow-x: auto; scrollbar-width: none; color: var(--lumi-text-soft); }
+.wb-breadcrumbs::-webkit-scrollbar { display: none; }
+.wb-breadcrumbs > span { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+.wb-breadcrumbs button, .wb-breadcrumbs strong { border: 0; border-radius: 5px; background: transparent; color: inherit; font: 12px/1.5 var(--lumi-font); padding: 4px; max-width: 140px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.wb-breadcrumbs > button { display: inline-flex; align-items: center; flex-shrink: 0; }
+.wb-breadcrumbs button:hover { background: var(--lumi-well); color: var(--lumi-text); }
+.wb-breadcrumbs [aria-current], .wb-breadcrumbs strong { color: var(--lumi-text); }
+.wb-explorer-controls { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.wb-explorer-search { display: flex; position: relative; flex: 1; min-width: 0; height: 34px; }
+.wb-explorer-search .wb-search { padding: 7px 25px 7px 29px; min-width: 0; height: 34px; margin: 0; font: 13px/18px var(--lumi-font); background: var(--wb-paper); border-color: var(--lumi-border); }
+.wb-explorer-search > svg { position: absolute; z-index: 1; left: 9px; top: 9px; color: var(--lumi-text-soft); pointer-events: none; }
+.wb-explorer-search > button { position: absolute; right: 1px; top: 3px; width: 25px; height: 28px; }
+.wb-sort-select { flex: 0 1 84px; min-width: 62px; max-width: 100px; height: 34px; padding: 0 4px; border: 1px solid var(--lumi-border); border-radius: 8px; font: 12px var(--lumi-font); background: var(--wb-paper); color: var(--lumi-text-soft); }
+.wb-view-switch { display: flex; flex-shrink: 0; padding: 2px; border: 1px solid var(--lumi-border); border-radius: 8px; background: var(--lumi-well); }
+.wb-view-switch .wb-icon-button { width: 28px; height: 28px; border-radius: 5px; }
+.wb-view-switch [aria-pressed="true"] { background: var(--wb-paper); color: var(--lumi-text); box-shadow: 0 1px 3px var(--lumi-border); }
+.wb-directory-panel, .wb-detail { min-width: 0; }
+.wb-directory-caption { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; font-size: var(--lumi-text-base); }
+.wb-directory-caption > span:first-child { color: var(--lumi-text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-directory-description { margin: -2px 0 10px; font-size: 12px; line-height: 1.6; color: var(--lumi-text-soft); }
+.wb-file-browser { --wb-file-columns: 26px minmax(0, 1fr) 58px 62px; min-width: 0; }
+.wb-file-browser.is-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 108px), 1fr)); align-items: start; gap: 6px 8px; }
+.wb-browser-item { position: relative; min-width: 0; border: 0; border-radius: var(--lumi-radius-control); background: transparent; transition: background var(--lumi-motion-duration-micro); }
+.wb-browser-item:hover { background: var(--lumi-tile-hover); }
+.wb-file-browser .wb-browser-item.is-selected { background: var(--wb-selected); }
+.wb-browser-entry { display: flex; align-items: center; width: 100%; min-width: 0; border: 0; border-radius: inherit; color: var(--lumi-text); background: transparent; text-align: left; font: 12px/1.5 var(--lumi-font); }
+.is-grid .wb-browser-entry { flex-direction: column; justify-content: flex-start; padding: 8px 6px; gap: 7px; min-height: 84px; text-align: center; }
+.wb-file-glyph { display: inline-flex; position: relative; align-items: center; justify-content: center; width: 48px; height: 50px; flex-shrink: 0; color: var(--lumi-text-soft); }
+.wb-file-glyph svg { width: 44px; height: 50px; }
+.wb-file-glyph > span { position: absolute; bottom: 9px; max-width: 38px; font: 8px/1 var(--lumi-mono); font-weight: 600; letter-spacing: .2px; }
+.wb-file-glyph.is-folder { color: var(--wb-folder-color, #d5ae77); width: 54px; }
+.wb-file-glyph.is-folder svg { width: 54px; height: 44px; }
+.is-grid .wb-file-glyph { width: 44px; height: 40px; }
+.is-grid .wb-file-glyph svg { width: 35px; height: 40px; }
+.is-grid .wb-file-glyph.is-folder svg { width: 44px; height: 36px; }
+.is-grid .wb-file-glyph > span { bottom: 7px; }
+.wb-file-glyph.is-folder-favorite { --wb-folder-color: #d8ae75; --wb-folder-ink: #795322; }
+.wb-file-glyph.is-folder-uploads { --wb-folder-color: #96b9d8; --wb-folder-ink: #365f83; }
+.wb-file-glyph.is-folder-downloads { --wb-folder-color: #a0bfae; --wb-folder-ink: #3e6450; }
+.wb-file-glyph.is-folder-screenshots { --wb-folder-color: #d3a5ae; --wb-folder-ink: #805260; }
+.wb-file-glyph.is-folder-notes { --wb-folder-color: #b5a2cd; --wb-folder-ink: #60497c; }
+.wb-file-glyph.is-folder-projects { --wb-folder-color: #9daecc; --wb-folder-ink: #405675; }
+.wb-folder-mark { color: var(--wb-folder-ink); }
+.is-list .wb-folder-mark { stroke-width: 2.1; }
+.wb-browser-label { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; max-width: 100%; }
+.wb-browser-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--lumi-text-base); font-weight: 500; }
+.wb-browser-meta { font-size: 11px; color: var(--lumi-text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.is-grid .wb-browser-label { flex: none; width: 100%; }
+.wb-browser-columns { display: grid; grid-template-columns: var(--wb-file-columns); gap: 8px; padding: 7px 8px; font-size: 11px; color: var(--lumi-text-soft); border-bottom: 1px solid var(--lumi-border); }
+.wb-browser-columns > span:first-child { grid-column: 2; }
+.wb-browser-columns > span:not(:first-child) { text-align: right; }
+.is-list .wb-browser-entry { display: grid; grid-template-columns: var(--wb-file-columns); gap: 8px; min-height: 42px; padding: 6px 8px; }
+.is-list .wb-browser-item { border-radius: 6px; margin-top: 3px; }
+.is-list .wb-file-glyph { width: 25px; height: 29px; }
+.is-list .wb-file-glyph svg { width: 25px; height: 29px; }
+.is-list .wb-file-glyph > span { display: none; }
+.wb-browser-size, .wb-browser-date { font: 11px var(--lumi-font); font-variant-numeric: tabular-nums; color: var(--lumi-text-soft); text-align: right; white-space: nowrap; }
+.wb-preview-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.wb-preview-actions .wb-button { min-height: 32px; padding: 5px 8px; }
+.wb-preview-actions > .wb-icon-button { margin-left: auto; }
+.wb-file-menu { position: fixed; z-index: 100; width: 180px; max-width: calc(100vw - 16px); padding: 5px; border: 1px solid var(--lumi-border-strong); border-radius: 10px; background: var(--lumi-surface-solid); box-shadow: 0 8px 28px var(--lumi-border-strong); }
+.wb-file-menu button { display: block; width: 100%; border: 0; border-radius: 5px; padding: 9px 10px; text-align: left; color: var(--lumi-text); background: transparent; font: 13px var(--lumi-font); }
+.wb-file-menu button:hover { background: var(--lumi-well); }
+.wb-file-menu button.is-danger { color: var(--lumi-danger-text); border-top: 1px solid var(--lumi-border); border-radius: 0 0 5px 5px; margin-top: 3px; }
+.wb-button--danger { color: var(--lumi-danger-text); }
+.wb-button--danger:hover:not(:disabled) { background: var(--lumi-danger-bg); border-color: var(--lumi-danger-border); }
+.wb-media-preview { width: 100%; min-width: 0; padding: 12px 0; }
+.wb-media-preview img, .wb-media-preview video { display: block; width: auto; max-width: 100%; max-height: 65vh; margin: 0 auto; border-radius: 6px; }
+.wb-media-preview audio { width: 100%; }
+.wb-media-preview iframe { display: block; width: 100%; height: 65vh; min-height: 350px; border: 0; border-radius: 7px; background: var(--lumi-well); }
+.wb-binary-preview { padding: 40px 15px; text-align: center; }
+.wb-explorer .wb-empty > .wb-file-glyph { margin-bottom: 10px; }
+@media (max-width: 440px) {
+  .wb-file-browser { --wb-file-columns: 26px minmax(0, 1fr) 50px; }
+  .wb-browser-date, .wb-browser-columns > span:last-child { display: none; }
+  .wb-sort-select { flex-basis: 60px; }
+}
+.wb-detail-heading { display: flex; align-items: center; gap: 9px; padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid var(--lumi-border); }
+.wb-detail-heading > div { min-width: 0; }
+.wb-detail-heading .wb-file-glyph { width: 30px; height: 36px; }
+.wb-detail-heading .wb-file-glyph svg { width: 30px; height: 36px; }
+.wb-detail-heading .wb-file-glyph > span { display: none; }
+.wb-detail-heading h2 { font-size: var(--lumi-text-md); font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; margin: 0; }
+.wb-path { font: 11px/1.5 var(--lumi-mono); margin: 3px 0 0; color: var(--lumi-text-soft); overflow-wrap: anywhere; }
+.wb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 14px 0; }
+.wb-file-editor { width: 100%; height: 320px; resize: vertical; padding: 10px; background: var(--lumi-tile); color: var(--lumi-text); border: 1px solid var(--lumi-border-strong); border-radius: 8px; font: 13px/1.65 var(--lumi-mono); }
+.wb-html-preview { width: 100%; height: 430px; background: white; border: 1px solid var(--lumi-border-strong); border-radius: 8px; }
+.wb-document { font: 13px/1.65 var(--lumi-font); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--lumi-text); overflow: auto; margin: 0; }
+pre.wb-document { padding: 10px; border-radius: 8px; background: var(--lumi-tile); font-family: var(--lumi-mono); }
+article.wb-document { white-space: normal; }
+.wb-document table { border-collapse: collapse; font-size: 13px; }
+.wb-document th, .wb-document td { border: 1px solid var(--lumi-border-strong); padding: 7px; }
+.wb-document img { max-width: 100%; }
+.wb-source-link, .wb-document a { color: var(--lumi-accent-a); }
+/* Shortcuts use the assistant's card scale, with separate surfaces for starters
+   and saved instructions so the page has a readable hierarchy at sidebar width. */
+.wb-task-section { padding: 12px; border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-panel); box-shadow: var(--lumi-shadow-panel); }
+.wb-task-section + .wb-task-section { margin-top: 12px; }
+.wb-task-section--starters { background: var(--wb-toolbar); }
+.wb-task-section--saved { background: var(--wb-library); }
+.wb-tasks .wb-section-heading { margin: 0 0 10px; min-height: 24px; }
+.wb-tasks .wb-section-heading h2 { margin: 0; font-size: var(--lumi-text-base); font-weight: 600; }
+.wb-tasks .wb-count { background: var(--wb-paper); }
+.wb-task-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.wb-task-starter { display: grid; grid-template-columns: 1fr auto; align-content: start; align-items: center; gap: 7px; min-width: 0; padding: 10px; border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-card); background: var(--wb-paper); color: var(--lumi-text); text-align: left; font-family: var(--lumi-font); box-shadow: var(--lumi-shadow-card); transition: box-shadow var(--lumi-motion-duration-micro), border-color var(--lumi-motion-duration-micro); }
+.wb-task-starter:hover { border-color: var(--lumi-border-strong); box-shadow: var(--lumi-shadow-elevated); }
+.wb-task-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 30px; height: 30px; border-radius: 9px; background: var(--wb-library); color: var(--wb-icon-purple); }
+.wb-task-starter--summarize .wb-task-icon { background: var(--wb-toolbar); color: var(--wb-icon-blue); }
+.wb-task-starter--compare .wb-task-icon { background: var(--wb-warm); color: var(--wb-icon-gold); }
+.wb-task-starter--design .wb-task-icon { background: var(--wb-warm); color: var(--wb-icon-coral); }
+.wb-task-arrow { align-self: start; color: var(--lumi-text-soft); font-size: 15px; line-height: 1.2; }
+.wb-task-copy { grid-column: 1 / -1; min-width: 0; overflow-wrap: anywhere; }
+.wb-task-copy strong, .wb-task-copy small { display: block; font-size: var(--lumi-text-base); font-weight: 600; line-height: 1.5; }
+.wb-task-copy small { font-size: 12px; font-weight: 400; color: var(--lumi-text-soft); margin-top: 3px; }
+.wb-task-empty { display: flex; flex-direction: column; align-items: center; border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-card); background: var(--wb-paper); padding: 16px 12px; text-align: center; color: var(--lumi-text-soft); }
+.wb-task-empty p { font-size: var(--lumi-text-base); line-height: 1.6; margin: 8px 0 12px; max-width: 240px; }
+.wb-task-form { padding: 14px; border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-panel); background: var(--wb-paper); box-shadow: var(--lumi-shadow-panel); }
+.wb-task-form-heading { display: flex; align-items: center; gap: 8px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--lumi-border); }
+.wb-task-form-heading h2 { font-size: var(--lumi-text-md); font-weight: 600; margin: 0; }
+.wb-task-form label { display: block; font-size: var(--lumi-text-base); font-weight: 500; line-height: 1.5; margin-bottom: 12px; }
+.wb-task-form input, .wb-task-form textarea { display: block; margin-top: 6px; padding: 9px 10px; font: 13px/1.65 var(--lumi-font); background: var(--lumi-tile); }
+.wb-task-form textarea { resize: vertical; }
+.wb-task-form .wb-actions { margin: 4px 0 0; }
+.wb-saved-task-list { display: grid; gap: 8px; }
+.wb-saved-task { background: var(--wb-paper); border: 1px solid var(--lumi-border); border-radius: var(--lumi-radius-card); padding: 12px; box-shadow: var(--lumi-shadow-card); }
+.wb-saved-task h2 { font-size: 14px; font-weight: 600; line-height: 1.5; margin: 0 0 5px; overflow-wrap: anywhere; }
+.wb-saved-task p { font-size: var(--lumi-text-base); line-height: 1.6; color: var(--lumi-text-soft); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; margin: 0; }
+.wb-saved-task .wb-card-meta { display: block; font-size: 11px; margin-bottom: 5px; }
+.wb-saved-task .wb-muted { display: block; margin-top: 6px; font-size: 12px; line-height: 1.5; }
+.wb-saved-task .wb-actions { margin: 10px 0 0; padding-top: 8px; gap: 10px; border-top: 1px solid var(--lumi-border); }
+.wb-saved-task .wb-actions .wb-button { margin-right: auto; padding: 5px 9px; }
+.wb-page-footer { font-size: 12px; color: var(--lumi-text-soft); margin: 12px 2px 0; line-height: 1.6; }
+.wb-error { background: var(--lumi-danger-bg); border: 1px solid var(--lumi-danger-border); color: var(--lumi-danger-text); border-radius: 8px; padding: 10px; font-size: 11px; line-height: 1.7; }
+.wb-notice { color: var(--lumi-success); font-size: 11px; padding: 6px 0; overflow-wrap: anywhere; }
+.wb-muted { color: var(--lumi-text-soft); font-size: 12px; line-height: 1.8; }
+@media (max-width: 380px) { .wb-home .lm-home-grid { grid-template-columns: 1fr; } .wb-section-heading { flex-wrap: wrap; } }
+
+@media (prefers-reduced-motion: reduce) { .wb-shell *, .wb-shell *::before, .wb-shell *::after { animation: none !important; transition: none !important; } }

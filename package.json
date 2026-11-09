@@ -1,8 +1,8 @@
 {
   "name": "lumino",
-  "displayName": "Lumino: Browse and Build with AI Agent",
-  "version": "1.0.2",
-  "description": "A free AI assistant for deep research, knowledge management, web replication, browser automation, etc. — powered by your own LLM.",
+  "displayName": "Lumino - AI 网页助手、总结与笔记",
+  "version": "1.1.1",
+  "description": "浏览器侧边栏 AI 助手：总结网页、对比标签页、整理笔记与文件、执行网页任务。支持自选 AI 模型与 Obsidian 集成。",
   "author": "the invulnus",
   "scripts": {
     "dev": "NODE_OPTIONS='--no-deprecation' plasmo dev",
@@ -24,6 +24,9 @@
     "zod": "3.25.76"
   },
   "manifest": {
+    "name": "__MSG_extensionName__",
+    "description": "__MSG_extensionDescription__",
+    "default_locale": "zh_CN",
     "permissions": [
       "storage",
       "sidePanel",

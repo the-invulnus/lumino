@@ -1,4 +1,5 @@
 import { writeWorkspaceFileBytes } from "../../fs/workspace"
+import { SCREENSHOTS_DIR } from "../../fs/workspace-paths"
 import { getAgentWindowId } from "./agent-window"
 import {
   executeScriptWithRetry,
@@ -573,7 +574,7 @@ export async function handleScreenshot(
 
     const ext = format === "png" ? "png" : "jpg"
     const timestamp = Date.now()
-    const savePath = `/screenshots/screenshot_${timestamp}_tab${tabId}.${ext}`
+    const savePath = `${SCREENSHOTS_DIR}/screenshot_${timestamp}_tab${tabId}.${ext}`
 
     await writeWorkspaceFileBytes(savePath, bytes)
 

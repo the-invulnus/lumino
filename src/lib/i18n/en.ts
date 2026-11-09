@@ -5,6 +5,19 @@
  */
 
 export const en: Record<string, string> = {
+  "execution.toolCalls": "{count} tool calls",
+  "execution.process": "Execution details",
+  "execution.running": "Running",
+  "chat.references": "Referenced pages and files",
+  "chat.removeFileReference": "Remove file reference: {path}",
+  "chat.previewFileReference": "Preview file: {path}",
+  "chat.switchPageReference": "Switch to tab: {title}",
+  "chat.removePageReference": "Remove page reference: {title}",
+  "chat.pageReferenceUnavailable": "This tab is closed or temporarily unavailable.",
+  "chat.uploadFiles": "Upload files",
+  "chat.uploadingFiles": "Uploading files…",
+  "chat.filesUploadFailed": "Could not upload these files. Please try again: {names}",
+
   // ── 内置 Agent 名称/描述 ──
   "agent.chat.name": "Chat",
   "agent.chat.desc": "All-in-one: read & write files, control pages, scrape resources",
@@ -67,6 +80,11 @@ export const en: Record<string, string> = {
   "history.empty": "No history yet",
   "history.notFound": "No matching chats found",
   "history.delete": "Delete",
+  "history.group.today": "Today",
+  "history.group.yesterday": "Yesterday",
+  "history.group.last7Days": "Last 7 days",
+  "history.group.thisMonth": "This month",
+  "history.group.count": "{count} chats",
 
   // ── 设置页导航 ──
   "option.nav.llm": "Model",
@@ -76,7 +94,10 @@ export const en: Record<string, string> = {
 
   // LLM 面板
   "option.llm.title": "Model Connection",
-  "option.llm.desc": "Configure an OpenAI-compatible API. Once connected, the agent will talk to the model through this API.",
+  "option.llm.desc": "Configure an OpenAI-compatible model service. When you send a request, conversation content and any pages, files or screenshots needed for the task are sent to this service. Your API key is stored in this browser and sent with requests to authenticate. A data-use notice appears before the first send; review your provider's data policy.",
+  "option.llm.resetDataConsent": "Show the send notice again",
+  "option.llm.consentResetDone": "The data-use notice will appear before your next send.",
+  "option.llm.consentResetFailed": "Could not reset the data-use confirmation. Please try again.",
 
   // 思考配置（thinking mode）
   "option.thinking.title": "Thinking Mode Config",
@@ -98,6 +119,14 @@ export const en: Record<string, string> = {
   "option.obsidian.desc": "Connect to the Obsidian Local REST API so the agent can read and write your vault directly.",
   "option.obsidian.enable": "Enable Obsidian integration",
   "option.obsidian.apiKeyPlaceholder": "Get it from Obsidian settings",
+  "option.obsidian.connection.disabled": "Integration disabled",
+  "option.obsidian.connection.incomplete": "Enter the API URL and API key",
+  "option.obsidian.connection.checking": "Checking connection…",
+  "option.obsidian.connection.connected": "Connected · {count} tools available",
+  "option.obsidian.connection.empty": "Connected, but no tools available",
+  "option.obsidian.connection.failed": "Connection failed",
+  "option.obsidian.connection.test": "Test connection",
+  "option.obsidian.connection.hint": "Tests the current fields without saving. Status reflects the latest check. Save changes to apply them to the agent.",
   "option.obsidian.whatTitle": "What is this?",
   "option.obsidian.whatDesc": "Obsidian is a local note-taking app. After connecting, the agent can read your notes, create new ones, and append content to existing notes — so it can save research, meeting summaries, or any output directly into your vault.",
   "option.obsidian.setupTitle": "How to set up",

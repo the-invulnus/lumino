@@ -296,7 +296,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 })
 
 async function boot(): Promise<void> {
-  // 恢复 locale（错误消息等用 t() 渲染，默认 en）
+  // 恢复 locale（错误消息等用 t() 渲染，默认跟随 Chrome 界面语言）
   void initLocaleFromStorage()
   enableOpenPanelOnActionClick()
   setupMessageHandlers()

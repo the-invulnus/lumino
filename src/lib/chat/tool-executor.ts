@@ -13,6 +13,10 @@ export function registerTool(name: string, handler: ToolHandler): void {
   toolRegistry.set(name, handler)
 }
 
+export function unregisterTool(name: string): void {
+  toolRegistry.delete(name)
+}
+
 export async function executeToolCall(
   call: OpenAiToolCall,
   signal?: AbortSignal
