@@ -22,10 +22,10 @@ AUTOMATIC LANGUAGE SELECTION
 On first use, Chinese Chrome interfaces use Simplified Chinese; other browser languages use English. Switch manually in settings; your saved preference is preserved. Includes themes, conversation search and collapsible date groups.
 
 DATA HANDLING
-API keys are stored locally. Conversations, workspace files and favorites are primarily stored in your browser. To carry out your requests, relevant messages, page content, screenshots or file excerpts may be sent to your configured model provider or enabled Obsidian service. Lumino does not upload this data to developer-operated servers and includes no advertising or behavioral analytics. Review your chosen provider's data policy.
+API keys are stored locally and sent only to your configured model or Obsidian service to authenticate requests. Conversations, workspace files and favorites are primarily stored in your browser. To carry out your requests, relevant messages, page content, screenshots or file excerpts may be sent to these services. Before the first send, Lumino displays a data-use notice and waits for your agreement; you can reset this choice in Model settings. Lumino does not upload this content to developer-operated servers and includes no advertising or behavioral analytics. Review your chosen provider's data policy.
 
 Get started: install Lumino, configure a model in settings, reference a page or file, and describe your task.
 
 Project: https://github.com/the-invulnus/lumino
 Support: https://github.com/the-invulnus/lumino/issues
-Privacy: https://github.com/the-invulnus/lumino/blob/dev/PRIVACY.md
+Privacy: https://github.com/the-invulnus/lumino/blob/main/PRIVACY.md

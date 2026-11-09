@@ -25,10 +25,10 @@ Lumino 不内置模型账户。首次使用需要在设置中填写支持工具�
 首次使用跟随 Chrome 界面语言：中文环境使用简体中文，其他语言环境使用 English。可在设置中手动切换，并记住你的选择。支持多种界面主题、历史会话搜索与可折叠的时间分组。
 
 【数据如何处理】
-API Key 保存在本机浏览器中。会话、工作区文件和收藏主要保存在本地；执行任务时，相关对话、网页内容、截图或文件片段会按功能需要发送给你配置的模型服务，或已启用的 Obsidian 服务。Lumino 不向开发者服务器上传这些数据，不内置广告或行为分析。请在使用前了解所选服务的数据政策。
+API Key 保存在本机浏览器中，并仅发送给你配置的模型或 Obsidian 服务用于身份验证。会话、工作区文件和收藏主要保存在本地；执行任务时，相关对话、网页内容、截图或文件片段会按功能需要发送给这些服务。首次发送前会显示数据处理说明，只有确认后才继续；你可以在模型设置中重置确认。Lumino 不向开发者服务器上传这些内容，不内置广告或行为分析。请在使用前了解所选服务的数据政策。
 
 开始使用：安装并打开 Lumino → 在设置中配置模型 → 引用网页或文件 → 告诉助手你想完成什么。
 
 项目与使用说明：https://github.com/the-invulnus/lumino
 问题反馈：https://github.com/the-invulnus/lumino/issues
-隐私政策：https://github.com/the-invulnus/lumino/blob/dev/PRIVACY.md
+隐私政策：https://github.com/the-invulnus/lumino/blob/main/PRIVACY.md

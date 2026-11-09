@@ -156,6 +156,13 @@
 .wb-confirm-actions { display: flex; gap: 10px; margin-top: 22px; }
 .wb-confirm-actions .wb-button { flex: 1; min-height: 35px; }
 .wb-confirm-actions .wb-button--danger { border-color: var(--lumi-danger-border); background: var(--lumi-danger-bg); }
+.wb-data-use-dialog { width: min(420px, calc(100vw - 32px)); }
+.wb-data-use-body h2 { font-size: 17px; }
+.wb-data-use-body > p { font-size: 12px; line-height: 1.75; }
+.wb-data-use-list { margin: 10px 0 0; padding-left: 20px; color: var(--lumi-text-soft); font-size: 12px; line-height: 1.75; }
+.wb-data-use-list li + li { margin-top: 5px; }
+.wb-data-use-body .wb-data-use-note { margin-top: 14px; padding: 10px 12px; border: 1px solid var(--lumi-border); border-radius: 9px; background: var(--lumi-well); color: var(--lumi-text-soft); font-size: 11px; line-height: 1.7; }
+.wb-data-use-dialog .wb-confirm-actions { margin-top: 18px; }
 .wb-collect-button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 5px 8px; }
 .wb-collect-button > svg { color: var(--wb-icon-gold); }
 .wb-explorer-navigation { display: flex; align-items: center; gap: 1px; min-width: 0; margin-bottom: 8px; }

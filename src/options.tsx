@@ -20,6 +20,7 @@ import { NavIcon, AVAILABLE_ICONS } from "./sidepanel/IconSidebar"
 import { listThreads, deleteThread } from "./lib/chat/thread-idb"
 import { useT, setStoredLocale, getLocale, type Locale } from "./lib/i18n"
 import { initLocaleFromStorage } from "./lib/i18n"
+import { resetDataUseConsent } from "./lib/data-use-consent"
 import { ObsidianConnectionStatus } from "./ObsidianConnectionStatus"
 
 // 工具组：label 和每条 tool 的 desc 都存 i18n key，展示时由 t() 解析
@@ -123,6 +124,12 @@ function IndexOptions() {
     setIsSaving(true)
     setStatus("")
     try {
+      const [previousLlm, previousObsidian] = await Promise.all([getLlmSettings(), getObsidianSettings()])
+      const endpointChanged = previousLlm.baseUrl !== settings.baseUrl.trim().replace(/\/+$/, "")
+        || previousLlm.model !== settings.model.trim()
+        || previousObsidian.enabled !== obsidianSettings.enabled
+        || previousObsidian.baseUrl !== (obsidianSettings.baseUrl.trim() || "http://127.0.0.1:27123")
+      if (endpointChanged) await resetDataUseConsent()
       await saveLlmSettings(settings)
       await saveObsidianSettings(obsidianSettings)
       await saveThinkingConfig(thinkingConfig)
@@ -371,6 +378,15 @@ function IndexOptions() {
             <div className="lm-options-panel">
               <h2 className="lm-options-panel-title">{t("option.llm.title")}</h2>
               <p className="lm-options-panel-desc">{t("option.llm.desc")}</p>
+              <button type="button" className="lm-thinking-reset" onClick={async () => {
+                try {
+                  await resetDataUseConsent()
+                  setStatus(t("option.llm.consentResetDone"))
+                } catch {
+                  setStatus(t("option.llm.consentResetFailed"))
+                }
+                setTimeout(() => setStatus(""), 2500)
+              }}>{t("option.llm.resetDataConsent")}</button>
               <label className="lm-field">
                 <span className="lm-label">Base URL</span>
                 <input className="lm-input" onChange={(e) => setSettings((p) => ({ ...p, baseUrl: e.target.value }))} placeholder="https://api.openai.com/v1" value={settings.baseUrl} />

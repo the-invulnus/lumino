@@ -94,7 +94,10 @@ export const zh: Record<string, string> = {
 
   // LLM 面板
   "option.llm.title": "模型连接",
-  "option.llm.desc": "配置 OpenAI 兼容 API，连接完成后 Agent 将通过此 API 与模型通信。",
+  "option.llm.desc": "配置 OpenAI 兼容模型服务。发送后，对话内容及完成任务所需的网页、文件或截图会发送到此服务；API Key 保存在本机，并会随请求发送给此服务用于身份验证。首次发送前会显示数据处理说明，请确认服务商的数据政策。",
+  "option.llm.resetDataConsent": "重新显示发送前说明",
+  "option.llm.consentResetDone": "下次发送时会再次显示数据处理说明。",
+  "option.llm.consentResetFailed": "无法重置数据处理确认，请重试。",
 
   // 思考配置（thinking mode）
   "option.thinking.title": "思考模式配置",

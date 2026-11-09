@@ -28,6 +28,7 @@ import {
 import type { AgentConfig } from "../lib/chat/mode-config"
 import type { LlmSettings } from "../lib/llm/llm-types"
 import { hasCompleteLlmSettings, type ThinkingConfig } from "../lib/settings"
+import { hasDataUseConsent, saveDataUseConsent } from "../lib/data-use-consent"
 import { useT } from "../lib/i18n"
 import { formatRelativeTime } from "../lib/format-time"
 import {
@@ -49,6 +50,7 @@ import { MessageErrorBoundary } from "./components/MessageErrorBoundary"
 import { AssistantTurn } from "./components/AssistantTurn"
 import { PageReferenceChip, ReferenceChips } from "./components/ReferenceChips"
 import { ComposerUploadButton } from "./components/ComposerUploadButton"
+import { DataUseConsentDialog } from "./components/DataUseConsentDialog"
 import { stripCurrentTime } from "../lib/chat/message-metadata"
 import lumiIcon from "data-base64:~lumi.png"
 
@@ -179,6 +181,49 @@ export const ChatView = forwardRef<ChatViewHandle, {
   const [savingAnswer, setSavingAnswer] = useState(false)
   const appliedRequest = useRef<number>()
   const sendGuard = useRef(false)
+  const consentDecisionRef = useRef<((accepted: boolean) => void) | null>(null)
+  const consentPromiseRef = useRef<Promise<boolean> | null>(null)
+  const [dataUseConsentOpen, setDataUseConsentOpen] = useState(false)
+
+  async function requestDataUseConsentInternal(): Promise<boolean> {
+    let acceptedAlready: boolean
+    try {
+      acceptedAlready = await hasDataUseConsent()
+    } catch {
+      setContextError(w("dataUseStorageFailed"))
+      return false
+    }
+    if (acceptedAlready) return true
+
+    const decision = new Promise<boolean>(resolve => { consentDecisionRef.current = resolve })
+    setDataUseConsentOpen(true)
+    const accepted = await decision
+    consentDecisionRef.current = null
+    if (!accepted) return false
+
+    try {
+      await saveDataUseConsent()
+      return true
+    } catch {
+      setContextError(w("dataUseStorageFailed"))
+      return false
+    }
+  }
+
+  function requestDataUseConsent(): Promise<boolean> {
+    if (consentPromiseRef.current) return consentPromiseRef.current
+    const pending = requestDataUseConsentInternal()
+    consentPromiseRef.current = pending
+    void pending.finally(() => {
+      if (consentPromiseRef.current === pending) consentPromiseRef.current = null
+    })
+    return pending
+  }
+
+  function resolveDataUseConsent(accepted: boolean) {
+    setDataUseConsentOpen(false)
+    consentDecisionRef.current?.(accepted)
+  }
   async function uploadFiles(files: File[]) {
     if (uploadInFlight.current || !files.length) return
     uploadInFlight.current = true
@@ -430,10 +475,12 @@ export const ChatView = forwardRef<ChatViewHandle, {
   }), [selectThread, handleDeleteThread, onOpenHistory, removeFileReferences])
 
   async function doSend(historyMessages: OpenAiChatMessage[], userInput: string) {
+    if (!(await requestDataUseConsent())) return
     // Regeneration keeps reference pages but must not resend the old timestamp.
     userInput = stripCurrentTime(userInput)
     const threadId = activeThreadIdRef.current
     if (!threadId) return
+    if (sendInFlightMapRef.current[threadId]) return
     sendInFlightMapRef.current[threadId] = true
     setLoadingThreadIds((prev) => new Set(prev).add(threadId))
     onThreadErrorsChange(prev => { const next = {...prev}; delete next[threadId]; return next })
@@ -494,6 +541,7 @@ export const ChatView = forwardRef<ChatViewHandle, {
 
     sendGuard.current = true
     try {
+    if (!(await requestDataUseConsent())) return
     // 没有活跃会话：创建新的
     if (!activeThreadIdRef.current) {
       const created = await createEmptyThread()
@@ -778,7 +826,6 @@ export const ChatView = forwardRef<ChatViewHandle, {
                           if (prevUserIdx < 0) return
                           const prevUser = messages[prevUserIdx]
                           const newHistory = messages.slice(0, prevUserIdx)
-                          saveThreadMessages(activeThreadId, newHistory).catch(() => {})
                           doSend(newHistory, formatMessagePreview(prevUser))
                         }}
                         title={t("chat.action.regenerate")} type="button"
@@ -861,7 +908,6 @@ export const ChatView = forwardRef<ChatViewHandle, {
                               if (!trimmed && !messageContext.files.length && !messageContext.pages.length) return
                               if (sendInFlightMapRef.current[activeThreadId]) return
                               const newHistory = messages.slice(0, msgIndex)
-                              saveThreadMessages(activeThreadId, newHistory).catch(() => {})
                               doSend(newHistory, withMessageContext(trimmed, messageContext.pages, messageContext.files))
                             }
                             if (e.key === "Escape") { setEditingIndex(-1); setEditingText("") }
@@ -896,7 +942,6 @@ export const ChatView = forwardRef<ChatViewHandle, {
                         onClick={() => {
                           // 保留当前 user 消息及以上的所有消息，删除其后内容，用此 user 消息重新请求
                           const newHistory = messages.slice(0, msgIndex)
-                          saveThreadMessages(activeThreadId, newHistory).catch(() => {})
                           doSend(newHistory, formatMessagePreview(msg))
                         }}
                         title={t("chat.action.regenerate")} type="button"
@@ -976,9 +1021,13 @@ export const ChatView = forwardRef<ChatViewHandle, {
             <p className="lm-chat-error__msg">{threadErrors[activeThreadId]}</p>
             <button
               className="lm-chat-error__retry"
-              onClick={() => {
+              onClick={async () => {
+                if (!activeThreadId || sendInFlightMapRef.current[activeThreadId]) return
+                if (!(await requestDataUseConsent())) return
+                if (sendInFlightMapRef.current[activeThreadId]) return
+                sendInFlightMapRef.current[activeThreadId] = true
+                setLoadingThreadIds((prev) => new Set(prev).add(activeThreadId))
                 onThreadErrorsChange(prev => { const next = {...prev}; delete next[activeThreadId]; return next })
-                if (!activeThreadId) return
                 void chrome.windows.getCurrent().then((win) => {
                   const payload = {
                     type: RETRY_AGENT_MESSAGE,
@@ -992,8 +1041,6 @@ export const ChatView = forwardRef<ChatViewHandle, {
                   } as RetryAgentMessage
                   chrome.runtime.sendMessage(payload).catch(() => {})
                 })
-                sendInFlightMapRef.current[activeThreadId] = true
-                setLoadingThreadIds((prev) => new Set(prev).add(activeThreadId))
               }}
               type="button"
             >
@@ -1096,6 +1143,12 @@ export const ChatView = forwardRef<ChatViewHandle, {
           </div>
         </div>
       </section>
+
+      <DataUseConsentDialog
+        open={dataUseConsentOpen}
+        onAccept={() => resolveDataUseConsent(true)}
+        onCancel={() => resolveDataUseConsent(false)}
+      />
 
       {/* 删除确认弹窗（始终挂载，靠 class 切换进出动画） */}
       <div

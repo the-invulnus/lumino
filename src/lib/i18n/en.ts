@@ -94,7 +94,10 @@ export const en: Record<string, string> = {
 
   // LLM 面板
   "option.llm.title": "Model Connection",
-  "option.llm.desc": "Configure an OpenAI-compatible API. Once connected, the agent will talk to the model through this API.",
+  "option.llm.desc": "Configure an OpenAI-compatible model service. When you send a request, conversation content and any pages, files or screenshots needed for the task are sent to this service. Your API key is stored in this browser and sent with requests to authenticate. A data-use notice appears before the first send; review your provider's data policy.",
+  "option.llm.resetDataConsent": "Show the send notice again",
+  "option.llm.consentResetDone": "The data-use notice will appear before your next send.",
+  "option.llm.consentResetFailed": "Could not reset the data-use confirmation. Please try again.",
 
   // 思考配置（thinking mode）
   "option.thinking.title": "Thinking Mode Config",
